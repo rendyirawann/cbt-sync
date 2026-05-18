@@ -178,6 +178,14 @@ class LearningModuleController extends Controller
             'comments.replies.user'
         ])->findOrFail($id);
 
+        // Log access for student
+        if (auth()->user()->hasRole('Siswa') && auth()->user()->student) {
+            \App\Models\ModuleView::create([
+                'student_id' => auth()->user()->student->id,
+                'learning_module_id' => $id
+            ]);
+        }
+
         return view('backend.master.learning-modules.show', compact('item'));
     }
 }

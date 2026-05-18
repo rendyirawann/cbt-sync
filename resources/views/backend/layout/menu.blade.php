@@ -137,6 +137,28 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('admin.analytics.index') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-chart-line fs-2"></i>
+										</span>
+										<span class="menu-title">Laporan Aktivitas</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
+
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('books.*') ? 'active' : '' }}" href="{{ route('books.index') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-book fs-2"></i>
+										</span>
+										<span class="menu-title">Manajemen Perpustakaan</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
                                 @endif
 
                                 @if(auth()->user()->hasRole('Siswa'))
@@ -180,6 +202,17 @@
 											<i class="ki-outline ki-cup fs-2"></i>
 										</span>
 										<span class="menu-title">Leaderboard & Lencana</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
+
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('student.library.index') ? 'active' : '' }}" href="{{ route('student.library.index') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-book fs-2"></i>
+										</span>
+										<span class="menu-title">Perpustakaan Saya</span>
 									</a>
 								</div>
 								<!--end:Menu item-->

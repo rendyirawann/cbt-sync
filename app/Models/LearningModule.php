@@ -39,4 +39,9 @@ class LearningModule extends Model
         }
         return round($bytes, 2) . ' ' . $units[$i];
     }
+
+    public function views()
+    {
+        return $this->hasMany(ModuleView::class);
+    }
 }

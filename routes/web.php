@@ -120,6 +120,13 @@ Route::middleware(['auth', 'forbid-banned-user'])->group(function () {
     Route::post('/admin/assignments/{id}/submit', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'submit'])->name('assignments.submit');
     Route::post('/admin/settings/update', [SettingController::class, 'update'])->name('settings.update');
 
+    // Administrasi & Monitoring (Analytics & Perpustakaan)
+    Route::get('/admin/analytics', [\App\Http\Controllers\Backend\Master\AnalyticsController::class, 'index'])->name('admin.analytics.index');
+    Route::resource('/admin/books', \App\Http\Controllers\Backend\Master\BookController::class);
+    Route::post('/admin/borrowings', [\App\Http\Controllers\Backend\Master\BorrowingController::class, 'store'])->name('borrowings.store');
+    Route::post('/admin/borrowings/{id}/return', [\App\Http\Controllers\Backend\Master\BorrowingController::class, 'returnBook'])->name('borrowings.return');
+
+
     // --- DEBUG/CHECK AUTH ---
     Route::get('/admin/check-auth', function () {
         $u = auth()->user();
@@ -188,6 +195,9 @@ Route::middleware(['auth', 'role:Siswa'])->prefix('portal')->group(function () {
     Route::get('/assignments', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'index'])->name('student.assignments.index');
     Route::get('/assignments/{id}', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'show'])->name('student.assignments.show');
     Route::post('/assignments/{id}/submit', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'submit'])->name('student.assignments.submit');
+
+    // Library for Student
+    Route::get('/library', [\App\Http\Controllers\Backend\Master\BookController::class, 'index'])->name('student.library.index');
 });
 
 // Portal Routes for All Authenticated Users (Siswa, Guru, Superadmin)

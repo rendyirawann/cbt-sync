@@ -33,4 +33,14 @@ class Student extends Model
     {
         return $this->hasMany(StudentBadge::class);
     }
+
+    public function moduleViews()
+    {
+        return $this->hasMany(ModuleView::class);
+    }
+
+    public function bookBorrowings()
+    {
+        return $this->hasMany(BookBorrowing::class);
+    }
 }
