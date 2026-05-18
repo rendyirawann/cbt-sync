@@ -206,7 +206,7 @@
                     </div>
                 </div>
                 <div class="modal-footer flex-center">
-                    <button type="submit" class="btn btn-primary confirm-delete">Simpan Tugas</button>
+                    <button type="submit" class="btn btn-primary">Simpan Tugas</button>
                 </div>
             </form>
         </div>
@@ -241,7 +241,7 @@
                     </div>
                 </div>
                 <div class="modal-footer flex-center">
-                    <button type="submit" class="btn btn-primary confirm-delete">Update Tugas</button>
+                    <button type="submit" class="btn btn-primary">Update Tugas</button>
                 </div>
             </form>
         </div>

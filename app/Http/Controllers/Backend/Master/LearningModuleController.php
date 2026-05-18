@@ -74,7 +74,7 @@ class LearningModuleController extends Controller
             // Simpan file ke storage public/modules
             $path = $file->store('modules', 'public');
 
-            LearningModule::create([
+            $module = LearningModule::create([
                 'teaching_assignment_id' => $request->teaching_assignment_id,
                 'title' => $request->title,
                 'description' => $request->description,
@@ -85,6 +85,8 @@ class LearningModuleController extends Controller
                 'file_size' => $size,
                 'is_published' => $request->has('is_published') ? true : false,
             ]);
+
+            \App\Services\NotificationService::sendAnnouncementNotification($module);
 
             return redirect()->back()->with('success', 'Modul berhasil diunggah!');
         } catch (\Exception $e) {
@@ -126,7 +128,12 @@ class LearningModuleController extends Controller
                 $data['file_size'] = $file->getSize();
             }
 
+            $oldPublished = $module->is_published;
             $module->update($data);
+
+            if ($module->is_published && !$oldPublished) {
+                \App\Services\NotificationService::sendAnnouncementNotification($module);
+            }
 
             return redirect()->back()->with('success', 'Modul berhasil diperbarui!');
         } catch (\Exception $e) {

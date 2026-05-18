@@ -67,7 +67,9 @@ class AssignmentController extends Controller
                 $data['file_path'] = $request->file('file')->store('assignments', 'public');
             }
 
-            Assignment::create($data);
+            $assignment = Assignment::create($data);
+
+            \App\Services\NotificationService::sendAssignmentNotification($assignment);
 
             return redirect()->back()->with('success', 'Penugasan berhasil dibuat!');
         } catch (\Exception $e) {
@@ -147,6 +149,9 @@ class AssignmentController extends Controller
                 'feedback' => $request->feedback
             ]);
 
+            // Award badges if applicable (e.g. perfect score badge)
+            \App\Services\GamificationService::evaluateScore($submission);
+
             return redirect()->back()->with('success', 'Nilai berhasil disimpan!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal menyimpan nilai: ' . $e->getMessage());
@@ -164,7 +169,7 @@ class AssignmentController extends Controller
             
             $path = $request->file('file')->store('submissions', 'public');
 
-            \App\Models\AssignmentSubmission::updateOrCreate(
+            $submission = \App\Models\AssignmentSubmission::updateOrCreate(
                 [
                     'assignment_id' => $id,
                     'student_id' => $studentId,
@@ -175,6 +180,9 @@ class AssignmentController extends Controller
                     'submitted_at' => now(),
                 ]
             );
+
+            // Award badges if applicable (quick submission, early bird, diligent student)
+            \App\Services\GamificationService::evaluateSubmission($submission);
 
             return redirect()->back()->with('success', 'Tugas berhasil dikirim!');
         } catch (\Exception $e) {

@@ -23,4 +23,14 @@ class Student extends Model
     {
         return $this->hasMany(ClassStudent::class);
     }
+
+    public function badges()
+    {
+        return $this->belongsToMany(Badge::class, 'student_badges', 'student_id', 'badge_id')->withTimestamps();
+    }
+
+    public function studentBadges()
+    {
+        return $this->hasMany(StudentBadge::class);
+    }
 }

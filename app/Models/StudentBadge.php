@@ -5,19 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class AssignmentSubmission extends Model
+class StudentBadge extends Model
 {
     use HasUuids;
-    
-    protected $guarded = [];
 
-    public function assignment()
-    {
-        return $this->belongsTo(Assignment::class);
-    }
+    protected $fillable = [
+        'student_id',
+        'badge_id'
+    ];
 
     public function student()
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function badge()
+    {
+        return $this->belongsTo(Badge::class);
     }
 }

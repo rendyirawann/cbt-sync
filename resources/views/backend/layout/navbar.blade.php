@@ -127,6 +127,7 @@
 		// Siswa (Portal)
 		{ title: 'Portal Siswa', url: '{{ route("student.dashboard") }}', icon: 'ki-home', type: 'student' },
 		{ title: 'Absensi Saya', url: '{{ route("student.attendance") }}', icon: 'ki-fingerprint-scan', type: 'student' },
+		{ title: 'Leaderboard & Lencana', url: '{{ route("portal.leaderboard") }}', icon: 'ki-cup', type: 'student' },
 	];
 
 	const isStudent = {{ auth()->user()->hasRole('Siswa') ? 'true' : 'false' }};
@@ -180,6 +181,9 @@
 								<!--begin::Activities-->
 								<div class="d-flex align-items-center ms-1 ms-lg-3">
 									<!--begin::Drawer toggle-->
+									@php
+										$unreadCount = auth()->check() ? \App\Models\Notification::where('user_id', auth()->id())->where('is_read', false)->count() : 0;
+									@endphp
 									<div class="position-relative btn btn-color-gray-800 btn-icon btn-active-light-primary w-30px h-30px w-md-40px h-md-40px" id="kt_notification_toggle" data-bs-toggle="offcanvas" data-bs-target="#kt_notification_drawer" aria-controls="kt_notification_drawer">
 										<i class="ki-duotone ki-notification-status fs-1">
 											<span class="path1"></span>
@@ -187,7 +191,11 @@
 											<span class="path3"></span>
 											<span class="path4"></span>
 										</i>
-										<span class="bullet bullet-dot bg-danger h-6px w-6px position-absolute translate-middle top-0 start-50 animation-blink"></span>
+										@if($unreadCount > 0)
+											<span id="notification-count-badge" class="badge badge-circle badge-danger position-absolute translate-middle top-0 start-100 fs-9 h-18px w-18px d-flex align-items-center justify-content-center" style="margin-left: -5px; margin-top: 5px;">{{ $unreadCount }}</span>
+										@else
+											<span class="bullet bullet-dot bg-danger h-6px w-6px position-absolute translate-middle top-0 start-50 animation-blink"></span>
+										@endif
 									</div>
 									<!--end::Drawer toggle-->
 								</div>
@@ -344,40 +352,53 @@
 	<div class="offcanvas-body p-0">
 		@php
 			$notifications = collect();
-			if(class_exists('\App\Models\LearningModule')) {
-				foreach(\App\Models\LearningModule::latest()->take(3)->get() as $module) {
+			if(auth()->check()) {
+				$dbNotifications = \App\Models\Notification::where('user_id', auth()->id())->latest()->take(15)->get();
+				foreach($dbNotifications as $dn) {
+					$icon = 'ki-notification-status';
+					$color = 'primary';
+					if ($dn->type === 'assignment') { $icon = 'ki-notepad-edit'; $color = 'warning'; }
+					elseif ($dn->type === 'announcement') { $icon = 'ki-book-open'; $color = 'success'; }
+					elseif ($dn->type === 'badge_earned') { $icon = 'ki-award'; $color = 'danger'; }
+					elseif ($dn->type === 'assignment_deadline') { $icon = 'ki-time'; $color = 'danger'; }
+					
 					$notifications->push([
-						'icon' => 'ki-book', 'color' => 'success',
-						'title' => 'Modul Baru: ' . $module->title,
-						'time' => $module->created_at->diffForHumans()
+						'icon' => $icon,
+						'color' => $color,
+						'title' => $dn->title,
+						'time' => $dn->created_at->diffForHumans(),
+						'url' => $dn->url ?: '#',
+						'message' => $dn->message,
+						'is_read' => $dn->is_read
 					]);
 				}
 			}
-			if(class_exists('\App\Models\Assignment')) {
-				foreach(\App\Models\Assignment::latest()->take(3)->get() as $assignment) {
-					$notifications->push([
-						'icon' => 'ki-notepad-edit', 'color' => 'warning',
-						'title' => 'Penugasan: ' . $assignment->title,
-						'time' => $assignment->created_at->diffForHumans()
-					]);
+			
+			// Fallback/Generic system updates if empty or not logged in
+			if ($notifications->isEmpty()) {
+				if(class_exists('\App\Models\LearningModule')) {
+					foreach(\App\Models\LearningModule::latest()->take(3)->get() as $module) {
+						$notifications->push([
+							'icon' => 'ki-book', 'color' => 'success',
+							'title' => 'Modul Baru: ' . $module->title,
+							'time' => $module->created_at->diffForHumans(),
+							'url' => '#',
+							'message' => 'Materi baru telah diunggah oleh pengajar.',
+							'is_read' => true
+						]);
+					}
 				}
-			}
-			if(class_exists('\App\Models\Attendance')) {
-				foreach(\App\Models\Attendance::with('user')->latest()->take(3)->get() as $attendance) {
-					$notifications->push([
-						'icon' => 'ki-badge', 'color' => 'primary',
-						'title' => 'Absensi: ' . ($attendance->user->name ?? 'User') . ' (' . ucfirst($attendance->type) . ')',
-						'time' => $attendance->created_at->diffForHumans()
-					]);
-				}
-			}
-			if(auth()->user() && auth()->user()->hasRole('Superadmin') && class_exists('\Spatie\Activitylog\Models\Activity')) {
-				foreach(\Spatie\Activitylog\Models\Activity::latest()->take(5)->get() as $log) {
-					$notifications->push([
-						'icon' => 'ki-user-tick', 'color' => 'info',
-						'title' => 'Aktivitas: ' . $log->description,
-						'time' => $log->created_at->diffForHumans()
-					]);
+				if(class_exists('\App\Models\Assignment')) {
+					foreach(\App\Models\Assignment::latest()->take(3)->get() as $assignment) {
+						$notifications->push([
+							'icon' => 'ki-notepad-edit', 'color' => 'warning',
+							'title' => 'Penugasan: ' . $assignment->title,
+							'time' => $assignment->created_at->diffForHumans(),
+							'url' => '#',
+							'message' => 'Penugasan baru telah diterbitkan.',
+							'is_read' => true
+						]);
+					}
 				}
 			}
 		@endphp
@@ -390,7 +411,7 @@
 		<div class="separator"></div>
 		<div class="scroll-y px-7 py-3" style="max-height: calc(100vh - 180px);">
 			@forelse($notifications as $notif)
-			<div class="d-flex align-items-start py-4">
+			<a href="{{ $notif['url'] }}" class="d-flex align-items-start py-4 text-decoration-none text-hover-primary" style="opacity: {{ isset($notif['is_read']) && $notif['is_read'] ? '0.7' : '1' }};">
 				<div class="symbol symbol-40px me-4">
 					<span class="symbol-label bg-light-{{ $notif['color'] }}">
 						<i class="ki-duotone {{ $notif['icon'] }} fs-2 text-{{ $notif['color'] }}">
@@ -400,9 +421,10 @@
 				</div>
 				<div class="flex-grow-1">
 					<span class="fs-6 text-gray-800 fw-bold d-block">{{ Str::limit($notif['title'], 50) }}</span>
-					<span class="text-gray-400 fs-7">{{ $notif['time'] }}</span>
+					<span class="text-gray-500 fs-7 d-block mb-1">{{ Str::limit($notif['message'], 100) }}</span>
+					<span class="text-gray-400 fs-8">{{ $notif['time'] }}</span>
 				</div>
-			</div>
+			</a>
 			<div class="separator separator-dashed"></div>
 			@empty
 			<div class="text-center py-15">
@@ -433,4 +455,34 @@ function confirmSignOut(event) {
 		}
 	});
 }
+
+// Mark notifications as read when offcanvas drawer is opened
+document.addEventListener('DOMContentLoaded', function() {
+	var drawerEl = document.getElementById('kt_notification_drawer');
+	if (drawerEl) {
+		drawerEl.addEventListener('shown.bs.offcanvas', function () {
+			// Clear badge/counter instantly
+			var badge = document.getElementById('notification-count-badge');
+			if (badge) {
+				badge.remove();
+			}
+			
+			// Send AJAX request to mark all read
+			fetch('{{ route("notifications.mark-as-read") }}', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-CSRF-TOKEN': '{{ csrf_token() }}'
+				}
+			})
+			.then(response => response.json())
+			.then(data => {
+				console.log('Notifikasi telah dibaca:', data.message);
+			})
+			.catch(error => {
+				console.error('Error marking notifications as read:', error);
+			});
+		});
+	}
+});
 </script>

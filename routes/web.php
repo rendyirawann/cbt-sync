@@ -203,6 +203,12 @@ Route::middleware(['auth'])->prefix('portal')->group(function () {
 
     // Forum Diskusi Modul
     Route::post('/module-comments', [\App\Http\Controllers\Frontend\ModuleCommentController::class, 'store'])->name('module-comments.store');
+
+    // Notifications
+    Route::post('/notifications/mark-as-read', [\App\Http\Controllers\Frontend\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-as-read');
+
+    // Leaderboard & Badge (Accessible to Student, Teacher, Admin)
+    Route::get('/leaderboard', [\App\Http\Controllers\Frontend\LeaderboardController::class, 'index'])->name('portal.leaderboard');
 });
 
 // Load Routes Authentication (Login, Register, Reset Password)

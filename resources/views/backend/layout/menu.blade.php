@@ -126,6 +126,17 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('portal.leaderboard') ? 'active' : '' }}" href="{{ route('portal.leaderboard') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-cup fs-2"></i>
+										</span>
+										<span class="menu-title">Leaderboard & Lencana</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
                                 @endif
 
                                 @if(auth()->user()->hasRole('Siswa'))
@@ -158,6 +169,17 @@
 											<i class="ki-outline ki-messages fs-2"></i>
 										</span>
 										<span class="menu-title">Pesan Internal</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
+
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('portal.leaderboard') ? 'active' : '' }}" href="{{ route('portal.leaderboard') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-cup fs-2"></i>
+										</span>
+										<span class="menu-title">Leaderboard & Lencana</span>
 									</a>
 								</div>
 								<!--end:Menu item-->

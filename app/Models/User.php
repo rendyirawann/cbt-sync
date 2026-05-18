@@ -73,6 +73,11 @@ class User extends Authenticatable implements BannableContract
         return $this->hasOne(Student::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class)->latest();
+    }
+
     /**
      * Get avatar URL with fallback to UI-Avatars.
      */
