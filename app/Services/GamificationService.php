@@ -8,7 +8,9 @@ use App\Models\StudentBadge;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Notification;
+use App\Models\ExamAttempt;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class GamificationService
 {
@@ -59,11 +61,30 @@ class GamificationService
     }
 
     /**
+     * Award "Nilai Sempurna" untuk attempt ujian CBT bernilai 100.
+     */
+    public static function evaluateExamScore(ExamAttempt $attempt)
+    {
+        if ($attempt->status === 'graded' && (float) $attempt->final_score >= 100) {
+            $student = Student::find($attempt->student_id);
+            if ($student) {
+                self::awardBadge($student, 'Nilai Sempurna');
+            }
+        }
+    }
+
+    /**
      * Award a badge to a student if they don't already have it.
      */
     private static function awardBadge(Student $student, string $badgeName)
     {
-        $badge = Badge::where('name', $badgeName)->first();
+        // Badge adalah data referensi yang nyaris statis — cache by name
+        // agar tidak query berulang setiap kali evaluasi submission/nilai.
+        $badges = Cache::remember('badges.by_name', 3600, function () {
+            return Badge::all()->keyBy('name');
+        });
+
+        $badge = $badges->get($badgeName);
         if (!$badge) {
             return;
         }

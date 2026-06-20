@@ -107,6 +107,17 @@
                                 @if(auth()->user()->hasRole('Superadmin') || auth()->user()->hasRole('Guru'))
 								<!--begin:Menu item-->
 								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('exams.*') || request()->routeIs('exam-sessions.*') || request()->routeIs('exam-attempts.*') ? 'active' : '' }}" href="{{ route('exams.index') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-questionnaire-tablet fs-2"></i>
+										</span>
+										<span class="menu-title">Ujian / CBT</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
+
+								<!--begin:Menu item-->
+								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('schedules.*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">
 										<span class="menu-icon">
 											<i class="ki-outline ki-calendar-8 fs-2"></i>
@@ -145,6 +156,17 @@
 											<i class="ki-outline ki-chart-line fs-2"></i>
 										</span>
 										<span class="menu-title">Laporan Aktivitas</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
+
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('admin.rapor.*') ? 'active' : '' }}" href="{{ route('admin.rapor.index') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-award fs-2"></i>
+										</span>
+										<span class="menu-title">e-Rapor Siswa</span>
 									</a>
 								</div>
 								<!--end:Menu item-->
@@ -213,6 +235,17 @@
 											<i class="ki-outline ki-book fs-2"></i>
 										</span>
 										<span class="menu-title">Perpustakaan Saya</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
+
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('student.rapor.*') ? 'active' : '' }}" href="{{ route('student.rapor.index') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-award fs-2"></i>
+										</span>
+										<span class="menu-title">e-Rapor Saya</span>
 									</a>
 								</div>
 								<!--end:Menu item-->

@@ -75,8 +75,10 @@ Route::get('/admin/debug-session', function () {
 // agar tidak bentrok "Route [login] defined twice".
 
 // Group Middleware untuk User yang sudah Login
-// Kita tambahkan 'forbid-banned-user' agar user yang di-banned tidak bisa akses
-Route::middleware(['auth', 'forbid-banned-user'])->group(function () {
+// - 'forbid-banned-user' : user yang di-banned tidak bisa akses
+// - 'no-student'         : role Siswa dipantulkan ke portal-nya, tidak boleh
+//                          masuk ke area /admin (mencegah kebocoran layout admin)
+Route::middleware(['auth', 'forbid-banned-user', 'no-student'])->group(function () {
 
     // --- SHARED ROLE ROUTES (generate-permissions helper, select) ---
     Route::post('/admin/roles/generate-permissions', [RoleController::class, 'generatePermissions'])->name('roles.generate');
@@ -118,6 +120,20 @@ Route::middleware(['auth', 'forbid-banned-user'])->group(function () {
     Route::resource('/admin/assignments', \App\Http\Controllers\Backend\Master\AssignmentController::class);
     Route::post('/admin/assignments/submission/{submissionId}/score', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'score'])->name('assignments.score');
     Route::post('/admin/assignments/{id}/submit', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'submit'])->name('assignments.submit');
+
+    // CBT / Ujian Online (Guru & Superadmin)
+    Route::resource('/admin/exams', \App\Http\Controllers\Backend\Master\ExamController::class)->except(['create', 'edit']);
+    Route::post('/admin/exams/{id}/publish', [\App\Http\Controllers\Backend\Master\ExamController::class, 'publish'])->name('exams.publish');
+    Route::post('/admin/exam-questions', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'store'])->name('exam-questions.store');
+    Route::put('/admin/exam-questions/{id}', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'update'])->name('exam-questions.update');
+    Route::delete('/admin/exam-questions/{id}', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'destroy'])->name('exam-questions.destroy');
+    Route::post('/admin/exam-sessions', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'store'])->name('exam-sessions.store');
+    Route::put('/admin/exam-sessions/{id}', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'update'])->name('exam-sessions.update');
+    Route::delete('/admin/exam-sessions/{id}', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'destroy'])->name('exam-sessions.destroy');
+    Route::get('/admin/exam-sessions/{id}/attempts', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'attempts'])->name('exam-sessions.attempts');
+    Route::get('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'grade'])->name('exam-attempts.grade');
+    Route::post('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'storeGrade'])->name('exam-attempts.grade.store');
+
     Route::post('/admin/settings/update', [SettingController::class, 'update'])->name('settings.update');
 
     // Administrasi & Monitoring (Analytics & Perpustakaan)
@@ -125,6 +141,12 @@ Route::middleware(['auth', 'forbid-banned-user'])->group(function () {
     Route::resource('/admin/books', \App\Http\Controllers\Backend\Master\BookController::class);
     Route::post('/admin/borrowings', [\App\Http\Controllers\Backend\Master\BorrowingController::class, 'store'])->name('borrowings.store');
     Route::post('/admin/borrowings/{id}/return', [\App\Http\Controllers\Backend\Master\BorrowingController::class, 'returnBook'])->name('borrowings.return');
+
+    // e-Rapor Routes
+    Route::get('/admin/rapor', [\App\Http\Controllers\Backend\Master\RaporController::class, 'index'])->name('admin.rapor.index');
+    Route::get('/admin/rapor/{id}', [\App\Http\Controllers\Backend\Master\RaporController::class, 'show'])->name('admin.rapor.show');
+    Route::get('/admin/rapor/{id}/generate', [\App\Http\Controllers\Backend\Master\RaporController::class, 'generate'])->name('admin.rapor.generate');
+    Route::post('/admin/rapor/settings', [\App\Http\Controllers\Backend\Master\RaporController::class, 'saveSettings'])->name('admin.rapor.settings');
 
 
     // --- DEBUG/CHECK AUTH ---
@@ -196,8 +218,19 @@ Route::middleware(['auth', 'role:Siswa'])->prefix('portal')->group(function () {
     Route::get('/assignments/{id}', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'show'])->name('student.assignments.show');
     Route::post('/assignments/{id}/submit', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'submit'])->name('student.assignments.submit');
 
+    // CBT / Ujian Online (Siswa)
+    Route::get('/exams', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'index'])->name('student.exams.index');
+    Route::post('/exams/{sessionId}/start', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'start'])->name('student.exams.start');
+    Route::get('/exams/{sessionId}/attempt', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'attempt'])->name('student.exams.attempt');
+    Route::post('/exam-answers/save', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'saveAnswer'])->name('student.exam-answers.save');
+    Route::post('/exams/{sessionId}/submit', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'submit'])->name('student.exams.submit');
+    Route::get('/exam-attempts/{attemptId}/result', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'result'])->name('student.exams.result');
+
     // Library for Student
     Route::get('/library', [\App\Http\Controllers\Backend\Master\BookController::class, 'index'])->name('student.library.index');
+
+    // Rapor for Student
+    Route::get('/rapor', [\App\Http\Controllers\Backend\Master\RaporController::class, 'index'])->name('student.rapor.index');
 });
 
 // Portal Routes for All Authenticated Users (Siswa, Guru, Superadmin)

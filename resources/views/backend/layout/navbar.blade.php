@@ -123,6 +123,7 @@
 		{ title: 'Penugasan Guru', url: '{{ route("teaching-assignments.index") }}', icon: 'ki-teacher', type: 'admin' },
 		{ title: 'Penugasan Siswa', url: '{{ route("assignments.index") }}', icon: 'ki-notepad-edit', type: 'admin' },
 		{ title: 'Rombongan Belajar', url: '{{ route("enrollments.index") }}', icon: 'ki-people', type: 'admin' },
+		{ title: 'Ujian / CBT', url: '{{ route("exams.index") }}', icon: 'ki-questionnaire-tablet', type: 'admin' },
 		
 		// Siswa (Portal)
 		{ title: 'Portal Siswa', url: '{{ route("student.dashboard") }}', icon: 'ki-home', type: 'student' },
