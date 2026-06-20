@@ -27,6 +27,7 @@
     <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('assets/css/elite-theme.css') }}?v=1" rel="stylesheet" type="text/css" />
     <!--end::Global Stylesheets Bundle-->
     <style>
         :root {
@@ -93,23 +94,20 @@
             @yield('content')
             <!--end::Body-->
             <!--begin::Aside-->
-            <div class="d-flex flex-lg-row-fluid">
+            <div class="d-flex flex-lg-row-fluid elite-hero" style="margin:18px 18px 18px 0; border-radius:28px;">
                 <!--begin::Content-->
-                <div class="d-flex flex-column flex-center pb-0 pb-lg-10 p-10 w-100">
+                <div class="d-flex flex-column flex-center pb-0 pb-lg-10 p-10 w-100 position-relative" style="z-index:2;">
                     <!--begin::Image-->
-                    <img class="theme-light-show mx-auto mw-100 w-150px w-lg-300px mb-10 mb-lg-20"
+                    <img class="mx-auto mw-100 w-130px w-lg-220px mb-8 mb-lg-12 bg-white rounded-4 p-4 shadow"
                         src="{{ asset('assets/media/logos/' . $siteLogo) }}" alt="" />
-
-                    <img class="theme-dark-show mx-auto mw-100 w-150px w-lg-300px mb-10 mb-lg-20"
-                        src="{{ asset('assets/media/logos/' . $siteLogo) }}" alt="" />
-
                     <!--end::Image-->
                     <!--begin::Title-->
-                    <h1 class="text-gray-800 fs-2qx fw-bold text-center mb-7">
+                    <span class="elite-chip mb-4"><i class="ki-duotone ki-award fs-5 text-white"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i> Sistem Pembelajaran Digital Sekolah Unggulan</span>
+                    <h1 class="text-white fs-2qx fw-bold text-center mb-5 elite-serif">
                         {{ $siteName }}
                     </h1>
-                    <div class="text-gray-600 fs-base text-center fw-semibold">
-                        Manage your operations efficiently with our modern admin dashboard.
+                    <div class="text-white opacity-75 fs-5 text-center fw-semibold" style="max-width:460px;">
+                        Belajar, berprestasi, dan tumbuh bersama dalam ekosistem pendidikan kelas dunia.
                     </div>
                     <!--end::Text-->
                 </div>

@@ -7,8 +7,11 @@
 		<meta name="csrf-token" content="{{ csrf_token() }}" />
 		<link rel="shortcut icon" href="{{ asset('assets/media/logos/lms.png') }}" />
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
+		<link href="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.css') }}" rel="stylesheet" type="text/css" />
+		<link href="{{ asset('assets/plugins/custom/datatables/datatables.bundle.css') }}" rel="stylesheet" type="text/css" />
 		<link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
 		<link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
+		<link href="{{ asset('assets/css/elite-theme.css') }}?v=1" rel="stylesheet" type="text/css" />
 		@stack('stylesheets')
 		<style>
 			.student-gradient {
@@ -44,8 +47,36 @@
 		{{-- Frontend Notification Drawer --}}
 		@include('frontend.layout.notification_drawer')
 
+		{{-- Hidden session data (parity dengan layout backend) --}}
+		<div id="session-success" data-message="{{ session('success', '') }}" style="display:none;"></div>
+		<div id="session-error" data-message="{{ session('error', '') }}" style="display:none;"></div>
+
 		<script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
 		<script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
+
+		@auth
+		<script>
+			$.ajaxSetup({
+				headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+			});
+		</script>
+		@endauth
+
+		{{-- Flash message handler (parity dengan layout backend) --}}
+		<script>
+			@if(session('success'))
+				Swal.fire({ text: "{!! session('success') !!}", icon: "success", buttonsStyling: false, confirmButtonText: "Ok, Mengerti!", customClass: { confirmButton: "btn btn-primary" } });
+			@endif
+			@if(session('error'))
+				Swal.fire({ text: "{!! session('error') !!}", icon: "error", buttonsStyling: false, confirmButtonText: "Ok, Mengerti!", customClass: { confirmButton: "btn btn-danger" } });
+			@endif
+			@if(session('warning'))
+				Swal.fire({ text: "{!! session('warning') !!}", icon: "warning", buttonsStyling: false, confirmButtonText: "Ok, Mengerti!", customClass: { confirmButton: "btn btn-warning" } });
+			@endif
+			@if($errors->any())
+				Swal.fire({ html: "{!! implode('<br>', $errors->all()) !!}", icon: "error", buttonsStyling: false, confirmButtonText: "Ok, Perbaiki", customClass: { confirmButton: "btn btn-danger" } });
+			@endif
+		</script>
 
 		<script>
 		function confirmSignOut(event) {

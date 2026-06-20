@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Outfit:300,400,500,600,700" />
     <link href="{{ URL::to('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ URL::to('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::to('assets/css/elite-theme.css') }}?v=1" rel="stylesheet" type="text/css" />
     <style>
         :root { --pixel-size: 30px; }
         body { 

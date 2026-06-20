@@ -1,4 +1,4 @@
-@extends('backend.layout.app')
+@extends(auth()->user()->hasRole('Siswa') ? 'frontend.layout.app' : 'backend.layout.app')
 @section('title', 'Detail Penugasan')
 @section('content')
 

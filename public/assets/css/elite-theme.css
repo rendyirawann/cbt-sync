@@ -1,0 +1,249 @@
+/* ============================================================================
+   ELITE SCHOOL LMS — GLOBAL THEME
+   Palet kaya: Navy (prestise) + Royal Indigo (primary) + Emas/Amber (aksen)
+   + Emerald, Royal Blue, Teal, Pink (variasi warna modul).
+   Disuntik ke layout backend & frontend, jadi seluruh halaman ikut berubah.
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
+
+:root {
+    /* ---- Brand palette ---- */
+    --elite-navy:      #0B1F3A;
+    --elite-navy-2:    #142C52;
+    --elite-indigo:    #4F46E5;
+    --elite-indigo-d:  #4338CA;
+    --elite-purple:    #7C3AED;
+    --elite-gold:      #D4A017;
+    --elite-gold-l:    #F4C430;
+    --elite-amber:     #F59E0B;
+    --elite-emerald:   #059669;
+    --elite-blue:      #1D4ED8;
+    --elite-teal:      #0EA5E9;
+    --elite-pink:      #EC4899;
+    --elite-rose:      #F43F5E;
+
+    --elite-ink:       #16213A;
+    --elite-muted:     #64748B;
+    --elite-bg:        #F4F6FB;
+    --elite-card:      #FFFFFF;
+
+    --elite-grad-primary: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    --elite-grad-navy:    linear-gradient(180deg, #0B1F3A 0%, #142C52 100%);
+    --elite-grad-gold:    linear-gradient(135deg, #F4C430 0%, #D4A017 100%);
+    --elite-grad-hero:    linear-gradient(120deg, #4F46E5 0%, #7C3AED 45%, #1D4ED8 100%);
+
+    --elite-shadow-sm: 0 2px 8px rgba(16, 24, 64, .06);
+    --elite-shadow:    0 12px 30px rgba(16, 24, 64, .08);
+    --elite-shadow-lg: 0 24px 60px rgba(16, 24, 64, .14);
+    --elite-radius:    16px;
+
+    /* ---- Bootstrap variable overrides (mempengaruhi banyak komponen) ---- */
+    --bs-primary: #4F46E5;
+    --bs-primary-rgb: 79, 70, 229;
+    --bs-link-color: #4F46E5;
+    --bs-link-hover-color: #4338CA;
+    --bs-body-font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+}
+
+/* ============================ TYPOGRAPHY ============================ */
+body, .fw-normal, .text-gray-700, .menu, .form-control, .btn {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif !important;
+}
+h1, h2, h3, h4, .page-heading, .card-title, .fw-bolder, .fw-bold {
+    font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif !important;
+    letter-spacing: -.01em;
+}
+.page-heading, .fs-2qx, .display-1, .display-2, .display-3, .display-4 {
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 800 !important;
+}
+.elite-serif { font-family: 'Playfair Display', serif !important; }
+
+/* ============================ BODY / CANVAS ============================ */
+body#kt_body, body {
+    background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(124,58,237,.06), transparent 60%),
+        radial-gradient(1000px 500px at -10% 10%, rgba(79,70,229,.06), transparent 55%),
+        var(--elite-bg) !important;
+}
+
+/* ============================ BUTTONS ============================ */
+.btn-primary {
+    background: var(--elite-grad-primary) !important;
+    border: none !important;
+    box-shadow: 0 8px 18px rgba(79,70,229,.28) !important;
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background: linear-gradient(135deg, #4338CA 0%, #6D28D9 100%) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(79,70,229,.36) !important;
+}
+.btn { border-radius: 12px; font-weight: 600; transition: all .2s ease; }
+.btn-light-primary { background-color: rgba(79,70,229,.10) !important; color: #4F46E5 !important; }
+.btn-light-primary:hover { background-color: rgba(79,70,229,.18) !important; color: #4338CA !important; }
+.btn-success { background: linear-gradient(135deg,#10B981,#059669)!important; border:none!important; }
+.btn-warning { background: linear-gradient(135deg,#F4C430,#D4A017)!important; border:none!important; color:#3a2c00!important; }
+.btn-danger  { background: linear-gradient(135deg,#FB7185,#E11D48)!important; border:none!important; }
+.btn-info    { background: linear-gradient(135deg,#38BDF8,#0EA5E9)!important; border:none!important; }
+.btn-outline-primary { border:2px solid #4F46E5!important; color:#4F46E5!important; }
+.btn-outline-primary:hover { background:var(--elite-grad-primary)!important; color:#fff!important; border-color:transparent!important; }
+
+/* ============================ TEXT & BG UTILITIES ============================ */
+.text-primary { color: #4F46E5 !important; }
+.text-hover-primary:hover { color: #4F46E5 !important; }
+.bg-primary { background: var(--elite-grad-primary) !important; }
+.bg-light-primary { background-color: rgba(79,70,229,.10) !important; }
+.bg-light-success { background-color: rgba(5,150,105,.12) !important; }
+.bg-light-warning { background-color: rgba(212,160,23,.14) !important; }
+.bg-light-info    { background-color: rgba(14,165,233,.12) !important; }
+.bg-light-danger  { background-color: rgba(244,63,94,.12) !important; }
+.text-success { color:#059669!important; } .text-warning{ color:#D4A017!important; }
+.text-info{ color:#0EA5E9!important; } .text-danger{ color:#E11D48!important; }
+
+/* ============================ CARDS ============================ */
+.card {
+    border: none !important;
+    border-radius: var(--elite-radius) !important;
+    box-shadow: var(--elite-shadow-sm);
+    transition: transform .22s ease, box-shadow .22s ease;
+}
+.card:hover { box-shadow: var(--elite-shadow); }
+.card .card-header { border-bottom: 1px solid rgba(16,24,64,.06); }
+
+/* Aksen warna-warni (inset, membulat) di sisi kiri kartu agar tiap blok
+   terasa berbeda. Tidak memakai overflow:hidden agar dropdown tak terpotong. */
+.app-content .row > [class*="col-"] > .card { position: relative; }
+.app-content .row > [class*="col-"]:nth-child(6n+1) > .card::before,
+.app-content .row > [class*="col-"]:nth-child(6n+2) > .card::before,
+.app-content .row > [class*="col-"]:nth-child(6n+3) > .card::before,
+.app-content .row > [class*="col-"]:nth-child(6n+4) > .card::before,
+.app-content .row > [class*="col-"]:nth-child(6n+5) > .card::before,
+.app-content .row > [class*="col-"]:nth-child(6n) > .card::before {
+    content:""; position:absolute; left:0; top:14px; bottom:14px; width:5px;
+    border-radius:0 4px 4px 0;
+}
+.app-content .row > [class*="col-"]:nth-child(6n+1) > .card::before { background:var(--elite-indigo); }
+.app-content .row > [class*="col-"]:nth-child(6n+2) > .card::before { background:var(--elite-emerald); }
+.app-content .row > [class*="col-"]:nth-child(6n+3) > .card::before { background:var(--elite-amber); }
+.app-content .row > [class*="col-"]:nth-child(6n+4) > .card::before { background:var(--elite-blue); }
+.app-content .row > [class*="col-"]:nth-child(6n+5) > .card::before { background:var(--elite-pink); }
+.app-content .row > [class*="col-"]:nth-child(6n)   > .card::before { background:var(--elite-teal); }
+
+/* Stat / symbol labels lebih hidup */
+.symbol-label.bg-primary { background: var(--elite-grad-primary)!important; }
+.symbol-label.bg-success { background: linear-gradient(135deg,#10B981,#059669)!important; }
+.symbol-label.bg-warning { background: var(--elite-grad-gold)!important; }
+.symbol-label.bg-info    { background: linear-gradient(135deg,#38BDF8,#0EA5E9)!important; }
+.symbol-label.bg-danger  { background: linear-gradient(135deg,#FB7185,#E11D48)!important; }
+
+/* ============================ BADGES ============================ */
+.badge { border-radius: 8px; font-weight: 700; letter-spacing:.2px; }
+.badge-primary, .badge.badge-primary { background: var(--elite-grad-primary)!important; color:#fff!important; }
+.badge-light-primary { background: rgba(79,70,229,.12)!important; color:#4F46E5!important; }
+.badge-light-success { background: rgba(5,150,105,.14)!important; color:#059669!important; }
+.badge-light-warning { background: rgba(212,160,23,.16)!important; color:#B7860B!important; }
+.badge-light-info    { background: rgba(14,165,233,.14)!important; color:#0EA5E9!important; }
+.badge-light-danger  { background: rgba(244,63,94,.14)!important; color:#E11D48!important; }
+
+/* ============================ FORMS ============================ */
+.form-control, .form-select {
+    border-radius: 12px !important;
+    border: 1.5px solid #E5E9F2 !important;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #4F46E5 !important;
+    box-shadow: 0 0 0 .2rem rgba(79,70,229,.15) !important;
+}
+.form-control-solid { background-color:#F4F6FB!important; }
+
+/* ============================ TABLES ============================ */
+.table thead th { text-transform: uppercase; letter-spacing:.04em; font-size:.74rem; color:var(--elite-muted)!important; }
+.table.table-row-dashed tr { border-bottom-color: rgba(16,24,64,.07); }
+.table > tbody > tr:hover { background: rgba(79,70,229,.035); }
+
+/* ============================ PAGE TITLE / TOOLBAR ============================ */
+.page-heading, .page-title .text-gray-900 { color: var(--elite-navy)!important; }
+.app-toolbar, #kt_app_toolbar { position: relative; }
+.breadcrumb-item, .breadcrumb-item a { color: var(--elite-muted)!important; }
+
+/* ============================ MENU (sidebar & navbar links) ============================ */
+.menu-state-primary .menu-item .menu-link.active,
+.menu-active-bg .menu-item .menu-link.active {
+    background: var(--elite-grad-primary) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 18px rgba(79,70,229,.3);
+    border-radius: 12px;
+}
+.menu-active-bg .menu-item .menu-link.active .menu-icon i,
+.menu-active-bg .menu-item .menu-link.active .menu-title { color:#fff!important; }
+
+/* ============================ BACKEND SIDEBAR (Aside) ============================ */
+#kt_aside.aside {
+    background: var(--elite-grad-navy) !important;
+    box-shadow: 4px 0 30px rgba(11,31,58,.25);
+}
+#kt_aside .menu-title, #kt_aside .menu-link { color: #C7D2E5 !important; }
+#kt_aside .menu-heading { color: #7E93B6 !important; letter-spacing:.08em; }
+#kt_aside .menu-icon i { color: #93A7C9 !important; }
+#kt_aside .menu-link:hover { background: rgba(255,255,255,.06) !important; border-radius:12px; }
+#kt_aside .menu-link:hover .menu-title,
+#kt_aside .menu-link:hover .menu-icon i { color:#fff !important; }
+#kt_aside .menu-item .menu-link.active { background: var(--elite-grad-gold)!important; color:#241a00!important; box-shadow:0 8px 18px rgba(212,160,23,.4); }
+#kt_aside .menu-item .menu-link.active .menu-title,
+#kt_aside .menu-item .menu-link.active .menu-icon i { color:#241a00 !important; }
+#kt_aside .menu-link.here, #kt_aside .menu-accordion.here.show > .menu-link { background: rgba(255,255,255,.05)!important; border-radius:12px; }
+#kt_aside .separator { border-color: rgba(255,255,255,.08)!important; }
+#kt_aside_footer .btn-primary { background: var(--elite-grad-gold)!important; color:#241a00!important; box-shadow:none!important; }
+
+/* ============================ BACKEND HEADER ============================ */
+#kt_header.header {
+    background: rgba(255,255,255,.85) !important;
+    backdrop-filter: saturate(160%) blur(10px);
+    border-bottom: 1px solid rgba(16,24,64,.06);
+    box-shadow: 0 4px 24px rgba(16,24,64,.05);
+}
+
+/* ============================ FRONTEND NAVBAR (Portal Siswa) ============================ */
+#kt_app_header.app-header {
+    background: var(--elite-grad-navy) !important;
+    box-shadow: 0 8px 30px rgba(11,31,58,.25);
+}
+#kt_app_header .menu-title { color:#C7D2E5 !important; font-weight:600; }
+#kt_app_header .menu-link:hover .menu-title { color:#fff !important; }
+#kt_app_header .menu-link.active { background: rgba(255,255,255,.12) !important; border-radius:10px; }
+#kt_app_header .menu-link.active .menu-title { color: var(--elite-gold-l) !important; }
+#kt_app_header .btn-icon i { color:#C7D2E5 !important; }
+#kt_app_header .btn-icon:hover i { color:#fff !important; }
+
+/* ============================ ALERTS / TABS / PAGINATION ============================ */
+.alert { border-radius: 14px; border:none; }
+.nav-line-tabs .nav-item .nav-link.active,
+.nav-line-tabs .nav-item .nav-link:hover {
+    border-bottom: 3px solid #4F46E5 !important; color:#4F46E5 !important;
+}
+.page-item.active .page-link { background: var(--elite-grad-primary)!important; border:none!important; }
+.page-link { color:#4F46E5; border-radius:8px!important; }
+
+/* ============================ MODAL / DRAWER / SWEETALERT ============================ */
+.modal-content { border-radius: 18px; border:none; box-shadow: var(--elite-shadow-lg); }
+.swal2-popup { border-radius: 18px !important; }
+.swal2-styled.swal2-confirm.btn.btn-primary { background: var(--elite-grad-primary)!important; }
+
+/* ============================ HELPER GRADIENT CLASSES ============================ */
+.elite-hero { background: var(--elite-grad-hero); color:#fff; border-radius: 22px; position:relative; overflow:hidden; }
+.elite-hero::after {
+    content:""; position:absolute; right:-60px; top:-60px; width:260px; height:260px;
+    background: radial-gradient(circle, rgba(244,196,48,.35), transparent 70%); border-radius:50%;
+}
+.elite-gold-text { color: var(--elite-gold); }
+.elite-chip {
+    display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .8rem; border-radius:999px;
+    background: rgba(255,255,255,.15); color:#fff; font-weight:600; font-size:.8rem;
+}
+
+/* ============================ DARK MODE TWEAKS ============================ */
+[data-bs-theme="dark"] body#kt_body { background:#0A1628 !important; }
+[data-bs-theme="dark"] .card { background:#0F2138 !important; }
+[data-bs-theme="dark"] #kt_header.header { background: rgba(10,22,40,.85)!important; }

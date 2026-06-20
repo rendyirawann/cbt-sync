@@ -33,8 +33,28 @@
 						</a>
 					</div>
 					<div class="menu-item me-0 me-lg-2">
+						<a href="{{ route('student.exams.index') }}" class="menu-link {{ request()->routeIs('student.exams.*') ? 'active' : '' }}">
+							<span class="menu-title">Ujian</span>
+						</a>
+					</div>
+					<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.timetable') }}" class="menu-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}">
 							<span class="menu-title">Jadwal</span>
+						</a>
+					</div>
+					<div class="menu-item me-0 me-lg-2">
+						<a href="{{ route('student.rapor.index') }}" class="menu-link {{ request()->routeIs('student.rapor.*') ? 'active' : '' }}">
+							<span class="menu-title">e-Rapor</span>
+						</a>
+					</div>
+					<div class="menu-item me-0 me-lg-2">
+						<a href="{{ route('student.library.index') }}" class="menu-link {{ request()->routeIs('student.library.*') ? 'active' : '' }}">
+							<span class="menu-title">Perpustakaan</span>
+						</a>
+					</div>
+					<div class="menu-item me-0 me-lg-2">
+						<a href="{{ route('portal.leaderboard') }}" class="menu-link {{ request()->routeIs('portal.leaderboard') ? 'active' : '' }}">
+							<span class="menu-title">Peringkat</span>
 						</a>
 					</div>
 					<div class="menu-item me-0 me-lg-2">

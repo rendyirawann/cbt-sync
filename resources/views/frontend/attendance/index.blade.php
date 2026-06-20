@@ -1,4 +1,4 @@
-@extends('backend.layout.app')
+@extends('frontend.layout.app')
 @section('content')
 <div class="content d-flex flex-column flex-column-fluid" id="kt_content">
     <div class="toolbar" id="kt_toolbar">

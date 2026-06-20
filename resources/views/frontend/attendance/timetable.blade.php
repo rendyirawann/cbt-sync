@@ -1,4 +1,4 @@
-@extends('backend.layout.app')
+@extends('frontend.layout.app')
 @section('title', 'Jadwal Pelajaran Mingguan')
 @section('content')
 
