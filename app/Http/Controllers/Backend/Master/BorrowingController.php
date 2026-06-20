@@ -7,6 +7,7 @@ use App\Models\Book;
 use App\Models\BookBorrowing;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BorrowingController extends Controller
 {
@@ -20,26 +21,32 @@ class BorrowingController extends Controller
         ]);
 
         try {
-            $book = Book::findOrFail($request->book_id);
+            // Bungkus dalam transaksi + kunci baris (lockForUpdate) agar dua
+            // peminjaman bersamaan tidak menyebabkan stok minus (race condition).
+            DB::transaction(function () use ($request) {
+                $book = Book::lockForUpdate()->findOrFail($request->book_id);
 
-            // Check stock availability
-            if ($book->available_stock <= 0) {
-                return redirect()->back()->with('error', 'Gagal meminjam: Stok buku "' . $book->title . '" saat ini sedang kosong/habis dipinjam.');
-            }
+                // Check stock availability
+                if ($book->available_stock <= 0) {
+                    throw new \RuntimeException('Gagal meminjam: Stok buku "' . $book->title . '" saat ini sedang kosong/habis dipinjam.');
+                }
 
-            // Create borrowing
-            BookBorrowing::create([
-                'student_id' => $request->student_id,
-                'book_id' => $request->book_id,
-                'borrowed_at' => $request->borrowed_at,
-                'due_date' => $request->due_date,
-                'status' => 'borrowed',
-            ]);
+                // Create borrowing
+                BookBorrowing::create([
+                    'student_id' => $request->student_id,
+                    'book_id' => $request->book_id,
+                    'borrowed_at' => $request->borrowed_at,
+                    'due_date' => $request->due_date,
+                    'status' => 'borrowed',
+                ]);
 
-            // Decrement available stock
-            $book->decrement('available_stock');
+                // Decrement available stock
+                $book->decrement('available_stock');
+            });
 
             return redirect()->back()->with('success', 'Transaksi peminjaman buku berhasil didaftarkan!');
+        } catch (\RuntimeException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal memproses peminjaman: ' . $e->getMessage());
         }
@@ -48,28 +55,25 @@ class BorrowingController extends Controller
     public function returnBook($id)
     {
         try {
-            $borrowing = BookBorrowing::findOrFail($id);
+            $borrowing = BookBorrowing::with('book')->findOrFail($id);
             if ($borrowing->returned_at) {
                 return redirect()->back()->with('error', 'Buku ini sudah dikembalikan sebelumnya.');
             }
 
-            $returnedDate = Carbon::now()->toDateString();
-            $status = 'returned';
+            DB::transaction(function () use ($borrowing) {
+                $borrowing->update([
+                    'returned_at' => Carbon::now()->toDateString(),
+                    'status' => 'returned',
+                ]);
 
-            // Check if returned past due date
-            if (Carbon::now()->gt(Carbon::parse($borrowing->due_date))) {
-                $status = 'overdue'; // Flag it as overdue return or keep returned with status adjustments
-            }
+                // Kembalikan stok secara atomik (jika data buku masih ada).
+                if ($borrowing->book) {
+                    Book::where('id', $borrowing->book_id)->increment('available_stock');
+                }
+            });
 
-            $borrowing->update([
-                'returned_at' => $returnedDate,
-                'status' => 'returned' // standard returned flag
-            ]);
-
-            // Increment available stock
-            $borrowing->book->increment('available_stock');
-
-            return redirect()->back()->with('success', 'Buku "' . $borrowing->book->title . '" berhasil dikembalikan!');
+            $bookTitle = $borrowing->book?->title ?? 'tersebut';
+            return redirect()->back()->with('success', 'Buku "' . $bookTitle . '" berhasil dikembalikan!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal memproses pengembalian buku: ' . $e->getMessage());
         }

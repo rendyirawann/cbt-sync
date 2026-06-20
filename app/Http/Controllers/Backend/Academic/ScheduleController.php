@@ -13,7 +13,12 @@ class ScheduleController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $query = Schedule::with(['teachingAssignment.classRoom', 'teachingAssignment.subject', 'teachingAssignment.teacher']);
+
+        if ($user->hasRole('Guru') && !$user->teacher) {
+            return redirect()->route('dashboard')->with('error', 'Profil guru tidak ditemukan.');
+        }
+
+        $query = Schedule::with(['teachingAssignment.classRoom', 'teachingAssignment.subject', 'teachingAssignment.teacher.user']);
 
         if ($user->hasRole('Guru')) {
             $teacherId = $user->teacher->id;

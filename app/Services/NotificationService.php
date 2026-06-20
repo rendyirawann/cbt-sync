@@ -21,7 +21,7 @@ class NotificationService
         if (!$teachingAssignment) return;
 
         $classId = $teachingAssignment->class_room_id;
-        $subjectName = $teachingAssignment->subject->name ?? 'Mata Pelajaran';
+        $subjectName = $teachingAssignment->subject?->name ?? 'Mata Pelajaran';
 
         // Get all students in the class
         $classStudents = ClassStudent::where('class_room_id', $classId)
@@ -48,27 +48,51 @@ class NotificationService
                 Log::error('Gagal membuat notifikasi in-app tugas: ' . $e->getMessage());
             }
 
-            // 2. Send Parent Email
+            // 2. Send Parent Email (di-queue agar tidak memblokir request)
             if ($student->parent_email) {
-                try {
-                    $emailData = [
-                        'parentName' => $student->parent_name ?: 'Orang Tua/Wali',
-                        'studentName' => $student->user->name,
-                        'subjectName' => $subjectName,
-                        'assignmentTitle' => $assignment->title,
-                        'dueDate' => $assignment->due_date,
-                        'description' => $assignment->description,
-                        'isReminder' => false,
-                        'loginUrl' => route('login')
-                    ];
+                $emailData = [
+                    'parentName' => $student->parent_name ?: 'Orang Tua/Wali',
+                    'studentName' => $student->user->name,
+                    'subjectName' => $subjectName,
+                    'assignmentTitle' => $assignment->title,
+                    'dueDate' => $assignment->due_date,
+                    'description' => $assignment->description,
+                    'isReminder' => false,
+                    'loginUrl' => route('login')
+                ];
 
-                    Mail::send('emails.parent_assignment_notification', $emailData, function ($message) use ($student) {
-                        $message->to($student->parent_email)
-                            ->subject('Pemberitahuan Tugas Baru: ' . $student->user->name);
-                    });
-                } catch (\Exception $e) {
-                    Log::error('Gagal mengirim email orang tua untuk tugas baru: ' . $e->getMessage());
-                }
+                self::queueParentMail(
+                    'emails.parent_assignment_notification',
+                    $emailData,
+                    $student->parent_email,
+                    'Pemberitahuan Tugas Baru: ' . $student->user->name
+                );
+            }
+        }
+    }
+
+    /**
+     * Kirim email orang tua melalui queue (database) agar SMTP tidak
+     * memblokir request. Bila queue gagal (mis. tabel jobs tidak ada),
+     * fallback ke pengiriman sinkron — keduanya dibungkus try/catch supaya
+     * tidak pernah menyebabkan 500 pada alur utama.
+     */
+    private static function queueParentMail(string $view, array $data, string $to, string $subject): void
+    {
+        try {
+            dispatch(function () use ($view, $data, $to, $subject) {
+                Mail::send($view, $data, function ($message) use ($to, $subject) {
+                    $message->to($to)->subject($subject);
+                });
+            })->afterResponse();
+        } catch (\Throwable $e) {
+            Log::error('Gagal men-queue email orang tua: ' . $e->getMessage());
+            try {
+                Mail::send($view, $data, function ($message) use ($to, $subject) {
+                    $message->to($to)->subject($subject);
+                });
+            } catch (\Throwable $e2) {
+                Log::error('Gagal mengirim email orang tua (fallback): ' . $e2->getMessage());
             }
         }
     }
@@ -84,7 +108,7 @@ class NotificationService
         if (!$teachingAssignment) return;
 
         $classId = $teachingAssignment->class_room_id;
-        $subjectName = $teachingAssignment->subject->name ?? 'Mata Pelajaran';
+        $subjectName = $teachingAssignment->subject?->name ?? 'Mata Pelajaran';
 
         // Get all students in the class
         $classStudents = ClassStudent::where('class_room_id', $classId)
@@ -111,26 +135,24 @@ class NotificationService
                 Log::error('Gagal membuat notifikasi in-app materi: ' . $e->getMessage());
             }
 
-            // 2. Send Parent Email
+            // 2. Send Parent Email (di-queue agar tidak memblokir request)
             if ($student->parent_email) {
-                try {
-                    $emailData = [
-                        'parentName' => $student->parent_name ?: 'Orang Tua/Wali',
-                        'studentName' => $student->user->name,
-                        'subjectName' => $subjectName,
-                        'moduleTitle' => $module->title,
-                        'zoomLink' => $module->zoom_link,
-                        'description' => $module->description,
-                        'loginUrl' => route('login')
-                    ];
+                $emailData = [
+                    'parentName' => $student->parent_name ?: 'Orang Tua/Wali',
+                    'studentName' => $student->user->name,
+                    'subjectName' => $subjectName,
+                    'moduleTitle' => $module->title,
+                    'zoomLink' => $module->zoom_link,
+                    'description' => $module->description,
+                    'loginUrl' => route('login')
+                ];
 
-                    Mail::send('emails.parent_announcement_notification', $emailData, function ($message) use ($student) {
-                        $message->to($student->parent_email)
-                            ->subject('Materi & Pengumuman Baru: ' . $student->user->name);
-                    });
-                } catch (\Exception $e) {
-                    Log::error('Gagal mengirim email orang tua untuk materi baru: ' . $e->getMessage());
-                }
+                self::queueParentMail(
+                    'emails.parent_announcement_notification',
+                    $emailData,
+                    $student->parent_email,
+                    'Materi & Pengumuman Baru: ' . $student->user->name
+                );
             }
         }
     }
@@ -143,7 +165,7 @@ class NotificationService
         if (!$student->user) return;
 
         $teachingAssignment = $assignment->teachingAssignment;
-        $subjectName = $teachingAssignment->subject->name ?? 'Mata Pelajaran';
+        $subjectName = $teachingAssignment?->subject?->name ?? 'Mata Pelajaran';
 
         // 1. Create In-App Notification
         try {

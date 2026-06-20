@@ -17,7 +17,12 @@ class DashboardAdminController extends Controller
     public function index()
     {
         $user = auth()->user();
-        
+
+        // Siswa tidak boleh berada di dashboard admin — arahkan ke portal mereka.
+        if ($user->hasRole('Siswa')) {
+            return redirect()->route('student.dashboard');
+        }
+
         if ($user->hasRole('Superadmin')) {
             $stats = [
                 'type' => 'admin',
@@ -32,6 +37,12 @@ class DashboardAdminController extends Controller
                 ->take(5)
                 ->get();
         } elseif ($user->hasRole('Guru')) {
+            if (!$user->teacher) {
+                return view('backend.dashboard.index', [
+                    'stats' => ['type' => 'guru'],
+                    'recentData' => collect(),
+                ])->with('error', 'Profil guru belum lengkap. Hubungi administrator.');
+            }
             $teacherId = $user->teacher->id;
             $stats = [
                 'type' => 'guru',
@@ -49,8 +60,14 @@ class DashboardAdminController extends Controller
                 $q->where('teacher_id', $teacherId);
             })->with(['teachingAssignment.subject', 'teachingAssignment.classRoom'])->latest()->take(5)->get();
         } else {
-            // Role Siswa
+            // User tanpa role yang dikenali (fallback aman).
             $student = $user->student;
+            if (!$student) {
+                return view('backend.dashboard.index', [
+                    'stats' => ['type' => 'unknown'],
+                    'recentData' => collect(),
+                ]);
+            }
             $classId = ClassStudent::where('student_id', $student->id)
                 ->whereHas('academicYear', function($q) { $q->where('is_active', 1); })
                 ->value('class_room_id');

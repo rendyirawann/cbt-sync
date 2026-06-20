@@ -16,6 +16,9 @@ class AssignmentController extends Controller
         $query = Assignment::with(['teachingAssignment.teacher.user', 'teachingAssignment.subject', 'teachingAssignment.classRoom']);
 
         if ($user->hasRole('Guru')) {
+            if (!$user->teacher) {
+                return redirect()->route('dashboard')->with('error', 'Profil guru tidak ditemukan.');
+            }
             $teacherId = $user->teacher->id;
             $query->whereHas('teachingAssignment', function($q) use ($teacherId) {
                 $q->where('teacher_id', $teacherId);

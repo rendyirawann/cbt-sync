@@ -83,22 +83,34 @@ class LeaderboardController extends Controller
 
         $leaderboard = [];
 
+        // Hitung agregat untuk SELURUH siswa kelas dalam 2 query (bukan 2 per siswa).
+        $studentIds = $classStudents->pluck('student_id')->filter()->all();
+
+        $onTimeCounts = AssignmentSubmission::whereIn('student_id', $studentIds)
+            ->whereNotNull('submitted_at')
+            ->whereHas('assignment', function ($query) {
+                $query->whereColumn('assignment_submissions.submitted_at', '<=', 'assignments.due_date');
+            })
+            ->selectRaw('student_id, COUNT(*) as cnt')
+            ->groupBy('student_id')
+            ->pluck('cnt', 'student_id');
+
+        $scoreSums = AssignmentSubmission::whereIn('student_id', $studentIds)
+            ->selectRaw('student_id, COALESCE(SUM(score), 0) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
         foreach ($classStudents as $cs) {
             $s = $cs->student;
             if (!$s || !$s->user) continue;
 
-            // 1. Calculate On-Time Submissions
-            $onTimeSubmissions = AssignmentSubmission::where('student_id', $s->id)
-                ->whereNotNull('submitted_at')
-                ->whereHas('assignment', function ($query) {
-                    $query->whereColumn('assignment_submissions.submitted_at', '<=', 'assignments.due_date');
-                })
-                ->count();
+            // 1. On-Time Submissions (dari hasil agregat)
+            $onTimeSubmissions = (int) ($onTimeCounts[$s->id] ?? 0);
 
-            // 2. Sum of Scores
-            $totalScore = AssignmentSubmission::where('student_id', $s->id)->sum('score') ?: 0;
+            // 2. Sum of Scores (dari hasil agregat)
+            $totalScore = (float) ($scoreSums[$s->id] ?? 0);
 
-            // 3. Count of Badges
+            // 3. Count of Badges (sudah di-eager-load)
             $badgeCount = $s->badges->count();
 
             // Calculate Gamification Rank Points

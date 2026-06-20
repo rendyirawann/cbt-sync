@@ -27,11 +27,12 @@ class LoginSessionController extends Controller
 {
     $userId = Auth::id();
 
+    // Serahkan query builder (bukan ->get()) agar DataTables melakukan
+    // paginasi & pencarian di level database, bukan memuat semua ke memori.
     $data = Activity::with('causer')
         ->where('causer_id', $userId)
         ->whereIn('log_name', ['login', 'logout'])
-        ->orderBy('created_at', 'desc')
-        ->get();
+        ->orderBy('created_at', 'desc');
 
     return datatables()->of($data)
 

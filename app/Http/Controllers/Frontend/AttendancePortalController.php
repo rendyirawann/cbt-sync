@@ -22,9 +22,17 @@ class AttendancePortalController extends Controller
         $dayOfWeek = $now->dayOfWeekIso; // 1-7
 
         $settings = AttendanceSetting::first();
-        
+        if (!$settings) {
+            return redirect()->route('student.dashboard')
+                ->with('error', 'Pengaturan absensi belum dikonfigurasi oleh administrator.');
+        }
+
         // Get Student and their Class
         $student = $user->student;
+        if (!$student) {
+            return redirect()->route('student.dashboard')
+                ->with('error', 'Profil siswa tidak ditemukan.');
+        }
         $classIds = $student->classStudents->pluck('class_room_id');
 
         // Check Daily Attendance (Datang/Pulang)
@@ -39,7 +47,7 @@ class AttendancePortalController extends Controller
             ->first();
 
         // Get Schedules for Today based on Student's Classes
-        $schedules = Schedule::with(['teachingAssignment.subject', 'teachingAssignment.teacher'])
+        $schedules = Schedule::with(['teachingAssignment.subject', 'teachingAssignment.teacher.user'])
             ->whereIn('teaching_assignment_id', function($query) use ($classIds) {
                 $query->select('id')
                     ->from('teaching_assignments')
@@ -50,14 +58,17 @@ class AttendancePortalController extends Controller
             ->orderBy('start_time', 'asc')
             ->get();
 
+        // Preload today's "mapel" attendances once (hindari N+1 di dalam loop).
+        $attendedToday = Attendance::where('user_id', $user->id)
+            ->where('type', 'mapel')
+            ->whereDate('created_at', $today)
+            ->get()
+            ->keyBy('schedule_id');
+
         // Check which subjects have been attended
         foreach ($schedules as $key => $s) {
-            $s->is_attended = Attendance::where('user_id', $user->id)
-                ->where('type', 'mapel')
-                ->where('schedule_id', $s->id)
-                ->whereDate('created_at', $today)
-                ->first();
-            
+            $s->is_attended = $attendedToday->get($s->id);
+
             $startTime = Carbon::createFromFormat('H:i:s', $s->start_time);
             $endTime = Carbon::createFromFormat('H:i:s', $s->end_time);
 
@@ -91,6 +102,10 @@ class AttendancePortalController extends Controller
         $now = Carbon::now();
         $today = Carbon::today();
         $settings = AttendanceSetting::first();
+
+        if (!$settings) {
+            return response()->json(['message' => 'Pengaturan absensi belum dikonfigurasi. Hubungi administrator.'], 422);
+        }
 
         if ($type == 'datang') {
             // Check if already attended
@@ -178,6 +193,9 @@ class AttendancePortalController extends Controller
 
             // Find next schedule to determine limit
             $student = $user->student;
+            if (!$student) {
+                return response()->json(['message' => 'Profil siswa tidak ditemukan.'], 422);
+            }
             $classIds = $student->classStudents->pluck('class_room_id');
             $dayOfWeek = $now->dayOfWeekIso;
 
@@ -231,9 +249,13 @@ class AttendancePortalController extends Controller
     {
         $user = Auth::user();
         $student = $user->student;
+        if (!$student) {
+            return redirect()->route('student.dashboard')
+                ->with('error', 'Profil siswa tidak ditemukan.');
+        }
         $classIds = $student->classStudents->pluck('class_room_id');
 
-        $schedules = Schedule::with(['teachingAssignment.subject', 'teachingAssignment.teacher', 'teachingAssignment.classRoom'])
+        $schedules = Schedule::with(['teachingAssignment.subject', 'teachingAssignment.teacher.user', 'teachingAssignment.classRoom'])
             ->whereIn('teaching_assignment_id', function($query) use ($classIds) {
                 $query->select('id')
                     ->from('teaching_assignments')

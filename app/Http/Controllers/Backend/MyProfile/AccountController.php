@@ -213,6 +213,9 @@ class AccountController extends Controller
     {
         $user = Auth::user();
         $student = $user->student;
+        if (!$student) {
+            return response()->json(['error' => 'Profil siswa tidak ditemukan.'], 403);
+        }
         $code = $request->code;
         $type = $request->type;
 

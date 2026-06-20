@@ -121,6 +121,11 @@ class SocialLoginController extends Controller
         Auth::login($user, true);
         request()->session()->regenerate();
 
+        // Siswa diarahkan ke portal-nya, bukan ke dashboard admin.
+        if ($user->hasRole('Siswa')) {
+            return redirect()->route('student.dashboard');
+        }
+
         return redirect()->intended(route('dashboard'));
     }
 

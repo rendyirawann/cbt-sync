@@ -13,31 +13,28 @@ class ChatController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
-        // Get unique users that have chatted with current user
-        $chatLog = Chat::where('sender_id', $user->id)
-            ->orWhere('receiver_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
 
-        $contactIds = $chatLog->map(function($chat) use ($user) {
-            return $chat->sender_id == $user->id ? $chat->receiver_id : $chat->sender_id;
-        })->unique();
+        // Ambil daftar id lawan bicara langsung di DB (tanpa memuat seluruh
+        // riwayat chat ke memori).
+        $sentTo = Chat::where('sender_id', $user->id)->distinct()->pluck('receiver_id');
+        $receivedFrom = Chat::where('receiver_id', $user->id)->distinct()->pluck('sender_id');
+        $contactIds = $sentTo->merge($receivedFrom)->unique()->filter()->values();
 
-        $recentContacts = User::whereIn('id', $contactIds)->get();
+        // Eager-load 'roles' karena view memanggil $contact->hasRole(...) per kontak.
+        $recentContacts = User::with('roles')->whereIn('id', $contactIds)->get();
 
         // If student, also show all their teachers as potential contacts
         $allContacts = collect($recentContacts);
-        if ($user->hasRole('Siswa')) {
-            $student = $user->student;
-            $classId = \App\Models\ClassStudent::where('student_id', $student->id)
+        if ($user->hasRole('Siswa') && $user->student) {
+            $classId = \App\Models\ClassStudent::where('student_id', $user->student->id)
                 ->whereHas('academicYear', function($q) { $q->where('is_active', 1); })
                 ->value('class_room_id');
-            
-            $teachers = User::whereHas('teacher.teachingAssignments', function($q) use ($classId) {
-                $q->where('class_room_id', $classId);
-            })->get();
-            
+
+            $teachers = User::with('roles')
+                ->whereHas('teacher.teachingAssignments', function($q) use ($classId) {
+                    $q->where('class_room_id', $classId);
+                })->get();
+
             $allContacts = $allContacts->merge($teachers)->unique('id');
         }
 

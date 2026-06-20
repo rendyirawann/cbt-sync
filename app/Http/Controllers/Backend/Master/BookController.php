@@ -18,7 +18,7 @@ class BookController extends Controller
             // Student portal view
             $student = $user->student;
             if (!$student) {
-                return redirect()->route('dashboard')->with('error', 'Profil siswa tidak ditemukan.');
+                return redirect()->route('student.dashboard')->with('error', 'Profil siswa tidak ditemukan.');
             }
             $myBorrowings = \App\Models\BookBorrowing::with(['book'])
                 ->where('student_id', $student->id)

@@ -29,19 +29,26 @@ class AnalyticsController extends Controller
         $daysCount = 7;
         $trendData = [];
         $trendLabels = [];
-        
+
+        // Satu query agregat untuk seluruh rentang 7 hari (bukan 7 query terpisah).
+        $startDate = Carbon::now()->subDays($daysCount - 1)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+
+        $viewsByDate = ModuleView::query()
+            ->when($selectedClassId, function ($q) use ($selectedClassId) {
+                $q->whereHas('student.classStudents', function ($q2) use ($selectedClassId) {
+                    $q2->where('class_room_id', $selectedClassId);
+                });
+            })
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
+            ->groupBy('d')
+            ->pluck('c', 'd');
+
         for ($i = $daysCount - 1; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
             $trendLabels[] = $date->format('d M');
-            
-            // Query module views count for this date
-            $count = ModuleView::whereDate('created_at', $date->toDateString());
-            if ($selectedClassId) {
-                $count->whereHas('student.classStudents', function($q) use ($selectedClassId) {
-                    $q->where('class_room_id', $selectedClassId);
-                });
-            }
-            $trendData[] = $count->count();
+            $trendData[] = (int) ($viewsByDate[$date->toDateString()] ?? 0);
         }
 
         // Fallback for visual demonstration if no database views yet
@@ -53,12 +60,16 @@ class AnalyticsController extends Controller
         $classScoreLabels = [];
         $classScoreData = [];
 
-        foreach ($classRooms as $class) {
-            $avgScore = AssignmentSubmission::whereHas('student.classStudents', function($q) use ($class) {
-                $q->where('class_room_id', $class->id);
-            })->avg('score');
+        // Satu query agregat: rata-rata nilai per kelas (bukan 1 query per kelas).
+        $avgByClass = AssignmentSubmission::query()
+            ->join('class_students', 'class_students.student_id', '=', 'assignment_submissions.student_id')
+            ->selectRaw('class_students.class_room_id as cid, AVG(assignment_submissions.score) as avg_score')
+            ->groupBy('class_students.class_room_id')
+            ->pluck('avg_score', 'cid');
 
+        foreach ($classRooms as $class) {
             $classScoreLabels[] = $class->name;
+            $avgScore = $avgByClass[$class->id] ?? null;
             $classScoreData[] = $avgScore ? round($avgScore, 1) : 0;
         }
 
