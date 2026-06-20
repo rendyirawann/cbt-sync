@@ -166,8 +166,15 @@
         .hint{position:fixed;bottom:22px;right:24px;z-index:40;display:flex;align-items:center;gap:8px;color:var(--muted);
             font-size:12.5px;font-weight:600;background:rgba(255,255,255,.7);padding:8px 14px;border-radius:999px;backdrop-filter:blur(6px)}
 
+        /* ---------- LAYAR MENENGAH (tablet landscape / laptop kecil): grid jangan terlalu rapat ---------- */
+        @media (min-width:1025px) and (max-width:1280px){
+            .panel{padding-left:clamp(20px,4vw,56px);padding-right:clamp(20px,4vw,56px)}
+            .price-grid{grid-template-columns:repeat(2,1fr)}
+            .res-grid{grid-template-columns:repeat(2,1fr)}
+        }
+
         /* ---------- LAYAR PENDEK: rapatkan agar konten tidak terpotong ---------- */
-        @media (min-width:993px) and (max-height:780px){
+        @media (min-width:1025px) and (max-height:780px){
             .panel{padding-top:82px;padding-bottom:26px}
             .h-title{font-size:clamp(22px,3vw,38px)}
             .section-head{margin-bottom:18px}
@@ -183,8 +190,8 @@
             .res{padding:16px}
         }
 
-        /* ---------- MOBILE: vertical fallback (Swiper tidak di-init) ---------- */
-        @media (max-width:992px){
+        /* ---------- MOBILE/TABLET ≤1024 (incl. iPad portrait): vertical fallback, Swiper tidak di-init ---------- */
+        @media (max-width:1024px){
             html,body{overflow:auto}
             .swiper{height:auto;overflow:visible}
             .swiper-wrapper{display:block;transform:none !important;height:auto}
@@ -195,6 +202,8 @@
             .stats{gap:30px}
             .swiper-button-prev,.swiper-button-next,.swiper-pagination,.hint{display:none}
             .nav-links{display:none}.nav-toggle{display:block}
+            .nav-cta .btn{display:none}   /* tombol Login/Portal pindah ke drawer hamburger agar nav tidak melimpah di HP */
+            .nav{padding:0 18px}
             .plan.feat{transform:none}
             .card-float{position:static;margin-top:12px;display:inline-flex}
         }
@@ -504,7 +513,7 @@
         }
         function destroySwiper(){ if (swiper){ swiper.destroy(true, true); swiper = null; } }
 
-        const mq = window.matchMedia('(min-width: 993px)');
+        const mq = window.matchMedia('(min-width: 1025px)');
         function handleMq(e){ e.matches ? initSwiper() : destroySwiper(); }
         handleMq(mq);
         mq.addEventListener('change', handleMq);
