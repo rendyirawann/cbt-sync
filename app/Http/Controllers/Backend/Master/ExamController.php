@@ -106,6 +106,11 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($id);
         $this->authorizeExam($exam);
+
+        if ($exam->hasStartedAttempts()) {
+            return redirect()->back()->with('error', 'Ujian tidak bisa dihapus karena sudah ada siswa yang memulai/mengerjakan.');
+        }
+
         $exam->delete();
 
         return redirect()->route('exams.index')->with('success', 'Ujian berhasil dihapus.');
@@ -118,6 +123,11 @@ class ExamController extends Controller
 
         if ($exam->status === 'draft' && $exam->questions->count() === 0) {
             return redirect()->back()->with('error', 'Tidak bisa menerbitkan ujian tanpa soal.');
+        }
+
+        // Sudah ada peserta yang memulai → ujian terkunci, tidak boleh ditarik ke draft.
+        if ($exam->status === 'published' && $exam->hasStartedAttempts()) {
+            return redirect()->back()->with('error', 'Ujian tidak bisa ditarik ke draft karena sudah ada siswa yang memulai ujian.');
         }
 
         $exam->update(['status' => $exam->status === 'draft' ? 'published' : 'draft']);

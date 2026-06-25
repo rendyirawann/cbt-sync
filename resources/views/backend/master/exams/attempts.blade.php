@@ -14,6 +14,12 @@
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
+        @if($session->exam->status === 'draft')
+        <div class="alert bg-light-warning border border-warning border-dashed mb-6 p-4">
+            <i class="ki-outline ki-information-5 fs-3 text-warning me-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+            Ujian ini masih <b>DRAFT</b> — siswa belum bisa melihat/mengerjakan. Buka halaman ujian lalu klik <b>Terbitkan</b>.
+        </div>
+        @endif
         <div class="card">
             <div class="card-body py-4">
                 <div class="table-responsive">

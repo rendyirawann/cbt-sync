@@ -58,6 +58,11 @@ class ExamGradingController extends Controller
         $attempt = ExamAttempt::with(['session.exam.questions', 'answers'])->findOrFail($attemptId);
         $this->authorizeExam($attempt->session->exam);
 
+        // Setelah dinilai (graded), hanya Superadmin yang boleh mengubah (koreksi). Guru tidak.
+        if ($attempt->status === 'graded' && !auth()->user()->hasRole('Superadmin')) {
+            return redirect()->back()->with('error', 'Nilai sudah final. Hanya Superadmin yang dapat mengubah nilai.');
+        }
+
         $exam = $attempt->session->exam;
         $count = $exam->questions->count();
         $scores = $request->input('scores', []);     // [question_id => nilai]

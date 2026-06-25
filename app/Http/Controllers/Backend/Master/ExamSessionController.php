@@ -43,6 +43,7 @@ class ExamSessionController extends Controller
             'shuffle_options' => $request->has('shuffle_options'),
             'show_result' => $request->has('show_result'),
             'status' => 'scheduled',
+            'is_active' => true,
         ]);
 
         if ($request->participant_mode === 'manual') {
@@ -66,6 +67,10 @@ class ExamSessionController extends Controller
         $session = ExamSession::with('exam')->findOrFail($id);
         $this->authorizeExam($session->exam);
 
+        if ($session->hasStartedAttempts()) {
+            return redirect()->back()->with('error', 'Sesi tidak bisa diubah karena sudah ada peserta yang memulai.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'starts_at' => 'required|date',
@@ -88,10 +93,31 @@ class ExamSessionController extends Controller
     {
         $session = ExamSession::with('exam')->findOrFail($id);
         $this->authorizeExam($session->exam);
+
+        if ($session->hasStartedAttempts()) {
+            return redirect()->back()->with('error', 'Sesi tidak bisa dihapus karena sudah ada peserta yang memulai ujian.');
+        }
+
         $examId = $session->exam_id;
         $session->delete();
 
         return redirect()->route('exams.show', $examId)->with('success', 'Sesi dihapus.');
+    }
+
+    /** Aktif/Nonaktifkan sesi — hanya boleh selama belum ada peserta yang memulai. */
+    public function toggleActive($id)
+    {
+        $session = ExamSession::with('exam')->findOrFail($id);
+        $this->authorizeExam($session->exam);
+
+        if ($session->hasStartedAttempts()) {
+            return redirect()->back()->with('error', 'Status sesi tidak bisa diubah karena sudah ada peserta yang memulai.');
+        }
+
+        $session->update(['is_active' => !$session->is_active]);
+
+        return redirect()->back()->with('success',
+            $session->is_active ? 'Sesi diaktifkan.' : 'Sesi dinonaktifkan (tersembunyi dari siswa).');
     }
 
     private function notifyParticipants(ExamSession $session, string $title, string $message): void

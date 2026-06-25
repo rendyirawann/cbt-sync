@@ -27,6 +27,7 @@ class ExamPortalController extends Controller
 
         $sessions = ExamSession::with(['exam.teachingAssignment.subject', 'classRoom'])
             ->whereHas('exam', fn ($q) => $q->where('status', 'published'))
+            ->where('is_active', true)
             ->where(function ($q) use ($classIds, $student) {
                 $q->whereIn('class_room_id', $classIds)
                   ->orWhereHas('students', fn ($s) => $s->where('students.id', $student->id));
@@ -45,7 +46,7 @@ class ExamPortalController extends Controller
     public function start($sessionId)
     {
         $student = auth()->user()->student;
-        $session = ExamSession::with('exam')->findOrFail($sessionId);
+        $session = ExamSession::with('exam.questions.options')->findOrFail($sessionId);
 
         if (!$this->isEligible($session, $student)) {
             return redirect()->route('student.exams.index')->with('error', 'Anda tidak terdaftar pada ujian ini.');
@@ -69,8 +70,9 @@ class ExamPortalController extends Controller
         }
 
         $now = Carbon::now();
-        $endByDuration = $now->copy()->addMinutes($session->duration_minutes);
-        $ends = $endByDuration->lt($session->ends_at) ? $endByDuration : $session->ends_at;
+        // Timer = durasi penuh sejak siswa MULAI. Jam sesi (starts_at–ends_at) hanya
+        // membatasi KAPAN siswa boleh masuk; durasi tidak dipotong walau telat masuk.
+        $ends = $now->copy()->addMinutes($session->duration_minutes);
 
         ExamAttempt::create([
             'exam_session_id' => $session->id,
@@ -78,16 +80,42 @@ class ExamPortalController extends Controller
             'started_at' => $now,
             'ends_at' => $ends,
             'status' => 'in_progress',
+            // Urutan soal & opsi DIKUNCI saat mulai → tidak teracak ulang saat refresh/pindah soal.
+            'layout' => json_encode($this->buildLayout($session)),
         ]);
 
         return redirect()->route('student.exams.attempt', $session->id);
+    }
+
+    /** Tentukan urutan soal & opsi (acak bila diaktifkan) — disimpan sekali per attempt. */
+    private function buildLayout(ExamSession $session): array
+    {
+        $questions = $session->exam->questions;
+        $qOrder = $session->shuffle_questions
+            ? $questions->shuffle()->pluck('id')->all()
+            : $questions->pluck('id')->all();
+
+        $oOrder = [];
+        foreach ($questions as $q) {
+            if ($q->type === 'mc') {
+                $opts = $session->shuffle_options ? $q->options->shuffle() : $q->options;
+                $oOrder[$q->id] = $opts->pluck('id')->all();
+            }
+        }
+
+        return ['q' => $qOrder, 'o' => $oOrder];
     }
 
     /** Halaman pengerjaan. */
     public function attempt($sessionId)
     {
         $student = auth()->user()->student;
-        $session = ExamSession::with('exam.questions.options')->findOrFail($sessionId);
+        $session = ExamSession::with([
+            'exam.questions.options',
+            'exam.teachingAssignment.subject',
+            'exam.teachingAssignment.classRoom',
+            'classRoom',
+        ])->findOrFail($sessionId);
 
         if (!$this->isEligible($session, $student)) {
             return redirect()->route('student.exams.index')->with('error', 'Anda tidak terdaftar pada ujian ini.');
@@ -109,15 +137,30 @@ class ExamPortalController extends Controller
         }
 
         $exam = $session->exam;
-        $questions = $exam->questions;
-        if ($session->shuffle_questions) {
-            $questions = $questions->shuffle(crc32($attempt->id));
+
+        // Urutan terkunci dari saat mulai (disimpan di attempt->layout). Fallback bila kosong.
+        $layout = $attempt->layout ? json_decode($attempt->layout, true) : null;
+        if (!$layout || empty($layout['q'])) {
+            $layout = $this->buildLayout($session);
+            $attempt->update(['layout' => json_encode($layout)]);
+        }
+
+        $byId = $exam->questions->keyBy('id');
+        $questions = collect($layout['q'])->map(fn ($qid) => $byId->get($qid))->filter()->values();
+
+        // Susun ulang opsi tiap soal sesuai urutan tersimpan (tidak diacak ulang).
+        foreach ($questions as $q) {
+            if ($q->type === 'mc' && !empty($layout['o'][$q->id])) {
+                $optById = $q->options->keyBy('id');
+                $ordered = collect($layout['o'][$q->id])->map(fn ($oid) => $optById->get($oid))->filter()->values();
+                $q->setRelation('options', $ordered);
+            }
         }
 
         $answers = $attempt->answers()->get()->keyBy('question_id');
         $remaining = max(0, Carbon::now()->diffInSeconds($attempt->ends_at, false));
 
-        return view('frontend.exams.attempt', compact('session', 'exam', 'attempt', 'questions', 'answers', 'remaining'));
+        return view('frontend.exams.attempt', compact('session', 'exam', 'attempt', 'questions', 'answers', 'remaining') + ['hideChrome' => true]);
     }
 
     /** Autosave satu jawaban (AJAX JSON). */

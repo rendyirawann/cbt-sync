@@ -130,6 +130,7 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student'])->group(function 
     Route::post('/admin/exam-sessions', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'store'])->name('exam-sessions.store');
     Route::put('/admin/exam-sessions/{id}', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'update'])->name('exam-sessions.update');
     Route::delete('/admin/exam-sessions/{id}', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'destroy'])->name('exam-sessions.destroy');
+    Route::post('/admin/exam-sessions/{id}/toggle-active', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'toggleActive'])->name('exam-sessions.toggle-active');
     Route::get('/admin/exam-sessions/{id}/attempts', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'attempts'])->name('exam-sessions.attempts');
     Route::get('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'grade'])->name('exam-attempts.grade');
     Route::post('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'storeGrade'])->name('exam-attempts.grade.store');

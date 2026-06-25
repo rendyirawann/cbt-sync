@@ -11,7 +11,7 @@
 		<link href="{{ asset('assets/plugins/custom/datatables/datatables.bundle.css') }}" rel="stylesheet" type="text/css" />
 		<link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
 		<link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
-		<link href="{{ asset('assets/css/elite-theme.css') }}?v=1" rel="stylesheet" type="text/css" />
+		<link href="{{ asset('assets/css/elite-theme.css') }}?v=2" rel="stylesheet" type="text/css" />
 		@stack('stylesheets')
 		<style>
 			.student-gradient {
@@ -27,9 +27,9 @@
 	<body id="kt_body" class="header-fixed header-tablet-and-mobile-fixed">
 		<div class="d-flex flex-column flex-root">
 			<div class="page d-flex flex-row flex-column-fluid">
-				<div class="wrapper d-flex flex-column flex-row-fluid" id="kt_wrapper" style="padding-top: 80px;">
+				<div class="wrapper d-flex flex-column flex-row-fluid" id="kt_wrapper" style="padding-top: {{ ($hideChrome ?? false) ? '16px' : '80px' }};">
 					{{-- Frontend Navbar --}}
-					@include('frontend.layout.navbar')
+					@unless($hideChrome ?? false) @include('frontend.layout.navbar') @endunless
 
 					<!-- Content -->
 					<div id="kt_content_container" class="d-flex flex-column-fluid align-items-start container-xxl">
@@ -39,7 +39,7 @@
 					</div>
 
 					{{-- Frontend Footer --}}
-					@include('frontend.layout.footer')
+					@unless($hideChrome ?? false) @include('frontend.layout.footer') @endunless
 				</div>
 			</div>
 		</div>

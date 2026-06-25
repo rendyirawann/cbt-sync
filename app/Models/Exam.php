@@ -41,6 +41,15 @@ class Exam extends Model
         return (float) $this->questions->sum('points');
     }
 
+    /**
+     * Apakah sudah ada siswa yang MEMULAI ujian (attempt) di sesi mana pun.
+     * Begitu true → ujian terkunci: soal tidak bisa diubah & tidak bisa ditarik ke draft.
+     */
+    public function hasStartedAttempts(): bool
+    {
+        return ExamAttempt::whereIn('exam_session_id', $this->sessions()->select('id'))->exists();
+    }
+
     public function hasMc(): bool
     {
         return in_array($this->type, ['mixed', 'mc']);

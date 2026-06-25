@@ -25,6 +25,10 @@ class ExamQuestionController extends Controller
         $exam = Exam::findOrFail($request->exam_id);
         $this->authorizeExam($exam);
 
+        if ($exam->hasStartedAttempts()) {
+            return redirect()->back()->with('error', 'Soal tidak bisa ditambah karena sudah ada siswa yang memulai ujian.');
+        }
+
         if ($request->type === 'mc') {
             $request->validate([
                 'options' => 'required|array|min:2',
@@ -64,6 +68,10 @@ class ExamQuestionController extends Controller
     {
         $question = Question::with('exam')->findOrFail($id);
         $this->authorizeExam($question->exam);
+
+        if ($question->exam->hasStartedAttempts()) {
+            return redirect()->back()->with('error', 'Soal tidak bisa diedit karena sudah ada siswa yang memulai ujian.');
+        }
 
         $request->validate([
             'question_text' => 'required|string',
@@ -112,6 +120,10 @@ class ExamQuestionController extends Controller
     {
         $question = Question::with('exam')->findOrFail($id);
         $this->authorizeExam($question->exam);
+
+        if ($question->exam->hasStartedAttempts()) {
+            return redirect()->back()->with('error', 'Soal tidak bisa dihapus karena sudah ada siswa yang memulai ujian.');
+        }
 
         if ($question->image_path) {
             Storage::disk('public')->delete($question->image_path);

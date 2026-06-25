@@ -1,89 +1,221 @@
 @extends('frontend.layout.app')
 @section('title', 'Mengerjakan: ' . $exam->title)
 
+@push('stylesheets')
+<style>
+    /* Mode ujian: sembunyikan navbar & footer agar siswa tidak salah klik menu lain */
+    #kt_app_header, #kt_app_footer { display:none !important; }
+    #kt_wrapper { padding-top:16px !important; }
+    .qnav-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+    .qnav{height:42px;border-radius:10px;border:1.5px solid #E5E9F2;background:#fff;font-weight:700;color:#475569;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center}
+    .qnav:hover{border-color:#4F46E5;color:#4F46E5}
+    .qnav.answered{background:rgba(5,150,105,.12);border-color:#059669;color:#059669}
+    .qnav.current{background:linear-gradient(135deg,#4F46E5,#7C3AED);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.35)}
+    .opt-label{cursor:pointer;transition:.15s}
+    .exam-panel{position:sticky;top:16px}
+    /* Soal panjang / bergambar tetap bisa di-scroll layar (alur normal halaman) */
+    .exam-q img{max-width:100%;height:auto;border-radius:10px}
+    .exam-q{overflow-wrap:anywhere}
+    @media (max-width:991.98px){
+        .exam-panel{position:static;margin-bottom:1.25rem}
+        .qnav-grid{grid-template-columns:repeat(8,1fr)}
+    }
+    @media (max-width:575.98px){
+        .qnav-grid{grid-template-columns:repeat(6,1fr)}
+        .opt-label{padding:.75rem !important}
+        .exam-q .fs-4{font-size:1.05rem !important}
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl py-6">
 
-        {{-- Sticky bar: judul + timer + submit --}}
-        <div class="card shadow-sm mb-6 position-sticky" style="top:84px;z-index:30">
-            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3 py-4">
-                <div>
-                    <h3 class="fw-bold text-gray-900 mb-0">{{ $exam->title }}</h3>
-                    <span class="text-muted fs-7">{{ $session->name }} • {{ $questions->count() }} soal <span id="saveStatus" class="ms-2 text-success"></span></span>
-                </div>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="badge badge-light-danger fs-4 fw-bold py-3 px-4"><i class="ki-outline ki-timer fs-3 me-1"></i> <span id="timer">--:--</span></div>
-                    <button type="button" id="btnSubmit" class="btn btn-primary"><i class="ki-outline ki-check fs-4"></i> Kumpulkan</button>
-                </div>
-            </div>
-        </div>
-
-        @php $no = 0; @endphp
-        @foreach($questions as $q)
-        @php
-            $no++;
-            $ans = $answers->get($q->id);
-            $opts = $q->type === 'mc' ? ($session->shuffle_options ? $q->options->shuffle(crc32($attempt->id.$q->id)) : $q->options) : collect();
-        @endphp
-        <div class="card mb-4" id="qcard-{{ $q->id }}">
-            <div class="card-body">
-                <div class="d-flex mb-3">
-                    <span class="badge badge-circle badge-primary fs-6 me-3">{{ $no }}</span>
-                    <div class="fw-semibold text-gray-900 fs-5">{!! nl2br(e($q->question_text)) !!}</div>
-                </div>
-                @if($q->image_path)<img src="{{ Storage::url($q->image_path) }}" class="rounded mb-4 mh-200px d-block">@endif
-
-                @if($q->type === 'mc')
-                    <div class="d-flex flex-column gap-2">
-                        @foreach($opts as $opt)
-                        <label class="d-flex align-items-center border rounded p-3 cursor-pointer opt-label {{ $ans && $ans->selected_option_id === $opt->id ? 'border-primary bg-light-primary' : 'border-gray-300' }}">
-                            <input class="form-check-input me-3 ans-mc" type="radio" name="q_{{ $q->id }}" value="{{ $opt->id }}"
-                                data-question="{{ $q->id }}" {{ $ans && $ans->selected_option_id === $opt->id ? 'checked' : '' }}>
-                            <span class="badge badge-light-primary me-2">{{ $opt->label }}</span>
-                            <span class="text-gray-800">{{ $opt->option_text }}</span>
-                        </label>
-                        @endforeach
+        <div class="row g-5">
+            {{-- ====== Panel Navigasi (kiri di desktop) ====== --}}
+            <div class="col-lg-4 order-lg-2">
+                <div class="card shadow-sm exam-panel">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <div class="text-muted fs-8 text-uppercase fw-bold">Sisa Waktu</div>
+                            <div class="badge badge-light-danger fs-2 fw-bold py-3 px-5 mt-1"><i class="ki-outline ki-timer fs-2 me-1"></i> <span id="timer">--:--</span></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-gray-800">Navigasi Soal</span>
+                            <span class="badge badge-light-success"><span id="answeredCount">0</span>/{{ $questions->count() }} terjawab</span>
+                        </div>
+                        <div class="qnav-grid mb-4">
+                            @foreach($questions as $i => $q)
+                            @php $a = $answers->get($q->id); $isAns = $a && ($a->selected_option_id || trim((string)($a->answer_text ?? '')) !== ''); @endphp
+                            <button type="button" class="qnav {{ $isAns ? 'answered' : '' }} {{ $i===0 ? 'current' : '' }}" data-goto="{{ $i }}" data-qid="{{ $q->id }}">{{ $i+1 }}</button>
+                            @endforeach
+                        </div>
+                        <div class="d-flex gap-3 fs-8 text-muted mb-4">
+                            <span><span class="badge badge-circle badge-success w-10px h-10px"></span> Terjawab</span>
+                            <span><span class="badge badge-circle w-10px h-10px" style="background:#E5E9F2"></span> Belum</span>
+                        </div>
+                        <button type="button" id="btnSubmit" class="btn btn-primary w-100"><i class="ki-outline ki-check fs-4"></i> Kumpulkan Ujian</button>
                     </div>
-                @else
-                    <textarea class="form-control ans-essay" rows="5" data-question="{{ $q->id }}" placeholder="Tulis jawaban Anda di sini...">{{ $ans->answer_text ?? '' }}</textarea>
-                @endif
+                </div>
             </div>
-        </div>
-        @endforeach
 
-        <div class="text-center py-4">
-            <button type="button" id="btnSubmit2" class="btn btn-primary btn-lg px-10"><i class="ki-outline ki-check fs-3"></i> Kumpulkan Ujian</button>
+            {{-- ====== Area Soal (kanan/utama) ====== --}}
+            <div class="col-lg-8 order-lg-1">
+                @php
+                    $subjectName = $exam->teachingAssignment->subject->name ?? 'Ujian';
+                    $kelasName = $session->class_room_id
+                        ? ($session->classRoom->name ?? null)
+                        : ($exam->teachingAssignment->classRoom->name ?? null);
+                    $typeLabel = ['mixed'=>'Pilihan Ganda + Essay','mc'=>'Pilihan Ganda','essay'=>'Essay'][$exam->type] ?? 'Ujian';
+                @endphp
+                <div class="card shadow-sm mb-5" style="border-left:6px solid #4F46E5">
+                    <div class="card-body py-5">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                            <div class="flex-grow-1">
+                                <span class="badge badge-light-primary fs-7 mb-2"><i class="ki-outline ki-book fs-6 me-1"></i> {{ $subjectName }}</span>
+                                <h1 class="fw-bold text-gray-900 mb-2" style="font-size:clamp(26px,3.2vw,44px);letter-spacing:-.02em">{{ $exam->title }}</h1>
+                                <div class="d-flex flex-wrap align-items-center gap-3 text-gray-700 fs-6">
+                                    @if($kelasName)
+                                        <span><i class="ki-outline ki-people fs-5 text-primary me-1"></i> Kelas <b>{{ $kelasName }}</b></span>
+                                    @else
+                                        <span><i class="ki-outline ki-people fs-5 text-primary me-1"></i> Peserta lintas kelas</span>
+                                    @endif
+                                    <span class="text-muted">•</span>
+                                    <span><i class="ki-outline ki-calendar fs-5 text-primary me-1"></i> {{ $session->name }}</span>
+                                    <span class="text-muted">•</span>
+                                    <span><i class="ki-outline ki-document fs-5 text-primary me-1"></i> {{ $questions->count() }} soal ({{ $typeLabel }})</span>
+                                </div>
+                                <div class="fs-8 text-muted mt-1"><span id="saveStatus" class="text-success"></span></div>
+                            </div>
+                            <span class="badge badge-primary fs-5 py-3 px-4" id="qcounter">Soal 1 / {{ $questions->count() }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                @php $no = 0; @endphp
+                @foreach($questions as $q)
+                @php
+                    $no++;
+                    $ans = $answers->get($q->id);
+                    $opts = $q->type === 'mc' ? $q->options : collect();
+                @endphp
+                <div class="card mb-4 exam-q" data-qindex="{{ $no-1 }}" style="{{ $no===1 ? '' : 'display:none' }}">
+                    <div class="card-body">
+                        <div class="d-flex mb-4">
+                            <span class="badge badge-circle badge-primary fs-5 me-3">{{ $no }}</span>
+                            <div class="fw-semibold text-gray-900 fs-4">{!! nl2br(e($q->question_text)) !!}</div>
+                        </div>
+                        @if($q->image_path)<img src="{{ Storage::url($q->image_path) }}" class="mb-4 d-block" alt="Gambar soal">@endif
+
+                        @if($q->type === 'mc')
+                            <div class="d-flex flex-column gap-2">
+                                @foreach($opts as $opt)
+                                <label class="d-flex align-items-center border rounded p-4 opt-label {{ $ans && $ans->selected_option_id === $opt->id ? 'border-primary bg-light-primary' : 'border-gray-300' }}">
+                                    <input class="form-check-input me-3 ans-mc" type="radio" name="q_{{ $q->id }}" value="{{ $opt->id }}"
+                                        data-question="{{ $q->id }}" {{ $ans && $ans->selected_option_id === $opt->id ? 'checked' : '' }}>
+                                    <span class="badge badge-light-primary me-3">{{ $opt->label }}</span>
+                                    <span class="text-gray-800 fs-5">{{ $opt->option_text }}</span>
+                                </label>
+                                @endforeach
+                            </div>
+                        @else
+                            <textarea class="form-control ans-essay" rows="8" data-question="{{ $q->id }}" placeholder="Tulis jawaban Anda di sini...">{{ $ans->answer_text ?? '' }}</textarea>
+                        @endif
+                    </div>
+                </div>
+                @endforeach
+
+                {{-- Prev / Next --}}
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <button type="button" id="prevBtn" class="btn btn-light-primary"><i class="ki-outline ki-arrow-left fs-4"></i> Sebelumnya</button>
+                    <button type="button" id="nextBtn" class="btn btn-primary">Berikutnya <i class="ki-outline ki-arrow-right fs-4"></i></button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-{{-- form submit tersembunyi --}}
+{{-- Gerbang Layar Penuh (mode ujian) --}}
+<div id="fsGate" style="position:fixed;inset:0;z-index:3000;background:linear-gradient(180deg,#0B1F3A,#142C52);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:24px">
+    <i class="ki-outline ki-screen fs-5x text-white mb-4"></i>
+    <h2 id="fsTitle" class="text-white fw-bold mb-2">Mode Ujian — Layar Penuh</h2>
+    <p id="fsDesc" class="text-white opacity-75 mb-6" style="max-width:480px">Ujian berlangsung dalam layar penuh. Klik tombol di bawah untuk mulai, dan jangan keluar dari layar penuh sampai ujian selesai.</p>
+    <button type="button" id="fsEnter" class="btn btn-light btn-lg fw-bold"><i class="ki-outline ki-rocket fs-3"></i> Masuk &amp; Mulai Ujian</button>
+    <p class="text-white opacity-50 fs-8 mt-8">Darurat keluar: tekan <b>Ctrl + Shift + C</b></p>
+</div>
+
 <form id="submitForm" action="{{ route('student.exams.submit', $session->id) }}" method="POST" class="d-none">@csrf</form>
 
 @push('scripts')
 <script>
+    /* ===== Mode ujian: layar penuh + proteksi (KHUSUS halaman ini) ===== */
+    let examExiting = false;
+    const EXIT_URL = "{{ route('student.exams.index') }}";
+
+    function fsRequest(){ const el=document.documentElement; const fn=el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen; if(fn){ try{ fn.call(el); }catch(e){} } }
+    function fsExit(){ const fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if((document.fullscreenElement||document.webkitFullscreenElement)&&fn){ try{ fn.call(document); }catch(e){} } }
+    function isFs(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
+
+    // Darurat keluar (Ctrl+Shift+C): keluar fullscreen, tutup tab; jika gagal, balik ke daftar ujian.
+    function emergencyExit(){ examExiting = true; fsExit(); try{ window.close(); }catch(e){} setTimeout(()=>{ window.location.href = EXIT_URL; }, 150); }
+
+    document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    document.addEventListener('keydown', function(e){
+        var k = (e.key || '').toUpperCase();
+        if (e.ctrlKey && e.shiftKey && k === 'C'){ e.preventDefault(); emergencyExit(); return false; } // darurat keluar
+        if (e.key === 'F12' || e.keyCode === 123) { e.preventDefault(); return false; }                 // F12
+        if (e.ctrlKey && e.shiftKey && (k === 'I' || k === 'J')) { e.preventDefault(); return false; }   // dev tools
+        if (e.ctrlKey && k === 'U') { e.preventDefault(); return false; }                                // view-source
+    });
+
     const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const SAVE_URL = "{{ route('student.exam-answers.save') }}";
     const ATTEMPT_ID = "{{ $attempt->id }}";
     let remaining = {{ (int) $remaining }};
     let submitting = false;
 
-    // ---------- Timer ----------
+    /* ---------- Navigasi soal (satu per layar) ---------- */
+    const cards = Array.from(document.querySelectorAll('.exam-q'));
+    const navBtns = Array.from(document.querySelectorAll('.qnav'));
+    const total = cards.length;
+    let current = 0;
+
+    function render(){
+        cards.forEach((c, i) => c.style.display = (i === current ? 'block' : 'none'));
+        navBtns.forEach((b, i) => b.classList.toggle('current', i === current));
+        document.getElementById('prevBtn').disabled = (current === 0);
+        const nb = document.getElementById('nextBtn');
+        nb.style.visibility = (current === total - 1) ? 'hidden' : 'visible';
+        document.getElementById('qcounter').textContent = `Soal ${current + 1} / ${total}`;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function go(i){ if (i >= 0 && i < total){ current = i; render(); } }
+    document.getElementById('prevBtn').addEventListener('click', () => go(current - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => go(current + 1));
+    navBtns.forEach((b, i) => b.addEventListener('click', () => go(i)));
+    render();
+
+    function markAnswered(qid, val){
+        const b = document.querySelector(`.qnav[data-qid="${qid}"]`);
+        if (b) b.classList.toggle('answered', !!val);
+        document.getElementById('answeredCount').textContent = document.querySelectorAll('.qnav.answered').length;
+    }
+    document.getElementById('answeredCount').textContent = document.querySelectorAll('.qnav.answered').length;
+
+    /* ---------- Timer ---------- */
     const timerEl = document.getElementById('timer');
-    function fmt(s){ const m=Math.floor(s/60), x=s%60; return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0'); }
+    function fmt(s){ const m = Math.floor(s/60), x = s%60; return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0'); }
     function tick(){
-        if (remaining <= 0){ timerEl.textContent='00:00'; autoSubmit(); return; }
+        if (remaining <= 0){ timerEl.textContent = '00:00'; autoSubmit(); return; }
         timerEl.textContent = fmt(remaining);
-        if (remaining <= 60) timerEl.parentElement.classList.add('bg-danger','text-white');
         remaining--;
     }
     tick(); const timerInt = setInterval(tick, 1000);
 
-    // ---------- Autosave ----------
+    /* ---------- Autosave ---------- */
     const status = document.getElementById('saveStatus');
-    function setStatus(t, ok=true){ status.textContent = t; status.className = 'ms-2 ' + (ok?'text-success':'text-danger'); }
-
+    function setStatus(t, ok=true){ status.textContent = t; status.className = 'ms-2 ' + (ok ? 'text-success' : 'text-danger'); }
     function save(payload){
         return fetch(SAVE_URL, {
             method:'POST',
@@ -95,39 +227,59 @@
         }).catch(() => setStatus('Gagal menyimpan', false));
     }
 
-    // MC: simpan saat pilih
     document.querySelectorAll('.ans-mc').forEach(r => {
         r.addEventListener('change', function(){
-            document.querySelectorAll('#qcard-'+this.dataset.question+' .opt-label').forEach(l => l.classList.remove('border-primary','bg-light-primary'));
+            document.querySelectorAll(`input[name="q_${this.dataset.question}"]`).forEach(x => x.closest('.opt-label').classList.remove('border-primary','bg-light-primary'));
             this.closest('.opt-label').classList.add('border-primary','bg-light-primary');
             setStatus('Menyimpan...');
+            markAnswered(this.dataset.question, true);
             save({question_id: this.dataset.question, selected_option_id: this.value});
         });
     });
 
-    // Essay: debounce
     let timers = {};
     document.querySelectorAll('.ans-essay').forEach(t => {
         t.addEventListener('input', function(){
             const qid = this.dataset.question, val = this.value;
+            markAnswered(qid, val.trim() !== '');
             setStatus('Mengetik...');
             clearTimeout(timers[qid]);
             timers[qid] = setTimeout(() => { setStatus('Menyimpan...'); save({question_id: qid, answer_text: val}); }, 900);
         });
     });
 
-    // ---------- Submit ----------
-    function doSubmit(){ submitting = true; clearInterval(timerInt); document.getElementById('submitForm').submit(); }
+    /* ---------- Submit ---------- */
+    function doSubmit(){ submitting = true; clearInterval(timerInt); fsExit(); document.getElementById('submitForm').submit(); }
     function autoSubmit(){ if (submitting) return; Swal.fire({title:'Waktu Habis!', text:'Jawaban dikumpulkan otomatis.', icon:'info', allowOutsideClick:false, timer:2500, timerProgressBar:true}).then(doSubmit); }
     function confirmSubmit(){
-        Swal.fire({title:'Kumpulkan ujian?', text:'Jawaban tidak bisa diubah setelah dikumpulkan.', icon:'question', showCancelButton:true, confirmButtonText:'Ya, Kumpulkan', cancelButtonText:'Cek lagi', confirmButtonColor:'#4F46E5'})
-          .then(r => { if (r.isConfirmed) doSubmit(); });
+        const unanswered = total - document.querySelectorAll('.qnav.answered').length;
+        Swal.fire({
+            title:'Kumpulkan ujian?',
+            html: unanswered > 0 ? `Masih ada <b>${unanswered} soal</b> belum dijawab. Tetap kumpulkan?` : 'Semua soal sudah dijawab. Kumpulkan sekarang?',
+            icon: unanswered > 0 ? 'warning' : 'question',
+            showCancelButton:true, confirmButtonText:'Ya, Kumpulkan', cancelButtonText:'Cek lagi', confirmButtonColor:'#4F46E5'
+        }).then(r => { if (r.isConfirmed) doSubmit(); });
     }
     document.getElementById('btnSubmit').addEventListener('click', confirmSubmit);
-    document.getElementById('btnSubmit2').addEventListener('click', confirmSubmit);
 
-    // ---------- Peringatan keluar ----------
-    window.addEventListener('beforeunload', function(e){ if (!submitting){ e.preventDefault(); e.returnValue=''; } });
+    window.addEventListener('beforeunload', function(e){ if (!submitting && !examExiting){ e.preventDefault(); e.returnValue=''; } });
+
+    /* ---------- Gerbang & penegakan layar penuh ---------- */
+    const fsGate = document.getElementById('fsGate');
+    document.getElementById('fsEnter').addEventListener('click', fsRequest);
+    function onFsChange(){
+        if (examExiting || submitting) return;
+        if (isFs()){
+            fsGate.style.display = 'none';
+        } else {
+            document.getElementById('fsTitle').textContent = 'Anda Keluar dari Layar Penuh';
+            document.getElementById('fsDesc').textContent = 'Ujian harus dikerjakan dalam layar penuh. Klik untuk kembali & melanjutkan, atau tekan Ctrl + Shift + C untuk keluar.';
+            document.getElementById('fsEnter').innerHTML = '<i class="ki-outline ki-screen fs-3"></i> Kembali ke Layar Penuh';
+            fsGate.style.display = 'flex';
+        }
+    }
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
 </script>
 @endpush
 @endsection

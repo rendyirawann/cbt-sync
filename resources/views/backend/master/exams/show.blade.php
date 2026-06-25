@@ -5,6 +5,8 @@
 @php
     $typeLabel = ['mixed'=>'PG + Essay','mc'=>'Pilihan Ganda','essay'=>'Essay'][$exam->type] ?? $exam->type;
     $modeLabel = ['per_question'=>'Per soal','equal'=>'Bagi rata otomatis','manual'=>'Manual'][$exam->points_mode] ?? $exam->points_mode;
+    // Ujian terkunci begitu ada minimal 1 siswa yang memulai (attempt). Soal & publish dikunci.
+    $locked = $exam->hasStartedAttempts();
 @endphp
 
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
@@ -19,20 +21,45 @@
         </div>
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('exams.index') }}" class="btn btn-sm btn-light"><i class="ki-outline ki-arrow-left fs-4"></i> Kembali</a>
-            <button class="btn btn-sm btn-light-primary" data-bs-toggle="modal" data-bs-target="#editExamModal"><i class="ki-outline ki-setting-2 fs-5"></i> Pengaturan</button>
-            <form action="{{ route('exams.publish', $exam->id) }}" method="POST" class="custom-ajax-confirm d-inline">
-                @csrf
-                <button type="submit" class="btn btn-sm btn-{{ $exam->status === 'published' ? 'warning' : 'success' }}">
-                    <i class="ki-outline ki-{{ $exam->status === 'published' ? 'lock' : 'send' }} fs-5"></i>
-                    {{ $exam->status === 'published' ? 'Tarik ke Draft' : 'Terbitkan' }}
-                </button>
-            </form>
+            <button class="btn btn-sm btn-light-primary" data-bs-toggle="modal" data-bs-target="#editExamModal" @disabled($locked)><i class="ki-outline ki-setting-2 fs-5"></i> Pengaturan</button>
+            @if($locked)
+                <span class="btn btn-sm btn-light-success disabled"><i class="ki-outline ki-lock-2 fs-5"></i> Terbit & Terkunci</span>
+            @else
+                <form action="{{ route('exams.publish', $exam->id) }}" method="POST" class="custom-ajax-confirm d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-{{ $exam->status === 'published' ? 'warning' : 'success' }}">
+                        <i class="ki-outline ki-{{ $exam->status === 'published' ? 'arrow-down' : 'send' }} fs-5"></i>
+                        {{ $exam->status === 'published' ? 'Tarik ke Draft' : 'Terbitkan' }}
+                    </button>
+                </form>
+            @endif
         </div>
     </div>
 </div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
+        @if($exam->status === 'draft')
+        <div class="alert bg-light-warning border border-warning border-dashed d-flex flex-wrap align-items-center mb-6 p-5">
+            <i class="ki-outline ki-information-5 fs-2x text-warning me-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+            <div class="flex-grow-1 me-3">
+                <h4 class="fw-bold text-gray-900 mb-1">Ujian masih DRAFT — siswa belum bisa melihatnya</h4>
+                <span class="text-gray-700">Begitu soal & sesi siap, klik <b>Terbitkan</b> supaya ujian muncul di portal siswa.</span>
+            </div>
+            <form action="{{ route('exams.publish', $exam->id) }}" method="POST">@csrf
+                <button type="submit" class="btn btn-success"><i class="ki-outline ki-send fs-5"></i> Terbitkan Sekarang</button>
+            </form>
+        </div>
+        @endif
+        @if($locked)
+        <div class="alert bg-light-primary border border-primary border-dashed d-flex align-items-center mb-6 p-5">
+            <i class="ki-outline ki-lock-2 fs-2x text-primary me-4"><span class="path1"></span><span class="path2"></span></i>
+            <div>
+                <h4 class="fw-bold text-gray-900 mb-1">Ujian Terkunci</h4>
+                <span class="text-gray-700">Sudah ada siswa yang memulai ujian, jadi <b>soal tidak bisa diubah</b>, ujian <b>tidak bisa ditarik ke draft</b>, dan sesi yang sudah dimulai tidak bisa dihapus/diubah. Anda tetap bisa memeriksa & menilai jawaban.</span>
+            </div>
+        </div>
+        @endif
         <ul class="nav nav-tabs nav-line-tabs fs-5 fw-bold mb-6">
             <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab_soal">📝 Soal ({{ $exam->questions->count() }})</a></li>
             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab_sesi">🗓️ Sesi & Jadwal ({{ $exam->sessions->count() }})</a></li>
@@ -43,11 +70,15 @@
             {{-- ================= TAB SOAL ================= --}}
             <div class="tab-pane fade show active" id="tab_soal">
                 <div class="d-flex gap-2 mb-5">
-                    @if($exam->hasMc())
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMcModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Pilihan Ganda</button>
-                    @endif
-                    @if($exam->hasEssay())
-                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addEssayModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Essay</button>
+                    @if($locked)
+                        <span class="text-muted fs-7"><i class="ki-outline ki-lock-2 fs-5 text-primary me-1"></i> Soal terkunci — sudah ada peserta yang memulai.</span>
+                    @else
+                        @if($exam->hasMc())
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMcModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Pilihan Ganda</button>
+                        @endif
+                        @if($exam->hasEssay())
+                        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addEssayModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Essay</button>
+                        @endif
                     @endif
                 </div>
 
@@ -58,12 +89,14 @@
                         <div class="flex-grow-1">
                             <div class="d-flex justify-content-between">
                                 <span class="badge badge-light-{{ $q->type === 'mc' ? 'primary' : 'info' }} mb-2">{{ $q->type === 'mc' ? 'Pilihan Ganda' : 'Essay' }} • {{ rtrim(rtrim((string)$q->points,'0'),'.') }} poin{{ $q->type==='mc' && $q->penalty>0 ? ' / -'.rtrim(rtrim((string)$q->penalty,'0'),'.').' salah' : '' }}</span>
+                                @unless($locked)
                                 <div>
                                     <button class="btn btn-sm btn-icon btn-light-primary" data-bs-toggle="modal" data-bs-target="#editQ{{ $q->id }}"><i class="ki-outline ki-pencil fs-5"></i></button>
                                     <form action="{{ route('exam-questions.destroy', $q->id) }}" method="POST" class="d-inline custom-ajax-confirm">@csrf @method('DELETE')
                                         <button class="btn btn-sm btn-icon btn-light-danger btn-delete"><i class="ki-outline ki-trash fs-5"></i></button>
                                     </form>
                                 </div>
+                                @endunless
                             </div>
                             <div class="fw-semibold text-gray-900 mb-2">{!! nl2br(e($q->question_text)) !!}</div>
                             @if($q->image_path)<img src="{{ Storage::url($q->image_path) }}" class="rounded mb-3 mh-150px">@endif
@@ -129,21 +162,34 @@
                 </div>
                 <div class="row g-4">
                     @forelse($exam->sessions as $s)
+                    @php $sStarted = $s->attempts->count() > 0; @endphp
                     <div class="col-md-6 col-xl-4">
-                        <div class="card h-100">
+                        <div class="card h-100 {{ $s->is_active ? '' : 'bg-light' }}">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between mb-2">
                                     <h4 class="fw-bold text-gray-900 mb-0">{{ $s->name }}</h4>
-                                    <span class="badge badge-light-{{ $s->isFinished() ? 'secondary' : ($s->isWithinSchedule() ? 'success' : 'warning') }}">
-                                        {{ $s->isFinished() ? 'Selesai' : ($s->isWithinSchedule() ? 'Berlangsung' : 'Terjadwal') }}
-                                    </span>
+                                    <div class="d-flex gap-1">
+                                        @unless($s->is_active)<span class="badge badge-light-secondary">Nonaktif</span>@endunless
+                                        <span class="badge badge-light-{{ $s->isFinished() ? 'secondary' : ($s->isWithinSchedule() ? 'success' : 'warning') }}">
+                                            {{ $s->isFinished() ? 'Selesai' : ($s->isWithinSchedule() ? 'Berlangsung' : 'Terjadwal') }}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-calendar fs-6 me-1"></i> {{ \Carbon\Carbon::parse($s->starts_at)->format('d M Y H:i') }} – {{ \Carbon\Carbon::parse($s->ends_at)->format('H:i') }}</div>
                                 <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-timer fs-6 me-1"></i> {{ $s->duration_minutes }} menit • Kuota: {{ $s->max_capacity ?? '∞' }}</div>
                                 <div class="text-gray-600 fs-7 mb-3"><i class="ki-outline ki-people fs-6 me-1"></i> {{ $s->class_room_id ? ($s->classRoom->name ?? 'Kelas') : 'Daftar manual' }} • {{ $s->attempts->count() }} mengerjakan</div>
                                 <div class="d-flex gap-2">
                                     <a href="{{ route('exam-sessions.attempts', $s->id) }}" class="btn btn-sm btn-light-primary flex-grow-1"><i class="ki-outline ki-eye fs-5"></i> Peserta & Nilai</a>
-                                    <form action="{{ route('exam-sessions.destroy', $s->id) }}" method="POST" class="custom-ajax-confirm">@csrf @method('DELETE')<button class="btn btn-sm btn-icon btn-light-danger btn-delete"><i class="ki-outline ki-trash fs-5"></i></button></form>
+                                    @if($sStarted)
+                                        <span class="btn btn-sm btn-icon btn-light disabled" title="Terkunci — ada peserta yang memulai"><i class="ki-outline ki-lock-2 fs-5"></i></span>
+                                    @else
+                                        <form action="{{ route('exam-sessions.toggle-active', $s->id) }}" method="POST">@csrf
+                                            <button class="btn btn-sm btn-icon btn-light-{{ $s->is_active ? 'warning' : 'success' }}" title="{{ $s->is_active ? 'Nonaktifkan sesi' : 'Aktifkan sesi' }}">
+                                                <i class="ki-outline ki-{{ $s->is_active ? 'eye-slash' : 'eye' }} fs-5"></i>
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('exam-sessions.destroy', $s->id) }}" method="POST" class="custom-ajax-confirm">@csrf @method('DELETE')<button class="btn btn-sm btn-icon btn-light-danger btn-delete"><i class="ki-outline ki-trash fs-5"></i></button></form>
+                                    @endif
                                 </div>
                             </div>
                         </div>

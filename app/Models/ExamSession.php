@@ -18,6 +18,7 @@ class ExamSession extends Model
         'shuffle_questions' => 'boolean',
         'shuffle_options' => 'boolean',
         'show_result' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     public function exam()
@@ -59,10 +60,16 @@ class ExamSession extends Model
         return $manual->unique('id')->values();
     }
 
+    /** Apakah sudah ada siswa yang memulai (attempt) pada sesi ini. */
+    public function hasStartedAttempts(): bool
+    {
+        return $this->attempts()->exists();
+    }
+
     public function isWithinSchedule(?Carbon $now = null): bool
     {
         $now = $now ?: Carbon::now();
-        return $this->status === 'scheduled'
+        return (bool) $this->is_active
             && $now->betweenIncluded($this->starts_at, $this->ends_at);
     }
 
