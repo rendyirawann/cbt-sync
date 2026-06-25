@@ -38,7 +38,7 @@ License: For each use you must have a valid license purchased only from above li
 		<link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
 		<!--end::Global Stylesheets Bundle-->
 		<!--begin::Elite School Theme (custom design system)-->
-		<link href="{{ asset('assets/css/elite-theme.css') }}?v=1" rel="stylesheet" type="text/css" />
+		<link href="{{ asset('assets/css/elite-theme.css') }}?v=2" rel="stylesheet" type="text/css" />
 		<!--end::Elite School Theme-->
 		@stack('stylesheets')
 		<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
