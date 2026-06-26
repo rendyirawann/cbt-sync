@@ -162,7 +162,12 @@
                 </div>
                 <div class="row g-4">
                     @forelse($exam->sessions as $s)
-                    @php $sStarted = $s->attempts->count() > 0; @endphp
+                    @php
+                        $sStarted = $s->attempts->count() > 0;
+                        $sFinished = $s->isFinished();
+                        // Sesi bisa diedit hanya jika belum ada yang memulai DAN belum terlewat.
+                        $sCanEdit = !$sStarted && !$sFinished;
+                    @endphp
                     <div class="col-md-6 col-xl-4">
                         <div class="card h-100 {{ $s->is_active ? '' : 'bg-light' }}">
                             <div class="card-body">
@@ -180,9 +185,12 @@
                                 <div class="text-gray-600 fs-7 mb-3"><i class="ki-outline ki-people fs-6 me-1"></i> {{ $s->class_room_id ? ($s->classRoom->name ?? 'Kelas') : 'Daftar manual' }} • {{ $s->attempts->count() }} mengerjakan</div>
                                 <div class="d-flex gap-2">
                                     <a href="{{ route('exam-sessions.attempts', $s->id) }}" class="btn btn-sm btn-light-primary flex-grow-1"><i class="ki-outline ki-eye fs-5"></i> Peserta & Nilai</a>
-                                    @if($sStarted)
+                    @if($sStarted)
                                         <span class="btn btn-sm btn-icon btn-light disabled" title="Terkunci — ada peserta yang memulai"><i class="ki-outline ki-lock-2 fs-5"></i></span>
                                     @else
+                                        @if($sCanEdit)
+                                        <button class="btn btn-sm btn-icon btn-light-primary" data-bs-toggle="modal" data-bs-target="#editSession{{ $s->id }}" title="Edit sesi"><i class="ki-outline ki-pencil fs-5"></i></button>
+                                        @endif
                                         <form action="{{ route('exam-sessions.toggle-active', $s->id) }}" method="POST">@csrf
                                             <button class="btn btn-sm btn-icon btn-light-{{ $s->is_active ? 'warning' : 'success' }}" title="{{ $s->is_active ? 'Nonaktifkan sesi' : 'Aktifkan sesi' }}">
                                                 <i class="ki-outline ki-{{ $s->is_active ? 'eye-slash' : 'eye' }} fs-5"></i>
@@ -194,6 +202,34 @@
                             </div>
                         </div>
                     </div>
+
+                    @if($sCanEdit)
+                    {{-- Modal edit sesi (hanya bila belum dimulai & belum terlewat) --}}
+                    <div class="modal fade drawer-modal" id="editSession{{ $s->id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog"><div class="modal-content">
+                            <form action="{{ route('exam-sessions.update', $s->id) }}" method="POST">
+                                @csrf @method('PUT')
+                                <div class="modal-header"><h3 class="modal-title">Edit Sesi</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
+                                <div class="modal-body px-8 py-6">
+                                    <div class="alert alert-light-info fs-8 py-2">Peserta sesi tidak dapat diubah di sini. Untuk mengganti kelas/daftar siswa, hapus sesi lalu buat baru.</div>
+                                    <div class="mb-4"><label class="form-label required">Nama Sesi</label><input type="text" name="name" class="form-control" value="{{ $s->name }}" required></div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-4"><label class="form-label required">Mulai</label><input type="datetime-local" name="starts_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->starts_at)->format('Y-m-d\TH:i') }}" required></div>
+                                        <div class="col-md-6 mb-4"><label class="form-label required">Selesai</label><input type="datetime-local" name="ends_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->ends_at)->format('Y-m-d\TH:i') }}" required></div>
+                                        <div class="col-md-6 mb-4"><label class="form-label required">Durasi (menit)</label><input type="number" name="duration_minutes" class="form-control" value="{{ $s->duration_minutes }}" required></div>
+                                        <div class="col-md-6 mb-4"><label class="form-label">Kuota maks (kosong = ∞)</label><input type="number" name="max_capacity" class="form-control" value="{{ $s->max_capacity }}"></div>
+                                    </div>
+                                    <div class="d-flex flex-column gap-2">
+                                        <label class="form-check form-switch"><input class="form-check-input" type="checkbox" name="shuffle_questions" @checked($s->shuffle_questions)> <span class="ms-2">Acak urutan soal</span></label>
+                                        <label class="form-check form-switch"><input class="form-check-input" type="checkbox" name="shuffle_options" @checked($s->shuffle_options)> <span class="ms-2">Acak urutan opsi PG</span></label>
+                                        <label class="form-check form-switch"><input class="form-check-input" type="checkbox" name="show_result" @checked($s->show_result)> <span class="ms-2">Siswa boleh lihat nilai setelah selesai</span></label>
+                                    </div>
+                                </div>
+                                <div class="modal-footer"><button type="submit" class="btn btn-primary">Simpan Perubahan</button></div>
+                            </form>
+                        </div></div>
+                    </div>
+                    @endif
                     @empty
                     <div class="col-12"><div class="card"><div class="card-body text-center py-10 text-muted">Belum ada sesi. Buat sesi untuk menjadwalkan ujian.</div></div></div>
                     @endforelse

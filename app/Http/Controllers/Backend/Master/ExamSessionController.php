@@ -70,6 +70,9 @@ class ExamSessionController extends Controller
         if ($session->hasStartedAttempts()) {
             return redirect()->back()->with('error', 'Sesi tidak bisa diubah karena sudah ada peserta yang memulai.');
         }
+        if ($session->isFinished()) {
+            return redirect()->back()->with('error', 'Sesi tidak bisa diubah karena jadwalnya sudah terlewat/berakhir.');
+        }
 
         $request->validate([
             'name' => 'required|string|max:255',
