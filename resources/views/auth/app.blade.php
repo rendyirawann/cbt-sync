@@ -93,25 +93,38 @@
             <!--begin::Body-->
             @yield('content')
             <!--end::Body-->
-            <!--begin::Aside-->
-            <div class="d-flex flex-lg-row-fluid elite-hero" style="margin:18px 18px 18px 0; border-radius:28px;">
-                <!--begin::Content-->
-                <div class="d-flex flex-column flex-center pb-0 pb-lg-10 p-10 w-100 position-relative" style="z-index:2;">
-                    <!--begin::Image-->
-                    <img class="mx-auto mw-100 w-130px w-lg-220px mb-8 mb-lg-12 bg-white rounded-4 p-4 shadow"
-                        src="{{ asset('assets/media/logos/' . $siteLogo) }}" alt="" />
-                    <!--end::Image-->
-                    <!--begin::Title-->
-                    <span class="elite-chip mb-4"><i class="ki-duotone ki-award fs-5 text-white"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i> Sistem Pembelajaran Digital Sekolah Unggulan</span>
-                    <h1 class="text-white fs-2qx fw-bold text-center mb-5 elite-serif">
-                        {{ $siteName }}
-                    </h1>
-                    <div class="text-white opacity-75 fs-5 text-center fw-semibold" style="max-width:460px;">
-                        Belajar, berprestasi, dan tumbuh bersama dalam ekosistem pendidikan kelas dunia.
+            <!--begin::Aside (Panel Administrasi — simpel, beda dari portal siswa) -->
+            <div class="d-none d-lg-flex flex-lg-row-fluid position-relative"
+                 style="margin:18px 18px 18px 0;border-radius:28px;overflow:hidden;
+                        background:linear-gradient(140deg,#0B1F3A 0%,#142C52 55%,#4F46E5 100%)">
+                {{-- dekorasi lembut --}}
+                <div style="position:absolute;right:-80px;top:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(244,196,48,.18),transparent 70%)"></div>
+                <div style="position:absolute;left:-60px;bottom:-60px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.30),transparent 70%)"></div>
+
+                <div class="d-flex flex-column flex-center p-15 w-100 position-relative" style="z-index:2">
+                    {{-- logo kecil dalam badge putih --}}
+                    <div class="d-flex align-items-center justify-content-center bg-white shadow mb-7"
+                         style="width:88px;height:88px;border-radius:24px">
+                        <img src="{{ asset('assets/media/logos/' . $siteLogo) }}" alt="Logo"
+                             style="width:58px;height:58px;object-fit:contain">
                     </div>
-                    <!--end::Text-->
+
+                    <span class="elite-chip mb-4"><i class="ki-duotone ki-shield-tick fs-5 text-white"><span class="path1"></span><span class="path2"></span></i> Panel Administrasi</span>
+                    <h1 class="text-white fw-bold text-center mb-3" style="font-size:clamp(24px,2.4vw,38px)">{{ $siteName }}</h1>
+                    <p class="text-white text-center mb-9" style="max-width:400px;opacity:.75">Kelola sekolah, pembelajaran, ujian online (CBT), dan e-Rapor dalam satu sistem terpadu.</p>
+
+                    <div class="d-flex flex-column gap-4" style="width:100%;max-width:330px">
+                        @foreach([['ki-data','Manajemen data sekolah & pengguna'],['ki-note-2','Ujian online (CBT) & penilaian'],['ki-chart-line-up','Analitik & laporan e-Rapor']] as $f)
+                        <div class="d-flex align-items-center text-white">
+                            <span class="d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                                  style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.14)">
+                                <i class="ki-duotone {{ $f[0] }} fs-3 text-white"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                            </span>
+                            <span class="fw-semibold" style="opacity:.92">{{ $f[1] }}</span>
+                        </div>
+                        @endforeach
+                    </div>
                 </div>
-                <!--end::Content-->
             </div>
             <!--end::Aside-->
         </div>
@@ -125,6 +138,7 @@
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
     <!--end::Global Javascript Bundle-->
     @stack('scripts')
+    @include('partials.dev-credit')
     <!--end::Javascript-->
 </body>
 <!--end::Body-->

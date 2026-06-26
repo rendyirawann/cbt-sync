@@ -192,5 +192,6 @@
             });
         });
     </script>
+@include('partials.dev-credit')
 </body>
 </html>

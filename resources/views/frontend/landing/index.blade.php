@@ -530,5 +530,6 @@
         });
         function closeDrawer(){ document.getElementById('mdrawer')?.classList.remove('open'); }
     </script>
+@include('partials.dev-credit')
 </body>
 </html>

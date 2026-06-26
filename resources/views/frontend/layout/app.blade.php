@@ -98,5 +98,6 @@
 		}
 		</script>
 		@stack('scripts')
+		@include('partials.dev-credit')
 	</body>
 </html>
