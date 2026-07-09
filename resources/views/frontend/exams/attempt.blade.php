@@ -178,6 +178,7 @@
         <input id="lockPin" type="text" inputmode="numeric" autocomplete="off" maxlength="10" class="form-control form-control-lg text-center mb-2" placeholder="Masukkan PIN" style="letter-spacing:.3em;font-weight:700">
         <div id="lockErr" class="text-warning fw-semibold mb-3" style="min-height:20px"></div>
         <button type="button" id="lockUnlock" class="btn btn-light btn-lg w-100 fw-bold"><i class="ki-outline ki-lock-3 fs-3"></i> Lanjutkan Ujian</button>
+        <button type="button" id="lockExit" class="btn btn-outline-light btn-lg w-100 fw-bold mt-3"><i class="ki-outline ki-exit-right fs-3"></i> Keluar &amp; Selesai Ujian</button>
     </div>
     <p class="text-white opacity-50 fs-8 mt-8">Pelanggaran tercatat. Darurat keluar: Ctrl + Shift + C</p>
 </div>
@@ -406,6 +407,16 @@
     if (lockGate){
         document.getElementById('lockUnlock').addEventListener('click', doUnlock);
         document.getElementById('lockPin').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); doUnlock(); } });
+        var lockExitBtn = document.getElementById('lockExit');
+        if (lockExitBtn) lockExitBtn.addEventListener('click', function(){
+            Swal.fire({
+                title:'Keluar & selesai ujian?',
+                html:'Ujian akan <b>dikumpulkan</b> dan <b>diakhiri sekarang</b>. Jawaban yang sudah terisi tetap tersimpan. Tindakan ini <b>tidak bisa dibatalkan</b>.',
+                icon:'warning', showCancelButton:true,
+                confirmButtonText:'Ya, keluar & selesai', cancelButtonText:'Batal',
+                confirmButtonColor:'#dc2626', allowOutsideClick:false
+            }).then(function(res){ if (res.isConfirmed){ doSubmit(); } });
+        });
     }
     // Abaikan penyembunyian tab akibat membuka kamera/galeri saat unggah foto jawaban (khusus HP).
     let pickingFile = false, pickT = null;

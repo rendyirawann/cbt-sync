@@ -284,14 +284,14 @@ class ExamPortalController extends Controller
         }
 
         if ($attempt->locked_at) {
-            $delta = abs(Carbon::parse($attempt->locked_at)->diffInSeconds(Carbon::now()));
+            $delta = (int) round(abs(Carbon::parse($attempt->locked_at)->diffInSeconds(Carbon::now())));
             $attempt->ends_at = Carbon::parse($attempt->ends_at)->addSeconds($delta);
             $attempt->paused_seconds = (int) $attempt->paused_seconds + $delta;
             $attempt->locked_at = null;
             $attempt->save();
         }
 
-        $remaining = max(0, Carbon::now()->diffInSeconds($attempt->ends_at, false));
+        $remaining = (int) max(0, Carbon::now()->diffInSeconds($attempt->ends_at, false));
         return response()->json(['ok' => true, 'remaining' => $remaining]);
     }
 
