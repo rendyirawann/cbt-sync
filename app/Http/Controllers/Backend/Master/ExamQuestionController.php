@@ -19,7 +19,11 @@ class ExamQuestionController extends Controller
             'question_text' => 'required|string',
             'points' => 'required|numeric|min:0',
             'penalty' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+        ], [
+            'image.image' => 'Berkas yang diunggah harus berupa gambar.',
+            'image.mimes' => 'Format gambar harus JPG, JPEG, atau PNG.',
+            'image.max' => 'Ukuran gambar maksimal 5 MB.',
         ]);
 
         $exam = Exam::findOrFail($request->exam_id);
@@ -77,7 +81,11 @@ class ExamQuestionController extends Controller
             'question_text' => 'required|string',
             'points' => 'required|numeric|min:0',
             'penalty' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+        ], [
+            'image.image' => 'Berkas yang diunggah harus berupa gambar.',
+            'image.mimes' => 'Format gambar harus JPG, JPEG, atau PNG.',
+            'image.max' => 'Ukuran gambar maksimal 5 MB.',
         ]);
 
         if ($question->type === 'mc') {

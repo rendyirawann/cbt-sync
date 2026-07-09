@@ -9,6 +9,8 @@
     $locked = $exam->hasStartedAttempts();
 @endphp
 
+@include('partials.katex')
+
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div class="app-container container-xxl d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
@@ -99,7 +101,7 @@
                                 @endunless
                             </div>
                             <div class="fw-semibold text-gray-900 mb-2">{!! nl2br(e($q->question_text)) !!}</div>
-                            @if($q->image_path)<img src="{{ Storage::url($q->image_path) }}" class="rounded mb-3 mh-150px">@endif
+                            @if($q->image_path)<img src="{{ asset('storage/'.$q->image_path) }}" class="rounded mb-3 mh-150px">@endif
                             @if($q->type === 'mc')
                                 <div class="d-flex flex-column gap-1">
                                     @foreach($q->options as $opt)
@@ -122,20 +124,25 @@
                             <form action="{{ route('exam-questions.update', $q->id) }}" method="POST" enctype="multipart/form-data">
                                 @csrf @method('PUT')
                                 <div class="modal-header"><h3 class="modal-title">Edit Soal #{{ $i+1 }}</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
-                                <div class="modal-body px-8 py-6">
-                                    <div class="mb-4"><label class="form-label required">Pertanyaan</label><textarea name="question_text" class="form-control" rows="3" required>{{ $q->question_text }}</textarea></div>
+                                <div class="modal-body px-8 py-6 rdev-math-scope">
+                                    <div class="mb-4">
+                                        <label class="form-label required">Pertanyaan <span class="text-muted fs-8">(rumus: $ … $)</span></label>
+                                        @include('partials.math-toolbar')
+                                        <textarea name="question_text" class="form-control math-input" data-preview="#prev_edit_{{ $q->id }}" rows="3" required>{{ $q->question_text }}</textarea>
+                                        <div class="math-preview" id="prev_edit_{{ $q->id }}"></div>
+                                    </div>
                                     <div class="row">
                                         <div class="col-6 mb-4"><label class="form-label required">Poin (benar)</label><input type="number" step="0.01" name="points" class="form-control" value="{{ rtrim(rtrim((string)$q->points,'0'),'.') }}" required></div>
                                         @if($q->type === 'mc')<div class="col-6 mb-4"><label class="form-label">Pengurang (salah)</label><input type="number" step="0.01" name="penalty" class="form-control" value="{{ rtrim(rtrim((string)$q->penalty,'0'),'.') }}"></div>@endif
                                     </div>
-                                    <div class="mb-4"><label class="form-label">Ganti Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"></div>
+                                    <div class="mb-4"><label class="form-label">Ganti Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 5 MB.</div></div>
                                     @if($q->type === 'mc')
                                     <label class="form-label required">Opsi Jawaban (pilih kunci)</label>
                                     <div class="mc-options">
                                         @foreach($q->options as $oi => $opt)
                                         <div class="input-group mb-2 mc-row">
                                             <span class="input-group-text"><input class="form-check-input mt-0" type="radio" name="correct" value="{{ $oi }}" {{ $opt->is_correct ? 'checked' : '' }}></span>
-                                            <input type="text" name="options[]" class="form-control" value="{{ $opt->option_text }}" required>
+                                            <input type="text" name="options[]" class="form-control math-input" value="{{ $opt->option_text }}" required>
                                             <button type="button" class="btn btn-light-danger mc-remove"><i class="ki-outline ki-trash fs-6"></i></button>
                                         </div>
                                         @endforeach
@@ -279,7 +286,7 @@
             const row = document.createElement('div');
             row.className = 'input-group mb-2 mc-row';
             row.innerHTML = '<span class="input-group-text"><input class="form-check-input mt-0" type="radio" name="correct"></span>' +
-                '<input type="text" name="options[]" class="form-control" placeholder="Teks opsi" required>' +
+                '<input type="text" name="options[]" class="form-control math-input" placeholder="Teks opsi (boleh $rumus$)" required>' +
                 '<button type="button" class="btn btn-light-danger mc-remove"><i class="ki-outline ki-trash fs-6"></i></button>';
             wrap.appendChild(row); renumber(wrap);
         }

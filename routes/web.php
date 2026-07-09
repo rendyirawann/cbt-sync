@@ -224,6 +224,8 @@ Route::middleware(['auth', 'role:Siswa'])->prefix('portal')->group(function () {
     Route::post('/exams/{sessionId}/start', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'start'])->name('student.exams.start');
     Route::get('/exams/{sessionId}/attempt', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'attempt'])->name('student.exams.attempt');
     Route::post('/exam-answers/save', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'saveAnswer'])->name('student.exam-answers.save');
+    Route::post('/exam-answers/photo', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'uploadPhoto'])->name('student.exam-answers.photo');
+    Route::post('/exam-answers/photo/delete', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'deletePhoto'])->name('student.exam-answers.photo.delete');
     Route::post('/exams/{sessionId}/submit', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'submit'])->name('student.exams.submit');
     Route::get('/exam-attempts/{attemptId}/result', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'result'])->name('student.exams.result');
 

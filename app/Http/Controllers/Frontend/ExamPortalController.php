@@ -12,6 +12,7 @@ use App\Services\CbtScoringService;
 use App\Services\GamificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ExamPortalController extends Controller
 {
@@ -190,6 +191,57 @@ class ExamPortalController extends Controller
         );
 
         return response()->json(['message' => 'tersimpan']);
+    }
+
+    /** Unggah foto jawaban essay (maks 3 per soal). */
+    public function uploadPhoto(Request $request)
+    {
+        $student = auth()->user()->student;
+        $attempt = ExamAttempt::findOrFail($request->attempt_id);
+        if ($attempt->student_id !== $student->id) return response()->json(['message' => 'Akses ditolak.'], 403);
+        if ($attempt->status !== 'in_progress') return response()->json(['message' => 'Ujian sudah dikumpulkan.'], 422);
+        if (Carbon::now()->gte($attempt->ends_at)) return response()->json(['message' => 'Waktu habis.', 'expired' => true], 422);
+
+        $request->validate([
+            'question_id' => 'required|uuid|exists:questions,id',
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+        ]);
+
+        $ans = ExamAnswer::firstOrNew(['exam_attempt_id' => $attempt->id, 'question_id' => $request->question_id]);
+        $imgs = $ans->answer_images ?: [];
+        if (count($imgs) >= 3) {
+            return response()->json(['message' => 'Maksimal 3 foto per soal.'], 422);
+        }
+        $path = $request->file('photo')->store('exam-answers', 'public');
+        $imgs[] = $path;
+        $ans->answer_images = $imgs;
+        $ans->save();
+
+        return response()->json([
+            'message' => 'Foto terunggah.',
+            'images' => array_map(fn ($p) => ['path' => $p, 'url' => asset('storage/'.$p)], $imgs),
+        ]);
+    }
+
+    /** Hapus satu foto jawaban essay (sebelum submit). */
+    public function deletePhoto(Request $request)
+    {
+        $student = auth()->user()->student;
+        $attempt = ExamAttempt::findOrFail($request->attempt_id);
+        if ($attempt->student_id !== $student->id) return response()->json(['message' => 'Akses ditolak.'], 403);
+        if ($attempt->status !== 'in_progress') return response()->json(['message' => 'Ujian sudah dikumpulkan.'], 422);
+
+        $request->validate(['question_id' => 'required|uuid', 'path' => 'required|string']);
+
+        $ans = ExamAnswer::where('exam_attempt_id', $attempt->id)->where('question_id', $request->question_id)->first();
+        if ($ans) {
+            $imgs = array_values(array_filter($ans->answer_images ?: [], fn ($p) => $p !== $request->path));
+            $ans->answer_images = $imgs;
+            $ans->save();
+            try { Storage::disk('public')->delete($request->path); } catch (\Throwable $e) {}
+            return response()->json(['message' => 'Foto dihapus.', 'images' => array_map(fn ($p) => ['path' => $p, 'url' => asset('storage/'.$p)], $imgs)]);
+        }
+        return response()->json(['message' => 'Tidak ditemukan.', 'images' => []]);
     }
 
     /** Kumpulkan ujian. */

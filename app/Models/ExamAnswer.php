@@ -15,6 +15,7 @@ class ExamAnswer extends Model
         'is_correct' => 'boolean',
         'graded' => 'boolean',
         'earned_score' => 'decimal:2',
+        'answer_images' => 'array',
     ];
 
     public function attempt()

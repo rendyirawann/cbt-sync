@@ -41,19 +41,24 @@
             <input type="hidden" name="exam_id" value="{{ $exam->id }}">
             <input type="hidden" name="type" value="mc">
             <div class="modal-header"><h3 class="modal-title">Tambah Soal Pilihan Ganda</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
-            <div class="modal-body px-8 py-6">
-                <div class="mb-4"><label class="form-label required">Pertanyaan</label><textarea name="question_text" class="form-control" rows="3" required></textarea></div>
+            <div class="modal-body px-8 py-6 rdev-math-scope">
+                <div class="mb-4">
+                    <label class="form-label required">Pertanyaan <span class="text-muted fs-8">(rumus: tulis di antara $ … $)</span></label>
+                    @include('partials.math-toolbar')
+                    <textarea name="question_text" class="form-control math-input" data-preview="#prev_addmc" rows="3" required></textarea>
+                    <div class="math-preview" id="prev_addmc"></div>
+                </div>
                 <div class="row">
                     <div class="col-6 mb-4"><label class="form-label required">Poin bila benar</label><input type="number" step="0.01" name="points" class="form-control" value="1" required></div>
                     <div class="col-6 mb-4"><label class="form-label">Pengurang bila salah</label><input type="number" step="0.01" name="penalty" class="form-control" value="0"></div>
                 </div>
-                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"></div>
+                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 5 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
                 <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci jawaban)</span></label>
                 <div class="mc-options">
                     @for($k=0;$k<4;$k++)
                     <div class="input-group mb-2 mc-row">
                         <span class="input-group-text"><input class="form-check-input mt-0" type="radio" name="correct" value="{{ $k }}" {{ $k===0 ? 'checked':'' }}></span>
-                        <input type="text" name="options[]" class="form-control" placeholder="Teks opsi {{ chr(65+$k) }}" required>
+                        <input type="text" name="options[]" class="form-control math-input" placeholder="Teks opsi {{ chr(65+$k) }} (boleh $rumus$)" required>
                         <button type="button" class="btn btn-light-danger mc-remove"><i class="ki-outline ki-trash fs-6"></i></button>
                     </div>
                     @endfor
@@ -75,10 +80,15 @@
             <input type="hidden" name="exam_id" value="{{ $exam->id }}">
             <input type="hidden" name="type" value="essay">
             <div class="modal-header"><h3 class="modal-title">Tambah Soal Essay</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
-            <div class="modal-body px-8 py-6">
-                <div class="mb-4"><label class="form-label required">Pertanyaan</label><textarea name="question_text" class="form-control" rows="4" required></textarea></div>
+            <div class="modal-body px-8 py-6 rdev-math-scope">
+                <div class="mb-4">
+                    <label class="form-label required">Pertanyaan <span class="text-muted fs-8">(rumus: tulis di antara $ … $)</span></label>
+                    @include('partials.math-toolbar')
+                    <textarea name="question_text" class="form-control math-input" data-preview="#prev_addessay" rows="4" required></textarea>
+                    <div class="math-preview" id="prev_addessay"></div>
+                </div>
                 <div class="mb-4"><label class="form-label required">Skor Maksimal</label><input type="number" step="0.01" name="points" class="form-control" value="10" required></div>
-                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"></div>
+                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 5 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
                 <div class="alert alert-light-info fs-7">Jawaban essay dinilai manual oleh guru di menu "Peserta & Nilai".</div>
             </div>
             <div class="modal-footer"><button type="submit" class="btn btn-info text-white">Simpan Soal</button></div>

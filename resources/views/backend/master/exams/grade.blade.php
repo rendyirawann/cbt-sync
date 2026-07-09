@@ -9,6 +9,8 @@
     // Setelah dinilai, Guru tidak bisa mengubah lagi; hanya Superadmin (untuk koreksi).
     $locked = $isGraded && !$isSuper;
 @endphp
+
+@include('partials.katex')
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div class="app-container container-xxl d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center">
@@ -55,7 +57,7 @@
                         @endif
                     </div>
                     <div class="fw-semibold text-gray-900 mb-3">{!! nl2br(e($q->question_text)) !!}</div>
-                    @if($q->image_path)<img src="{{ Storage::url($q->image_path) }}" class="rounded mb-3 mh-150px">@endif
+                    @if($q->image_path)<img src="{{ asset('storage/'.$q->image_path) }}" class="rounded mb-3 mh-150px">@endif
 
                     @if($q->type === 'mc')
                         @foreach($q->options as $opt)
@@ -73,6 +75,18 @@
                             <div class="text-muted fs-8 text-uppercase fw-bold mb-1">Jawaban Siswa</div>
                             <div class="text-gray-800">{!! $ans && $ans->answer_text ? nl2br(e($ans->answer_text)) : '<span class="text-muted">(tidak dijawab)</span>' !!}</div>
                         </div>
+                        @if($ans && !empty($ans->answer_images))
+                        <div class="mb-3">
+                            <div class="text-muted fs-8 text-uppercase fw-bold mb-2">Foto Jawaban</div>
+                            <div class="d-flex flex-wrap gap-3">
+                                @foreach($ans->answer_images as $img)
+                                <a href="{{ asset('storage/'.$img) }}" target="_blank" title="Buka gambar penuh">
+                                    <img src="{{ asset('storage/'.$img) }}" style="width:130px;height:130px;object-fit:cover;border-radius:10px;border:1px solid #e4e6ef">
+                                </a>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label required">Nilai (0–{{ rtrim(rtrim((string)$weights[$q->id],'0'),'.') }})</label>

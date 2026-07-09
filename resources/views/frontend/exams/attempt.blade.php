@@ -16,6 +16,8 @@
     /* Soal panjang / bergambar tetap bisa di-scroll layar (alur normal halaman) */
     .exam-q img{max-width:100%;height:auto;border-radius:10px}
     .exam-q{overflow-wrap:anywhere}
+    .rdev-thumb img{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid #e4e6ef;display:block}
+    .photo-del{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;border:none;background:#E11D48;color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
     @media (max-width:991.98px){
         .exam-panel{position:static;margin-bottom:1.25rem}
         .qnav-grid{grid-template-columns:repeat(8,1fr)}
@@ -31,6 +33,7 @@
 @section('content')
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl py-6">
+        @include('partials.katex')
 
         <div class="row g-5">
             {{-- ====== Panel Navigasi (kiri di desktop) ====== --}}
@@ -47,7 +50,7 @@
                         </div>
                         <div class="qnav-grid mb-4">
                             @foreach($questions as $i => $q)
-                            @php $a = $answers->get($q->id); $isAns = $a && ($a->selected_option_id || trim((string)($a->answer_text ?? '')) !== ''); @endphp
+                            @php $a = $answers->get($q->id); $isAns = $a && ($a->selected_option_id || trim((string)($a->answer_text ?? '')) !== '' || !empty($a->answer_images)); @endphp
                             <button type="button" class="qnav {{ $isAns ? 'answered' : '' }} {{ $i===0 ? 'current' : '' }}" data-goto="{{ $i }}" data-qid="{{ $q->id }}">{{ $i+1 }}</button>
                             @endforeach
                         </div>
@@ -106,7 +109,7 @@
                             <span class="badge badge-circle badge-primary fs-5 me-3">{{ $no }}</span>
                             <div class="fw-semibold text-gray-900 fs-4">{!! nl2br(e($q->question_text)) !!}</div>
                         </div>
-                        @if($q->image_path)<img src="{{ Storage::url($q->image_path) }}" class="mb-4 d-block" alt="Gambar soal">@endif
+                        @if($q->image_path)<img src="{{ asset('storage/'.$q->image_path) }}" class="mb-4 d-block" alt="Gambar soal">@endif
 
                         @if($q->type === 'mc')
                             <div class="d-flex flex-column gap-2">
@@ -120,7 +123,29 @@
                                 @endforeach
                             </div>
                         @else
-                            <textarea class="form-control ans-essay" rows="8" data-question="{{ $q->id }}" placeholder="Tulis jawaban Anda di sini...">{{ $ans->answer_text ?? '' }}</textarea>
+                            <div class="rdev-math-scope">
+                                @include('partials.math-toolbar')
+                                <textarea class="form-control ans-essay math-input" rows="6" data-question="{{ $q->id }}" data-preview="#prev_essay_{{ $q->id }}" placeholder="Tulis jawaban Anda di sini... (rumus: tulis di antara $ … $)">{{ $ans->answer_text ?? '' }}</textarea>
+                                <div class="math-hint">Pratinjau rumus (yang ditulis antara tanda $) akan tampil di bawah:</div>
+                                <div class="math-preview" id="prev_essay_{{ $q->id }}"></div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                    <label class="btn btn-sm btn-light-primary mb-0">
+                                        <i class="ki-outline ki-picture fs-5"></i> Unggah Foto Jawaban
+                                        <input type="file" accept="image/*" capture="environment" class="d-none ans-photo" data-question="{{ $q->id }}">
+                                    </label>
+                                    <span class="text-muted fs-8">Maks 3 foto, JPG/JPEG/PNG ≤ 5 MB — cocok untuk rumus/coretan/diagram.</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 photo-list" id="photos_{{ $q->id }}">
+                                    @foreach(($ans->answer_images ?? []) as $img)
+                                    <div class="position-relative rdev-thumb" data-path="{{ $img }}">
+                                        <img src="{{ asset('storage/'.$img) }}" alt="Foto jawaban">
+                                        <button type="button" class="photo-del" data-question="{{ $q->id }}" data-path="{{ $img }}" title="Hapus">&times;</button>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -238,14 +263,53 @@
     });
 
     let timers = {};
+    function updateEssayAnswered(qid){
+        var ta = document.querySelector('.ans-essay[data-question="'+qid+'"]');
+        var hasText = ta && ta.value.trim() !== '';
+        var box = document.getElementById('photos_'+qid);
+        var hasPhoto = box && box.children.length > 0;
+        markAnswered(qid, hasText || hasPhoto);
+    }
     document.querySelectorAll('.ans-essay').forEach(t => {
         t.addEventListener('input', function(){
             const qid = this.dataset.question, val = this.value;
-            markAnswered(qid, val.trim() !== '');
+            updateEssayAnswered(qid);
             setStatus('Mengetik...');
             clearTimeout(timers[qid]);
             timers[qid] = setTimeout(() => { setStatus('Menyimpan...'); save({question_id: qid, answer_text: val}); }, 900);
         });
+    });
+
+    /* ---------- Foto jawaban essay ---------- */
+    const PHOTO_URL = "{{ route('student.exam-answers.photo') }}";
+    const PHOTO_DEL_URL = "{{ route('student.exam-answers.photo.delete') }}";
+    function renderPhotos(qid, images){
+        var box = document.getElementById('photos_'+qid); if (!box) return;
+        box.innerHTML = (images || []).map(function(im){
+            return '<div class="position-relative rdev-thumb" data-path="'+im.path+'"><img src="'+im.url+'" alt="Foto"><button type="button" class="photo-del" data-question="'+qid+'" data-path="'+im.path+'" title="Hapus">&times;</button></div>';
+        }).join('');
+        updateEssayAnswered(qid);
+    }
+    document.querySelectorAll('.ans-photo').forEach(inp => {
+        inp.addEventListener('change', function(){
+            if (!this.files || !this.files[0]) return;
+            var qid = this.dataset.question, file = this.files[0];
+            var fd = new FormData(); fd.append('attempt_id', ATTEMPT_ID); fd.append('question_id', qid); fd.append('photo', file);
+            setStatus('Mengunggah foto...');
+            fetch(PHOTO_URL, { method:'POST', headers:{'X-CSRF-TOKEN':CSRF, 'Accept':'application/json'}, body:fd })
+                .then(async r => { var d = await r.json();
+                    if (!r.ok){ if (d.expired){ clearInterval(timerInt); autoSubmit(); } Swal.fire('Gagal', d.message || 'Gagal unggah foto', 'error'); setStatus('Gagal unggah', false); return; }
+                    renderPhotos(qid, d.images); setStatus('✓ Foto tersimpan');
+                }).catch(() => setStatus('Gagal unggah', false));
+            this.value = '';
+        });
+    });
+    document.addEventListener('click', function(e){
+        var b = e.target.closest && e.target.closest('.photo-del'); if (!b) return;
+        var qid = b.dataset.question, path = b.dataset.path;
+        var fd = new FormData(); fd.append('attempt_id', ATTEMPT_ID); fd.append('question_id', qid); fd.append('path', path);
+        fetch(PHOTO_DEL_URL, { method:'POST', headers:{'X-CSRF-TOKEN':CSRF, 'Accept':'application/json'}, body:fd })
+            .then(async r => { var d = await r.json(); renderPhotos(qid, d.images); });
     });
 
     /* ---------- Submit ---------- */
