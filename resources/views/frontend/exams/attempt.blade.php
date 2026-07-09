@@ -34,6 +34,7 @@
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl py-6">
         @include('partials.katex')
+        @include('partials.math-editor')   {{-- ƒx Rumus (WYSIWYG) untuk jawaban essay siswa (.math-input) --}}
 
         <div class="row g-5">
             {{-- ====== Panel Navigasi (kiri di desktop) ====== --}}
@@ -174,6 +175,7 @@
     <i class="ki-outline ki-lock-2 fs-5x text-white mb-4"><span class="path1"></span><span class="path2"></span></i>
     <h2 class="text-white fw-bold mb-2">Sesi Terkunci</h2>
     <p class="text-white opacity-75 mb-4" style="max-width:520px">Kamu terdeteksi meninggalkan layar ujian (pindah tab/aplikasi atau keluar layar penuh). <b>Timer dijeda.</b> Untuk melanjutkan, minta <b>PIN</b> kepada pengawas/guru.</p>
+    <p id="lockExtra" class="text-warning fw-bold mb-3" style="max-width:560px;display:none"></p>
     <div style="max-width:320px;width:100%">
         <input id="lockPin" type="text" inputmode="numeric" autocomplete="off" maxlength="10" class="form-control form-control-lg text-center mb-2" placeholder="Masukkan PIN" style="letter-spacing:.3em;font-weight:700">
         <div id="lockErr" class="text-warning fw-semibold mb-3" style="min-height:20px"></div>
@@ -367,7 +369,11 @@
 
     /* ---------- Anti-contek: kunci sesi saat keluar layar ujian ---------- */
     const lockGate = document.getElementById('lockGate');
-    function showLockOverlay(){ locked = true; if (lockGate) lockGate.style.display = 'flex'; }
+    function showLockOverlay(extra){
+        locked = true; if (lockGate) lockGate.style.display = 'flex';
+        var ex = document.getElementById('lockExtra');
+        if (ex){ if (extra){ ex.textContent = extra; ex.style.display = 'block'; } else { ex.style.display = 'none'; } }
+    }
     function sendLockBeacon(){
         try {
             var fd = new FormData();
@@ -382,11 +388,26 @@
         showLockOverlay();       // tampilkan overlay dulu (instan)
         sendLockBeacon();        // catat di server (andal walau tab disembunyikan)
     }
+    // ===== Deteksi LAYAR KEDUA (extended display: HDMI ke monitor/proyektor kedua, atau mirroring/cast) =====
+    // screen.isExtended = true saat ada >1 layar dalam mode diperluas. 1 monitor (incl. HDMI tunggal) = false.
+    function isMultiScreen(){
+        try { if (window.screen && typeof window.screen.isExtended === 'boolean') return window.screen.isExtended === true; } catch(e){}
+        return false;
+    }
+    var MULTI_MSG = 'Terdeteksi LAYAR KEDUA / tampilan diperluas (HDMI ke monitor-proyektor kedua, atau screen mirroring/cast). Demi keamanan ujian: cabut kabel HDMI / hentikan cast — sisakan 1 layar — lalu minta PIN pengawas untuk lanjut.';
+    function checkScreens(){
+        if (submitting || examExiting || !started) return;
+        if (isMultiScreen() && !locked){ showLockOverlay(MULTI_MSG); sendLockBeacon(); }
+    }
+    try { if (window.screen && window.screen.addEventListener) window.screen.addEventListener('change', checkScreens); } catch(e){}
+    setInterval(checkScreens, 4000);
+    setTimeout(checkScreens, 1200);
     function doUnlock(){
         var input = document.getElementById('lockPin');
         var errEl = document.getElementById('lockErr');
         var pin = (input.value || '').trim();
         if (!pin){ errEl.textContent = 'Masukkan PIN dulu.'; return; }
+        if (isMultiScreen()){ errEl.textContent = 'Masih terdeteksi layar kedua. Cabut HDMI / hentikan cast dulu (sisakan 1 layar).'; return; }
         errEl.textContent = '';
         var btn = document.getElementById('lockUnlock');
         var old = btn.innerHTML; btn.classList.add('disabled'); btn.innerHTML = 'Memeriksa...';
