@@ -34,7 +34,6 @@
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl py-6">
         @include('partials.katex')
-        @include('partials.math-editor')
 
         <div class="row g-5">
             {{-- ====== Panel Navigasi (kiri di desktop) ====== --}}
@@ -125,8 +124,7 @@
                             </div>
                         @else
                             <div class="rdev-math-scope">
-                                @include('partials.math-toolbar')
-                                <textarea class="form-control ans-essay math-input" rows="6" data-question="{{ $q->id }}" data-preview="#prev_essay_{{ $q->id }}" placeholder="Tulis jawaban Anda di sini... (rumus: tulis di antara $ … $)">{{ $ans->answer_text ?? '' }}</textarea>
+                                <textarea class="form-control ans-essay math-input" rows="6" data-question="{{ $q->id }}" data-preview="#prev_essay_{{ $q->id }}" placeholder="Tulis jawaban Anda di sini... (rumus: tulis di antara $ … $, atau unggah foto)">{{ $ans->answer_text ?? '' }}</textarea>
                                 <div class="math-hint">Pratinjau rumus (yang ditulis antara tanda $) akan tampil di bawah:</div>
                                 <div class="math-preview" id="prev_essay_{{ $q->id }}"></div>
                             </div>
