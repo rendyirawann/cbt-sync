@@ -196,6 +196,7 @@
     function fsRequest(){ const el=document.documentElement; const fn=el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen; if(fn){ try{ fn.call(el); }catch(e){} } }
     function fsExit(){ const fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if((document.fullscreenElement||document.webkitFullscreenElement)&&fn){ try{ fn.call(document); }catch(e){} } }
     function isFs(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
+    var FS_SUPPORTED = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen || document.documentElement.msRequestFullscreen);
 
     // Darurat keluar (Ctrl+Shift+C): keluar fullscreen, tutup tab; jika gagal, balik ke daftar ujian.
     function emergencyExit(){ examExiting = true; fsExit(); try{ window.close(); }catch(e){} setTimeout(()=>{ window.location.href = EXIT_URL; }, 150); }
@@ -209,7 +210,8 @@
         if (e.ctrlKey && k === 'U') { e.preventDefault(); return false; }                                // view-source
     });
 
-    const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    var _csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const CSRF = _csrfMeta ? _csrfMeta.getAttribute('content') : '';
     const SAVE_URL = "{{ route('student.exam-answers.save') }}";
     const ATTEMPT_ID = "{{ $attempt->id }}";
     let remaining = {{ (int) $remaining }};
@@ -350,7 +352,10 @@
 
     /* ---------- Gerbang & penegakan layar penuh ---------- */
     const fsGate = document.getElementById('fsGate');
-    document.getElementById('fsEnter').addEventListener('click', fsRequest);
+    document.getElementById('fsEnter').addEventListener('click', function(){
+        if (!FS_SUPPORTED){ started = true; fsGate.style.display = 'none'; return; }  // iPhone/Safari: mulai tanpa fullscreen
+        fsRequest();
+    });
     function onFsChange(){
         if (examExiting || submitting) return;
         if (isFs()){

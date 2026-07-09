@@ -481,7 +481,9 @@
     <div class="hint"><i data-lucide="mouse" style="width:15px"></i> Putar scroll mouse untuk menjelajah →</div>
 
     <script>
-        lucide.createIcons();
+        window.addEventListener('error', function(e){ try { console.warn('Landing JS suppressed:', e.message); } catch(_){} });
+        function drawIcons(){ try { if (window.lucide && lucide.createIcons) lucide.createIcons(); } catch(e){} }
+        drawIcons();
 
         /* ---- Swiper: vertical wheel -> horizontal slide, NO mouse drag (config terverifikasi) ---- */
         let swiper = null;
@@ -496,6 +498,7 @@
 
         function initSwiper(){
             if (swiper) return;
+            if (!window.Swiper){ document.querySelectorAll('.swiper-slide').forEach(function(s){ s.style.display='block'; }); document.documentElement.style.overflow='auto'; document.body.style.overflow='auto'; return; }
             swiper = new Swiper('.swiper', {
                 direction: 'horizontal',
                 slidesPerView: 1,
@@ -508,26 +511,26 @@
                 pagination: { el: '.swiper-pagination', clickable: true },
                 on: { init(){ setPagTheme(this); }, slideChange(){ setPagTheme(this); } },
             });
-            lucide.createIcons();
+            drawIcons();
         }
         function destroySwiper(){ if (swiper){ swiper.destroy(true, true); swiper = null; } }
 
         const mq = window.matchMedia('(min-width: 1025px)');
         function handleMq(e){ e.matches ? initSwiper() : destroySwiper(); }
         handleMq(mq);
-        mq.addEventListener('change', handleMq);
+        if (mq.addEventListener) mq.addEventListener('change', handleMq); else if (mq.addListener) mq.addListener(handleMq);
 
         /* ---- Nav / anchor: slideTo di desktop, scroll di mobile ---- */
         function go(id){
             const idx = idIndex[id];
             if (swiper && mq.matches && idx !== undefined){ swiper.slideTo(idx); }
-            else { document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' }); }
+            else { var _t = document.getElementById(id); if (_t) _t.scrollIntoView({ behavior:'smooth', block:'start' }); }
             closeDrawer();
         }
         document.querySelectorAll('[data-scroll]').forEach(el=>{
             el.addEventListener('click', (e)=>{ e.preventDefault(); go(el.dataset.scroll); });
         });
-        function closeDrawer(){ document.getElementById('mdrawer')?.classList.remove('open'); }
+        function closeDrawer(){ var _d = document.getElementById('mdrawer'); if (_d) _d.classList.remove('open'); }
     </script>
 @include('partials.dev-credit')
 </body>
