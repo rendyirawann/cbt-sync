@@ -85,7 +85,8 @@
         ensureField(function(){
             mf.value = sel || '';
             overlay.classList.add('show');
-            setTimeout(function(){ try { mf.focus(); } catch(e){} }, 60);
+            try { mf.focus(); } catch(e){}
+            setTimeout(function(){ try { mf.focus(); } catch(e){} }, 80);
         });
     }
     function close(){ overlay.classList.remove('show'); }
@@ -122,6 +123,8 @@
         overlay = document.getElementById('rdevMathEditor');
         host = document.getElementById('rdevMfHost');
         if (!overlay || !host) return;
+        // Pindahkan overlay ke <body> agar lepas dari focus-trap & transform milik modal.
+        if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
 
         decorateAll(document);
         // Kolom opsi PG bisa ditambah dinamis → pantau & dekorasi otomatis.

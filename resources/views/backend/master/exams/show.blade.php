@@ -119,7 +119,7 @@
                 </div>
 
                 {{-- edit modal per soal --}}
-                <div class="modal fade drawer-modal drawer-wide" id="editQ{{ $q->id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal fade drawer-modal drawer-wide" id="editQ{{ $q->id }}" tabindex="-1" data-bs-focus="false" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">
                             <form action="{{ route('exam-questions.update', $q->id) }}" method="POST" enctype="multipart/form-data">

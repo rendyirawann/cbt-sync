@@ -34,7 +34,7 @@
 
 {{-- ===== Tambah Soal Pilihan Ganda ===== --}}
 @if($exam->hasMc())
-<div class="modal fade drawer-modal drawer-wide" id="addMcModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade drawer-modal drawer-wide" id="addMcModal" tabindex="-1" data-bs-focus="false" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <form action="{{ route('exam-questions.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
@@ -73,7 +73,7 @@
 
 {{-- ===== Tambah Soal Essay ===== --}}
 @if($exam->hasEssay())
-<div class="modal fade drawer-modal drawer-wide" id="addEssayModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade drawer-modal drawer-wide" id="addEssayModal" tabindex="-1" data-bs-focus="false" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <form action="{{ route('exam-questions.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
