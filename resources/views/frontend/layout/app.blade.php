@@ -9,7 +9,7 @@
 		<link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
 		<link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
 			<link href="{{ asset('assets/css/keenicons-fix.css') }}?v=1" rel="stylesheet" type="text/css" />
-		<link href="{{ asset('assets/css/elite-theme.css') }}?v=2" rel="stylesheet" type="text/css" />
+		<link href="{{ asset('assets/css/elite-theme.css') }}?v=3" rel="stylesheet" type="text/css" />
 		@stack('stylesheets')
 		<style>
 			.student-gradient {

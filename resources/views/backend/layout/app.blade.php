@@ -33,7 +33,7 @@ License: For each use you must have a valid license purchased only from above li
 			<link href="{{ asset('assets/css/keenicons-fix.css') }}?v=1" rel="stylesheet" type="text/css" />
 		<!--end::Global Stylesheets Bundle-->
 		<!--begin::Elite School Theme (custom design system)-->
-		<link href="{{ asset('assets/css/elite-theme.css') }}?v=2" rel="stylesheet" type="text/css" />
+		<link href="{{ asset('assets/css/elite-theme.css') }}?v=3" rel="stylesheet" type="text/css" />
 		<!--end::Elite School Theme-->
 		@stack('stylesheets')
 		{{-- Anti-clickjacking ditangani header X-Frame-Options: SAMEORIGIN (SecurityHeaders middleware). --}}

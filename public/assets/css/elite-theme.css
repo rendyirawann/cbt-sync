@@ -243,6 +243,31 @@ body#kt_body, body {
 #kt_app_header .menu-sub .menu-title { color: #4b5675 !important; }
 #kt_app_header .menu-sub .menu-link { color: #4b5675 !important; }
 
+/* Burger hanya tampil di mobile/tablet; backdrop drawer disembunyikan secara default */
+#portalBurger { display: none; }
+#portalDrawerBackdrop { display: none; }
+@media (max-width: 991.98px) {
+    #portalBurger { display: inline-flex !important; align-items: center; justify-content: center; }
+    /* Menu header berubah jadi drawer geser dari kiri (deterministik, tanpa library) */
+    #kt_app_header .app-header-menu {
+        position: fixed !important; top: 0; bottom: 0; left: 0;
+        width: 280px; max-width: 82vw;
+        background: var(--elite-grad-navy) !important;
+        z-index: 1090; overflow-y: auto !important; overflow-x: hidden !important;
+        transform: translateX(-100%); transition: transform .25s ease;
+        padding: 84px 14px 24px; box-shadow: 8px 0 30px rgba(0,0,0,.35);
+        display: block !important;
+    }
+    #kt_app_header .app-header-menu.drawer-open { transform: translateX(0); }
+    #kt_app_header .app-header-menu > .menu {
+        flex-direction: column !important; flex-wrap: nowrap; align-items: stretch !important; gap: 4px;
+    }
+    #kt_app_header .app-header-menu .menu-item { display: block !important; width: 100%; }
+    #kt_app_header .app-header-menu .menu-link { padding: 12px 14px !important; }
+    #portalDrawerBackdrop { position: fixed; inset: 0; background: rgba(11,31,58,.55); z-index: 1085; }
+    #portalDrawerBackdrop.show { display: block !important; }
+}
+
 /* ============================ ALERTS / TABS / PAGINATION ============================ */
 .alert { border-radius: 14px; border:none; }
 .nav-line-tabs .nav-item .nav-link.active,

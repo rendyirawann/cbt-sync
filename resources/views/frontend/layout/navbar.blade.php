@@ -3,6 +3,7 @@
 	<div class="app-container container-xxl d-flex align-items-stretch justify-content-between" id="kt_app_header_container">
 		<!-- Logo -->
 		<div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-lg-15">
+			<button type="button" id="portalBurger" class="btn btn-icon p-0 me-3" aria-label="Buka menu"><span style="font-size:26px;line-height:1;color:#fff">&#9776;</span></button>
 			<a href="{{ route('student.dashboard') }}">
 				<img alt="Logo" src="{{ asset('assets/media/logos/lms.png') }}" class="h-30px h-lg-40px" />
 			</a>
@@ -64,6 +65,21 @@
 					</div>
 				</div>
 			</div>
+
+			<div id="portalDrawerBackdrop"></div>
+			<script>
+			document.addEventListener('DOMContentLoaded', function(){
+				var hdr = document.getElementById('kt_app_header'); if(!hdr) return;
+				var menu = hdr.querySelector('.app-header-menu');
+				var burger = document.getElementById('portalBurger');
+				var bd = document.getElementById('portalDrawerBackdrop');
+				function openD(){ if(menu) menu.classList.add('drawer-open'); if(bd) bd.classList.add('show'); }
+				function closeD(){ if(menu) menu.classList.remove('drawer-open'); if(bd) bd.classList.remove('show'); }
+				if(burger) burger.addEventListener('click', openD);
+				if(bd) bd.addEventListener('click', closeD);
+				if(menu) menu.querySelectorAll('.menu-link').forEach(function(l){ l.addEventListener('click', closeD); });
+			});
+			</script>
 
 			<!-- Right Navbar Items -->
 			<div class="app-navbar flex-shrink-0">
