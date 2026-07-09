@@ -134,6 +134,7 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student'])->group(function 
     Route::post('/admin/exam-sessions/{id}/toggle-active', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'toggleActive'])->name('exam-sessions.toggle-active');
     Route::post('/admin/exam-sessions/{id}/pin', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'regeneratePin'])->name('exam-sessions.pin');
     Route::get('/admin/exam-sessions/{id}/attempts', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'attempts'])->name('exam-sessions.attempts');
+    Route::get('/admin/exam-sessions/{id}/export', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'exportResults'])->name('exam-sessions.export');
     Route::get('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'grade'])->name('exam-attempts.grade');
     Route::post('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'storeGrade'])->name('exam-attempts.grade.store');
 

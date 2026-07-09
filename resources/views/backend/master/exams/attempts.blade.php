@@ -8,7 +8,10 @@
             <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">{{ $session->name }}</h1>
             <span class="text-muted fs-7 pt-1">{{ $session->exam->title }} • {{ $session->exam->teachingAssignment->subject->name ?? '' }}</span>
         </div>
-        <a href="{{ route('exams.show', $session->exam_id) }}" class="btn btn-sm btn-light"><i class="ki-outline ki-arrow-left fs-4"></i> Kembali ke Ujian</a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('exam-sessions.export', $session->id) }}" class="btn btn-sm btn-success"><span class="fs-5 me-1">📊</span> Unduh Excel</a>
+            <a href="{{ route('exams.show', $session->exam_id) }}" class="btn btn-sm btn-light"><span class="fs-5 me-1">←</span> Kembali ke Ujian</a>
+        </div>
     </div>
 </div>
 
