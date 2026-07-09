@@ -136,7 +136,7 @@
                                         <div class="col-6 mb-4"><label class="form-label required">Poin (benar)</label><input type="number" step="0.01" name="points" class="form-control" value="{{ rtrim(rtrim((string)$q->points,'0'),'.') }}" required></div>
                                         @if($q->type === 'mc')<div class="col-6 mb-4"><label class="form-label">Pengurang (salah)</label><input type="number" step="0.01" name="penalty" class="form-control" value="{{ rtrim(rtrim((string)$q->penalty,'0'),'.') }}"></div>@endif
                                     </div>
-                                    <div class="mb-4"><label class="form-label">Ganti Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 5 MB.</div></div>
+                                    <div class="mb-4"><label class="form-label">Ganti Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB.</div></div>
                                     @if($q->type === 'mc')
                                     <label class="form-label required">Opsi Jawaban (pilih kunci)</label>
                                     <div class="mc-options">

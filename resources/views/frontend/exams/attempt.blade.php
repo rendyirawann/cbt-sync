@@ -134,7 +134,7 @@
                                         <i class="ki-outline ki-picture fs-5"></i> Unggah Foto Jawaban
                                         <input type="file" accept="image/*" capture="environment" class="d-none ans-photo" data-question="{{ $q->id }}">
                                     </label>
-                                    <span class="text-muted fs-8">Maks 3 foto, JPG/JPEG/PNG ≤ 5 MB — cocok untuk rumus/coretan/diagram.</span>
+                                    <span class="text-muted fs-8">Maks 3 foto, JPG/JPEG/PNG ≤ 3 MB — cocok untuk rumus/coretan/diagram.</span>
                                 </div>
                                 <div class="d-flex flex-wrap gap-2 photo-list" id="photos_{{ $q->id }}">
                                     @foreach(($ans->answer_images ?? []) as $img)

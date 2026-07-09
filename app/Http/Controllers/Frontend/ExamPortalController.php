@@ -212,7 +212,7 @@ class ExamPortalController extends Controller
 
         $request->validate([
             'question_id' => 'required|uuid|exists:questions,id',
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:3072',
         ]);
 
         $ans = ExamAnswer::firstOrNew(['exam_attempt_id' => $attempt->id, 'question_id' => $request->question_id]);

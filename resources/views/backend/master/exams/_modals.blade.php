@@ -52,7 +52,7 @@
                     <div class="col-6 mb-4"><label class="form-label required">Poin bila benar</label><input type="number" step="0.01" name="points" class="form-control" value="1" required></div>
                     <div class="col-6 mb-4"><label class="form-label">Pengurang bila salah</label><input type="number" step="0.01" name="penalty" class="form-control" value="0"></div>
                 </div>
-                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 5 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
+                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
                 <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci jawaban)</span></label>
                 <div class="mc-options">
                     @for($k=0;$k<4;$k++)
@@ -88,7 +88,7 @@
                     <div class="math-preview" id="prev_addessay"></div>
                 </div>
                 <div class="mb-4"><label class="form-label required">Skor Maksimal</label><input type="number" step="0.01" name="points" class="form-control" value="10" required></div>
-                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 5 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
+                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
                 <div class="alert alert-light-info fs-7">Jawaban essay dinilai manual oleh guru di menu "Peserta & Nilai".</div>
             </div>
             <div class="modal-footer"><button type="submit" class="btn btn-info text-white">Simpan Soal</button></div>
