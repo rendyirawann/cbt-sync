@@ -36,7 +36,7 @@ License: For each use you must have a valid license purchased only from above li
 		<link href="{{ asset('assets/css/elite-theme.css') }}?v=2" rel="stylesheet" type="text/css" />
 		<!--end::Elite School Theme-->
 		@stack('stylesheets')
-		<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
+		{{-- Anti-clickjacking ditangani header X-Frame-Options: SAMEORIGIN (SecurityHeaders middleware). --}}
 		<style>
 			/* Modal Custom: Muncul dari Kanan (Offcanvas Style) */
 			.drawer-modal .modal-dialog {

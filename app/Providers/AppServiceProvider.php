@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,6 +29,11 @@ class AppServiceProvider extends ServiceProvider
         // Implicitly grant "Superadmin" role all permissions
         Gate::before(function ($user, $ability) {
             return $user->hasRole(['Superadmin', 'superadmin']) ? true : null;
+        });
+
+        // Rate limiter login: wajar (5x/menit per email+IP), melengkapi progressive-lockout di LoginRequest.
+        RateLimiter::for('login', function ($request) {
+            return Limit::perMinute(5)->by(Str::lower((string) $request->input('email')) . '|' . $request->ip());
         });
 
         // Share settings globally to all views

@@ -32,7 +32,7 @@ use App\Http\Controllers\Backend\Settings\SettingController;
 
 // --- PORTAL SISWA (FRONTEND) ---
 Route::get('/login', [\App\Http\Controllers\Frontend\PortalController::class, 'login'])->name('student.login');
-Route::post('/login', [\App\Http\Controllers\Frontend\PortalController::class, 'authenticate'])->name('student.authenticate');
+Route::post('/login', [\App\Http\Controllers\Frontend\PortalController::class, 'authenticate'])->middleware('throttle:login')->name('student.authenticate');
 
 
 
@@ -44,7 +44,8 @@ Route::get('/', function () {
 
 
 
-// --- TARUH DEBUG DISINI (DI LUAR MIDDLEWARE AUTH) ---
+// --- DEBUG (hanya di environment lokal; tidak aktif di production) ---
+if (app()->environment('local'))
 Route::get('/admin/debug-session', function () {
     $user = auth()->user();
 

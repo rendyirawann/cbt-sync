@@ -28,7 +28,7 @@ Route::middleware('guest')->group(function () {
     // PENTING: Saya tambahkan middleware throttle (Limit 5x percobaan per menit)
     // Ini menggantikan fungsi yang tadi dihapus di web.php
     Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])
-        ->middleware('throttle:3,1');
+        ->middleware('throttle:login');
 
     // --- FORGOT PASSWORD ---
     Route::get('/admin/forgot-password', [PasswordResetLinkController::class, 'create'])
