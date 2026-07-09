@@ -1,0 +1,17 @@
+/*
+ * Keenicons codepoint fix.
+ * The bundled plugins.bundle.css is a NEWER Keenicons build than the shipped font
+ * files (public/assets/plugins/global/fonts/keenicons/*). Its CSS maps these icons to
+ * codepoints ABOVE the installed font's range, so they render as empty "tofu" boxes.
+ * Here we remap the affected classes to the font's OWN codepoints (taken from the
+ * font glyph table via glyph-name), so they display the correct glyph.
+ * Load this AFTER plugins.bundle.css.
+ */
+.ki-home:before        { content: "\ea42"; } /* font glyph: home */
+.ki-plus:before        { content: "\eaa1"; } /* font glyph: plus */
+.ki-minus:before       { content: "\ea78"; } /* font glyph: minus */
+.ki-paper-clip:before  { content: "\ea92"; } /* font glyph: paper-clip */
+.ki-right:before       { content: "\e966"; } /* font glyph: black-right (chevron) */
+.ki-left:before        { content: "\e964"; } /* font glyph: black-left */
+.ki-down:before        { content: "\e962"; } /* font glyph: black-down */
+.ki-up:before          { content: "\e967"; } /* font glyph: black-up */
