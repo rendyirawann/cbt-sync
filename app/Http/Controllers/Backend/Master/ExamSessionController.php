@@ -44,6 +44,7 @@ class ExamSessionController extends Controller
             'show_result' => $request->has('show_result'),
             'status' => 'scheduled',
             'is_active' => true,
+            'resume_pin' => $this->generatePin(),
         ]);
 
         if ($request->participant_mode === 'manual') {
@@ -121,6 +122,24 @@ class ExamSessionController extends Controller
 
         return redirect()->back()->with('success',
             $session->is_active ? 'Sesi diaktifkan.' : 'Sesi dinonaktifkan (tersembunyi dari siswa).');
+    }
+
+    /** Buat ulang PIN pembuka kunci sesi. Boleh kapan saja (termasuk saat ujian berlangsung,
+     *  karena guru butuh PIN untuk membuka kunci siswa yang keluar layar). */
+    public function regeneratePin($id)
+    {
+        $session = ExamSession::with('exam')->findOrFail($id);
+        $this->authorizeExam($session->exam);
+
+        $session->update(['resume_pin' => $this->generatePin()]);
+
+        return redirect()->back()->with('success', 'PIN sesi "' . $session->name . '" diperbarui: ' . $session->resume_pin);
+    }
+
+    /** PIN 6 digit acak. */
+    private function generatePin(): string
+    {
+        return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     }
 
     private function notifyParticipants(ExamSession $session, string $title, string $message): void

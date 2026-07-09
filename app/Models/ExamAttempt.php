@@ -15,6 +15,7 @@ class ExamAttempt extends Model
         'started_at' => 'datetime',
         'ends_at' => 'datetime',
         'submitted_at' => 'datetime',
+        'locked_at' => 'datetime',
         'essay_graded' => 'boolean',
         'final_score' => 'decimal:2',
     ];

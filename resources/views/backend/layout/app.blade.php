@@ -54,6 +54,10 @@ License: For each use you must have a valid license purchased only from above li
 				transform: translateX(100%) !important;
 				transition: transform 0.3s ease-in-out !important;
 			}
+			/* Varian lebih lebar untuk form yang butuh ruang (mis. penyusun soal + rumus) */
+			.drawer-modal.drawer-wide .modal-dialog {
+				width: 680px;
+			}
 			.drawer-modal.show .modal-dialog {
 				transform: translateX(0) !important;
 			}

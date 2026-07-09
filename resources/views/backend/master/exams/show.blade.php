@@ -10,6 +10,7 @@
 @endphp
 
 @include('partials.katex')
+@include('partials.math-editor')
 
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div class="app-container container-xxl d-flex flex-stack">
@@ -118,7 +119,7 @@
                 </div>
 
                 {{-- edit modal per soal --}}
-                <div class="modal fade drawer-modal" id="editQ{{ $q->id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal fade drawer-modal drawer-wide" id="editQ{{ $q->id }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">
                             <form action="{{ route('exam-questions.update', $q->id) }}" method="POST" enctype="multipart/form-data">
@@ -190,6 +191,14 @@
                                 <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-calendar fs-6 me-1"></i> {{ \Carbon\Carbon::parse($s->starts_at)->format('d M Y H:i') }} – {{ \Carbon\Carbon::parse($s->ends_at)->format('H:i') }}</div>
                                 <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-timer fs-6 me-1"></i> {{ $s->duration_minutes }} menit • Kuota: {{ $s->max_capacity ?? '∞' }}</div>
                                 <div class="text-gray-600 fs-7 mb-3"><i class="ki-outline ki-people fs-6 me-1"></i> {{ $s->class_room_id ? ($s->classRoom->name ?? 'Kelas') : 'Daftar manual' }} • {{ $s->attempts->count() }} mengerjakan</div>
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <span class="badge badge-light-info d-inline-flex align-items-center py-2" title="Berikan PIN ini ke siswa untuk membuka kunci bila ia keluar layar saat ujian">
+                                        <i class="ki-outline ki-lock-2 fs-7 me-1"></i> PIN buka kunci: <b class="ms-1" style="letter-spacing:.12em">{{ $s->resume_pin ?? '—' }}</b>
+                                    </span>
+                                    <form action="{{ route('exam-sessions.pin', $s->id) }}" method="POST" class="d-inline">@csrf
+                                        <button class="btn btn-sm btn-icon btn-light-primary" title="Buat ulang PIN"><i class="ki-outline ki-arrows-circle fs-6"></i></button>
+                                    </form>
+                                </div>
                                 <div class="d-flex gap-2">
                                     <a href="{{ route('exam-sessions.attempts', $s->id) }}" class="btn btn-sm btn-light-primary flex-grow-1"><i class="ki-outline ki-eye fs-5"></i> Peserta & Nilai</a>
                     @if($sStarted)

@@ -34,6 +34,7 @@
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl py-6">
         @include('partials.katex')
+        @include('partials.math-editor')
 
         <div class="row g-5">
             {{-- ====== Panel Navigasi (kiri di desktop) ====== --}}
@@ -170,6 +171,19 @@
     <p class="text-white opacity-50 fs-8 mt-8">Darurat keluar: tekan <b>Ctrl + Shift + C</b></p>
 </div>
 
+{{-- Gerbang Kunci (anti-contek): muncul saat siswa keluar layar ujian; butuh PIN dari guru --}}
+<div id="lockGate" style="position:fixed;inset:0;z-index:3500;background:linear-gradient(180deg,#7f1d1d,#450a0a);flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:24px;display:{{ ($isLocked ?? false) ? 'flex' : 'none' }}">
+    <i class="ki-outline ki-lock-2 fs-5x text-white mb-4"><span class="path1"></span><span class="path2"></span></i>
+    <h2 class="text-white fw-bold mb-2">Sesi Terkunci</h2>
+    <p class="text-white opacity-75 mb-4" style="max-width:520px">Kamu terdeteksi meninggalkan layar ujian (pindah tab/aplikasi atau keluar layar penuh). <b>Timer dijeda.</b> Untuk melanjutkan, minta <b>PIN</b> kepada pengawas/guru.</p>
+    <div style="max-width:320px;width:100%">
+        <input id="lockPin" type="text" inputmode="numeric" autocomplete="off" maxlength="10" class="form-control form-control-lg text-center mb-2" placeholder="Masukkan PIN" style="letter-spacing:.3em;font-weight:700">
+        <div id="lockErr" class="text-warning fw-semibold mb-3" style="min-height:20px"></div>
+        <button type="button" id="lockUnlock" class="btn btn-light btn-lg w-100 fw-bold"><i class="ki-outline ki-lock-3 fs-3"></i> Lanjutkan Ujian</button>
+    </div>
+    <p class="text-white opacity-50 fs-8 mt-8">Pelanggaran tercatat. Darurat keluar: Ctrl + Shift + C</p>
+</div>
+
 <form id="submitForm" action="{{ route('student.exams.submit', $session->id) }}" method="POST" class="d-none">@csrf</form>
 
 @push('scripts')
@@ -199,6 +213,10 @@
     const ATTEMPT_ID = "{{ $attempt->id }}";
     let remaining = {{ (int) $remaining }};
     let submitting = false;
+    const LOCK_URL = "{{ route('student.exams.lock') }}";
+    const UNLOCK_URL = "{{ route('student.exams.unlock') }}";
+    let locked = {{ ($isLocked ?? false) ? 'true' : 'false' }};
+    let started = {{ ($isLocked ?? false) ? 'true' : 'false' }};
 
     /* ---------- Navigasi soal (satu per layar) ---------- */
     const cards = Array.from(document.querySelectorAll('.exam-q'));
@@ -232,6 +250,7 @@
     const timerEl = document.getElementById('timer');
     function fmt(s){ const m = Math.floor(s/60), x = s%60; return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0'); }
     function tick(){
+        if (locked) return;                        // timer dijeda saat sesi terkunci
         if (remaining <= 0){ timerEl.textContent = '00:00'; autoSubmit(); return; }
         timerEl.textContent = fmt(remaining);
         remaining--;
@@ -247,7 +266,7 @@
             headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'Accept':'application/json'},
             body: JSON.stringify(Object.assign({attempt_id: ATTEMPT_ID}, payload))
         }).then(async res => {
-            if (res.status === 422){ const d = await res.json(); if (d.expired){ clearInterval(timerInt); autoSubmit(); } setStatus('Gagal menyimpan', false); return; }
+            if (res.status === 422){ const d = await res.json(); if (d.expired){ clearInterval(timerInt); autoSubmit(); } else if (d.locked){ showLockOverlay(); } setStatus('Gagal menyimpan', false); return; }
             setStatus('✓ Tersimpan');
         }).catch(() => setStatus('Gagal menyimpan', false));
     }
@@ -334,16 +353,75 @@
     function onFsChange(){
         if (examExiting || submitting) return;
         if (isFs()){
+            started = true;                 // sudah masuk mode ujian
             fsGate.style.display = 'none';
-        } else {
-            document.getElementById('fsTitle').textContent = 'Anda Keluar dari Layar Penuh';
-            document.getElementById('fsDesc').textContent = 'Ujian harus dikerjakan dalam layar penuh. Klik untuk kembali & melanjutkan, atau tekan Ctrl + Shift + C untuk keluar.';
-            document.getElementById('fsEnter').innerHTML = '<i class="ki-outline ki-screen fs-3"></i> Kembali ke Layar Penuh';
+        } else if (!started){
+            // Belum pernah masuk fullscreen → tampilkan gerbang masuk.
             fsGate.style.display = 'flex';
+        } else if (!locked){
+            // Sudah mulai lalu keluar fullscreen → pelanggaran → kunci (butuh PIN guru).
+            doLock();
         }
     }
     document.addEventListener('fullscreenchange', onFsChange);
     document.addEventListener('webkitfullscreenchange', onFsChange);
+
+    /* ---------- Anti-contek: kunci sesi saat keluar layar ujian ---------- */
+    const lockGate = document.getElementById('lockGate');
+    function showLockOverlay(){ locked = true; if (lockGate) lockGate.style.display = 'flex'; }
+    function sendLockBeacon(){
+        try {
+            var fd = new FormData();
+            fd.append('_token', CSRF);
+            fd.append('attempt_id', ATTEMPT_ID);
+            if (navigator.sendBeacon) navigator.sendBeacon(LOCK_URL, fd);
+            else fetch(LOCK_URL, {method:'POST', headers:{'X-CSRF-TOKEN':CSRF}, body:fd, keepalive:true});
+        } catch(e){}
+    }
+    function doLock(){
+        if (submitting || examExiting || locked || !started) return;
+        showLockOverlay();       // tampilkan overlay dulu (instan)
+        sendLockBeacon();        // catat di server (andal walau tab disembunyikan)
+    }
+    function doUnlock(){
+        var input = document.getElementById('lockPin');
+        var errEl = document.getElementById('lockErr');
+        var pin = (input.value || '').trim();
+        if (!pin){ errEl.textContent = 'Masukkan PIN dulu.'; return; }
+        errEl.textContent = '';
+        var btn = document.getElementById('lockUnlock');
+        var old = btn.innerHTML; btn.classList.add('disabled'); btn.innerHTML = 'Memeriksa...';
+        var fd = new FormData(); fd.append('attempt_id', ATTEMPT_ID); fd.append('pin', pin);
+        fetch(UNLOCK_URL, {method:'POST', headers:{'X-CSRF-TOKEN':CSRF, 'Accept':'application/json'}, body:fd})
+            .then(async r => {
+                var d = await r.json();
+                btn.classList.remove('disabled'); btn.innerHTML = old;
+                if (!r.ok){ errEl.textContent = d.message || 'PIN salah.'; input.value = ''; return; }
+                locked = false;
+                if (typeof d.remaining === 'number') remaining = d.remaining;
+                input.value = '';
+                lockGate.style.display = 'none';
+                fsRequest();     // kembali ke layar penuh (gestur klik tombol ini valid)
+            })
+            .catch(() => { btn.classList.remove('disabled'); btn.innerHTML = old; errEl.textContent = 'Gagal terhubung. Coba lagi.'; });
+    }
+    if (lockGate){
+        document.getElementById('lockUnlock').addEventListener('click', doUnlock);
+        document.getElementById('lockPin').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); doUnlock(); } });
+    }
+    // Abaikan penyembunyian tab akibat membuka kamera/galeri saat unggah foto jawaban (khusus HP).
+    let pickingFile = false, pickT = null;
+    document.querySelectorAll('.ans-photo').forEach(function(inp){
+        inp.addEventListener('click', function(){ pickingFile = true; clearTimeout(pickT); pickT = setTimeout(function(){ pickingFile = false; }, 2500); });
+    });
+    // Pemicu kunci: pindah tab / minimize / beralih aplikasi.
+    document.addEventListener('visibilitychange', function(){
+        if (!document.hidden) return;
+        if (pickingFile){ pickingFile = false; return; }   // sekali jalan: akibat pemilih file, bukan pindah tab
+        doLock();
+    });
+    // Muat ulang dalam keadaan terkunci → pastikan overlay tampil & anggap sudah mulai.
+    if (locked){ started = true; if (lockGate) lockGate.style.display = 'flex'; }
 </script>
 @endpush
 @endsection

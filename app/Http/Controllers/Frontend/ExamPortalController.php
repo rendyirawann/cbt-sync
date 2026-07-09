@@ -130,8 +130,8 @@ class ExamPortalController extends Controller
             return redirect()->route('student.exams.result', $attempt->id);
         }
 
-        // Waktu habis → auto submit.
-        if (Carbon::now()->gte($attempt->ends_at)) {
+        // Waktu habis → auto submit (kecuali sedang terkunci: timer dijeda menunggu PIN guru).
+        if (!$attempt->locked_at && Carbon::now()->gte($attempt->ends_at)) {
             CbtScoringService::finalizeOnSubmit($attempt);
             $this->afterFinalize($attempt);
             return redirect()->route('student.exams.result', $attempt->id)->with('error', 'Waktu ujian telah habis, jawaban otomatis dikumpulkan.');
@@ -159,9 +159,13 @@ class ExamPortalController extends Controller
         }
 
         $answers = $attempt->answers()->get()->keyBy('question_id');
-        $remaining = max(0, Carbon::now()->diffInSeconds($attempt->ends_at, false));
+        // Saat terkunci timer dijeda → sisa waktu dibekukan pada saat mulai terkunci.
+        $remaining = $attempt->locked_at
+            ? max(0, Carbon::parse($attempt->locked_at)->diffInSeconds($attempt->ends_at, false))
+            : max(0, Carbon::now()->diffInSeconds($attempt->ends_at, false));
 
-        return view('frontend.exams.attempt', compact('session', 'exam', 'attempt', 'questions', 'answers', 'remaining') + ['hideChrome' => true]);
+        return view('frontend.exams.attempt', compact('session', 'exam', 'attempt', 'questions', 'answers', 'remaining')
+            + ['hideChrome' => true, 'isLocked' => (bool) $attempt->locked_at]);
     }
 
     /** Autosave satu jawaban (AJAX JSON). */
@@ -175,6 +179,9 @@ class ExamPortalController extends Controller
         }
         if ($attempt->status !== 'in_progress') {
             return response()->json(['message' => 'Ujian sudah dikumpulkan.'], 422);
+        }
+        if ($attempt->locked_at) {
+            return response()->json(['message' => 'Sesi terkunci. Masukkan PIN untuk melanjutkan.', 'locked' => true], 422);
         }
         if (Carbon::now()->gte($attempt->ends_at)) {
             return response()->json(['message' => 'Waktu habis.', 'expired' => true], 422);
@@ -200,6 +207,7 @@ class ExamPortalController extends Controller
         $attempt = ExamAttempt::findOrFail($request->attempt_id);
         if ($attempt->student_id !== $student->id) return response()->json(['message' => 'Akses ditolak.'], 403);
         if ($attempt->status !== 'in_progress') return response()->json(['message' => 'Ujian sudah dikumpulkan.'], 422);
+        if ($attempt->locked_at) return response()->json(['message' => 'Sesi terkunci. Masukkan PIN untuk melanjutkan.', 'locked' => true], 422);
         if (Carbon::now()->gte($attempt->ends_at)) return response()->json(['message' => 'Waktu habis.', 'expired' => true], 422);
 
         $request->validate([
@@ -242,6 +250,49 @@ class ExamPortalController extends Controller
             return response()->json(['message' => 'Foto dihapus.', 'images' => array_map(fn ($p) => ['path' => $p, 'url' => asset('storage/'.$p)], $imgs)]);
         }
         return response()->json(['message' => 'Tidak ditemukan.', 'images' => []]);
+    }
+
+    /** Kunci attempt karena siswa keluar dari layar ujian (pindah tab / keluar fullscreen). Timer dijeda. */
+    public function lock(Request $request)
+    {
+        $student = auth()->user()->student;
+        $attempt = ExamAttempt::findOrFail($request->attempt_id);
+        if (!$student || $attempt->student_id !== $student->id) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+        if ($attempt->status === 'in_progress' && !$attempt->locked_at) {
+            $attempt->locked_at = Carbon::now();
+            $attempt->lock_count = (int) $attempt->lock_count + 1;
+            $attempt->save();
+        }
+        return response()->json(['locked' => true]);
+    }
+
+    /** Buka kunci dengan PIN sesi (dari guru). Timer dilanjutkan — ends_at diperpanjang selama durasi jeda. */
+    public function unlock(Request $request)
+    {
+        $student = auth()->user()->student;
+        $attempt = ExamAttempt::with('session')->findOrFail($request->attempt_id);
+        if (!$student || $attempt->student_id !== $student->id) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+        $request->validate(['pin' => 'required|string']);
+
+        $pin = $attempt->session->resume_pin ?? null;
+        if (!$pin || trim((string) $request->pin) !== (string) $pin) {
+            return response()->json(['message' => 'PIN salah. Minta PIN yang benar kepada pengawas/guru.'], 422);
+        }
+
+        if ($attempt->locked_at) {
+            $delta = abs(Carbon::parse($attempt->locked_at)->diffInSeconds(Carbon::now()));
+            $attempt->ends_at = Carbon::parse($attempt->ends_at)->addSeconds($delta);
+            $attempt->paused_seconds = (int) $attempt->paused_seconds + $delta;
+            $attempt->locked_at = null;
+            $attempt->save();
+        }
+
+        $remaining = max(0, Carbon::now()->diffInSeconds($attempt->ends_at, false));
+        return response()->json(['ok' => true, 'remaining' => $remaining]);
     }
 
     /** Kumpulkan ujian. */

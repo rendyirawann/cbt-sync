@@ -131,6 +131,7 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student'])->group(function 
     Route::put('/admin/exam-sessions/{id}', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'update'])->name('exam-sessions.update');
     Route::delete('/admin/exam-sessions/{id}', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'destroy'])->name('exam-sessions.destroy');
     Route::post('/admin/exam-sessions/{id}/toggle-active', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'toggleActive'])->name('exam-sessions.toggle-active');
+    Route::post('/admin/exam-sessions/{id}/pin', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'regeneratePin'])->name('exam-sessions.pin');
     Route::get('/admin/exam-sessions/{id}/attempts', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'attempts'])->name('exam-sessions.attempts');
     Route::get('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'grade'])->name('exam-attempts.grade');
     Route::post('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'storeGrade'])->name('exam-attempts.grade.store');
@@ -226,6 +227,8 @@ Route::middleware(['auth', 'role:Siswa'])->prefix('portal')->group(function () {
     Route::post('/exam-answers/save', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'saveAnswer'])->name('student.exam-answers.save');
     Route::post('/exam-answers/photo', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'uploadPhoto'])->name('student.exam-answers.photo');
     Route::post('/exam-answers/photo/delete', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'deletePhoto'])->name('student.exam-answers.photo.delete');
+    Route::post('/exams/lock', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'lock'])->name('student.exams.lock');
+    Route::post('/exams/unlock', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'unlock'])->name('student.exams.unlock');
     Route::post('/exams/{sessionId}/submit', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'submit'])->name('student.exams.submit');
     Route::get('/exam-attempts/{attemptId}/result', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'result'])->name('student.exams.result');
 
