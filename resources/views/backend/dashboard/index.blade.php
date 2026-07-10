@@ -126,7 +126,7 @@
                 <div class="col-md-6 col-lg-6">
                     <div class="card card-flush h-md-100 mb-5 mb-xl-10 bg-primary">
                         <div class="card-header pt-5"><div class="card-title d-flex flex-column">
-                            <span class="fs-2hx fw-bold text-white lh-1">{{ $stats['my_subjects'] }}</span>
+                            <span class="fs-2hx fw-bold text-white lh-1">{{ $stats['my_subjects'] ?? 0 }}</span>
                             <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Mata Pelajaran Saya</span>
                         </div></div>
                     </div>
@@ -134,7 +134,7 @@
                 <div class="col-md-6 col-lg-6">
                     <div class="card card-flush h-md-100 mb-5 mb-xl-10 bg-success">
                         <div class="card-header pt-5"><div class="card-title d-flex flex-column">
-                            <span class="fs-2hx fw-bold text-white lh-1">{{ $stats['new_modules'] }}</span>
+                            <span class="fs-2hx fw-bold text-white lh-1">{{ $stats['new_modules'] ?? 0 }}</span>
                             <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Modul Pembelajaran</span>
                         </div></div>
                     </div>

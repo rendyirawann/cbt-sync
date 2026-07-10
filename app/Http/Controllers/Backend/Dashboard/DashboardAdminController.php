@@ -23,7 +23,7 @@ class DashboardAdminController extends Controller
             return redirect()->route('student.dashboard');
         }
 
-        if ($user->hasRole('Superadmin')) {
+        if ($user->hasAnyRole(['Superadmin', 'Admin', 'admin'])) {
             $stats = [
                 'type' => 'admin',
                 'schools' => School::count(),
