@@ -25,6 +25,7 @@ class User extends Authenticatable implements BannableContract
         'name',
         'username',
         'email',
+        'school_id',
         'no_wa',
         'avatar',
         'last_ip',
@@ -66,6 +67,11 @@ class User extends Authenticatable implements BannableContract
     public function teacher()
     {
         return $this->hasOne(Teacher::class);
+    }
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
     }
 
     public function student()

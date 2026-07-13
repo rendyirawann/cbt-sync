@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\LogsAllActivity;
 use Carbon\Carbon;
 
 class ExamSession extends Model
 {
-    use HasUuids;
+    use HasUuids, LogsAllActivity;
 
     protected $guarded = [];
 

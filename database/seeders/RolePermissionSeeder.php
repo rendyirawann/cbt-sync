@@ -58,7 +58,7 @@ class RolePermissionSeeder extends Seeder
         // 2. CREATE ROLES (if they don't exist)
         // ================================================
         $roleSuperadmin = Role::firstOrCreate(['name' => 'Superadmin']);
-        $roleAdmin      = Role::firstOrCreate(['name' => 'admin']);
+        $roleAdmin      = Role::firstOrCreate(['name' => 'Admin']);
 
         // ================================================
         // 3. ASSIGN PERMISSIONS TO ROLES

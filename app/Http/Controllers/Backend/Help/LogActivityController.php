@@ -55,12 +55,11 @@ class LogActivityController extends Controller implements HasMiddleware
             ->select('activity_log.*')
             ->orderBy('created_at', 'desc');
 
-        // --- TAMBAHAN LOGIC DI SINI ---
-        // Jika user BUKAN 'Superadmin', hanya tampilkan activity milik user tersebut
-        if (!$user->hasRole('Superadmin')) {
-            $postsQuery->where('causer_id', $user->id);
+        // Cakupan berjenjang: Superadmin=semua, Admin=sekolahnya, Guru=dirinya+siswanya, Siswa=sendiri.
+        $visibleIds = app(\App\Services\ActivityScope::class)->visibleCauserIds($user);
+        if ($visibleIds !== null) {
+            $postsQuery->whereIn('causer_id', $visibleIds);
         }
-        // -----------------------------
 
         // Pencarian Manual
         if (!empty($searchValue)) {
