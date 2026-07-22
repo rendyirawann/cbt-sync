@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\SimpleType\Jc;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Template Word (.docx) untuk pembuatan soal — mendukung TEMPEL GAMBAR langsung
@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ExamWordController extends Controller
 {
-    public function download(string $type): StreamedResponse
+    public function download(string $type): BinaryFileResponse
     {
         $type = in_array($type, ['pg', 'mixed', 'essay']) ? $type : 'pg';
         $config = $this->config($type);
@@ -44,13 +44,15 @@ class ExamWordController extends Controller
         $section->addText('SOAL — isi di tabel ini (boleh tambah baris):', ['bold' => true, 'size' => 11, 'color' => '059669']);
         $this->buildTable($word, $section, $config, [], 12);
 
-        $writer = IOFactory::createWriter($word, 'Word2007');
-        return response()->streamDownload(function () use ($writer) {
-            $writer->save('php://output');
-        }, $config['file'], [
+        // PhpWord (ZipArchive) butuh file nyata — tidak bisa menulis ke php://output.
+        // Simpan ke file sementara lalu kirim & hapus setelah terunduh.
+        $tmp = tempnam(sys_get_temp_dir(), 'wordtpl_') . '.docx';
+        IOFactory::createWriter($word, 'Word2007')->save($tmp);
+
+        return response()->download($tmp, $config['file'], [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'Cache-Control' => 'max-age=0',
-        ]);
+        ])->deleteFileAfterSend(true);
     }
 
     private function buildTable(PhpWord $word, $section, array $config, array $rows, int $emptyRows): void
@@ -98,7 +100,7 @@ class ExamWordController extends Controller
         $extra = match ($type) {
             'pg' => ['Kolom "Kunci (A-E)": tulis huruf opsi yang benar (A/B/C/D/E).'],
             'essay' => ['Kolom "Skor Maksimal": nilai bila jawaban sempurna. Essay dinilai manual oleh guru.'],
-            'mixed' => ['Kolom "Tipe": tulis PG atau Essay. Baris Essay: kosongkan Opsi & Kunci.'],
+            'mixed' => ['Kolom "Tipe": tulis PG atau Essay. Baris Essay: kosongkan Opsi dan Kunci.'],
             default => [],
         };
         return array_merge($common, $extra);
