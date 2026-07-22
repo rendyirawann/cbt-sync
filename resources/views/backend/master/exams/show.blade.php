@@ -83,17 +83,51 @@
                         <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addEssayModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Essay</button>
                         @endif
                     @endif
-                    @if($exam->type === 'mixed')
-                    <a href="{{ route('exams.template', 'mixed') }}" class="btn btn-light-success ms-auto" title="Template Excel PG + Essay">
-                        <i class="ki-outline ki-file-down fs-4"></i> Unduh Template Soal (Excel)
-                    </a>
-                    @else
-                    @php $tpl = $exam->type === 'essay' ? 'essay' : 'pg'; @endphp
-                    <a href="{{ route('exams.template', $tpl) }}" class="btn btn-light-success ms-auto" title="Template Excel {{ $exam->type === 'essay' ? 'Essay' : 'Pilihan Ganda' }}">
-                        <i class="ki-outline ki-file-down fs-4"></i> Unduh Template Soal (Excel)
-                    </a>
-                    @endif
+                    @php $tpl = $exam->type === 'mixed' ? 'mixed' : ($exam->type === 'essay' ? 'essay' : 'pg'); @endphp
+                    <div class="d-flex flex-wrap gap-2 ms-auto">
+                        <div class="dropdown">
+                            <button class="btn btn-light-success" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Unduh template untuk menyiapkan soal secara offline">
+                                <i class="ki-outline ki-file-down fs-4"></i> Unduh Template Soal
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ route('exams.template', $tpl) }}"><i class="ki-outline ki-file fs-5 me-2 text-success"></i> Excel (.xlsx) — teks & rumus</a></li>
+                                <li><a class="dropdown-item" href="{{ route('exams.word-template', $tpl) }}"><i class="ki-outline ki-file fs-5 me-2 text-primary"></i> Word (.docx) — bisa tempel gambar</a></li>
+                            </ul>
+                        </div>
+                        @unless($locked)
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importModal" title="Unggah template (Excel/Word) yang sudah diisi">
+                            <i class="ki-outline ki-file-up fs-4"></i> Upload Template (Impor Soal)
+                        </button>
+                        @endunless
+                    </div>
                 </div>
+
+                @unless($locked)
+                {{-- ===== Modal Impor Soal dari Excel ===== --}}
+                <div class="modal fade drawer-modal" id="importModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog"><div class="modal-content">
+                        <form action="{{ route('exams.import', $exam->id) }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="modal-header"><h3 class="modal-title">Impor Soal dari Excel</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
+                            <div class="modal-body px-8 py-6">
+                                <div class="alert alert-light-primary fs-8 py-3 mb-5">
+                                    Gunakan <b>Template Soal</b> di atas, isi pada lembar/tabel <b>"Soal"</b>, lalu unggah di sini.
+                                    Rumus tulis di antara <code>$ … $</code>.
+                                    <b>Excel</b>: untuk gambar, impor dulu lalu tambahkan lewat tombol <b>Edit</b> soal.
+                                    <b>Word</b>: gambar bisa <b>ditempel langsung</b> ke dalam sel (soal/opsi).
+                                    @if($exam->type==='mc') Kategori ujian ini <b>Pilihan Ganda</b> — baris essay akan dilewati.
+                                    @elseif($exam->type==='essay') Kategori ujian ini <b>Essay</b> — baris PG akan dilewati.
+                                    @endif
+                                </div>
+                                <label class="form-label required">Berkas Excel / Word (.xlsx, .xls, .docx)</label>
+                                <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.docx" required>
+                                <div class="form-text">Maksimal 8 MB. Soal yang diimpor ditambahkan ke soal yang sudah ada.</div>
+                            </div>
+                            <div class="modal-footer"><button type="submit" class="btn btn-success"><i class="ki-outline ki-file-up fs-5"></i> Impor Sekarang</button></div>
+                        </form>
+                    </div></div>
+                </div>
+                @endunless
 
                 @forelse($exam->questions as $i => $q)
                 <div class="card mb-4">

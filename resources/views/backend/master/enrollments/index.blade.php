@@ -118,7 +118,7 @@
                 </div>
                 <div class="modal-footer flex-center">
                     <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary confirm-delete">Plotting Siswa</button>
+                    <button type="submit" class="btn btn-primary">Plotting Siswa</button>
                 </div>
             </form>
         </div>

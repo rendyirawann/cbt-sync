@@ -125,6 +125,9 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student'])->group(function 
     // CBT / Ujian Online (Guru & Superadmin)
     Route::get('/admin/exams/template/{type}', [\App\Http\Controllers\Backend\Master\ExamTemplateController::class, 'download'])
         ->where('type', 'pg|mixed|essay')->name('exams.template');
+    Route::get('/admin/exams/template-word/{type}', [\App\Http\Controllers\Backend\Master\ExamWordController::class, 'download'])
+        ->where('type', 'pg|mixed|essay')->name('exams.word-template');
+    Route::post('/admin/exams/{exam}/import-questions', [\App\Http\Controllers\Backend\Master\ExamTemplateController::class, 'import'])->name('exams.import');
     Route::resource('/admin/exams', \App\Http\Controllers\Backend\Master\ExamController::class)->except(['create', 'edit']);
     Route::post('/admin/exams/{id}/publish', [\App\Http\Controllers\Backend\Master\ExamController::class, 'publish'])->name('exams.publish');
     Route::post('/admin/exam-questions', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'store'])->name('exam-questions.store');

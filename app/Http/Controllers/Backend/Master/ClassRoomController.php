@@ -18,14 +18,24 @@ class ClassRoomController extends Controller
 
     public function store(Request $request)
     {
-        ClassRoom::create($request->all());
+        $data = $request->validate([
+            'school_id' => 'required|uuid|exists:schools,id',
+            'name' => 'required|string|max:255',
+            'level' => 'required|string|max:50',
+        ]);
+        ClassRoom::create($data);
         return redirect()->back()->with('success', 'Kelas berhasil ditambahkan');
     }
 
     public function update(Request $request, $id)
     {
+        $data = $request->validate([
+            'school_id' => 'required|uuid|exists:schools,id',
+            'name' => 'required|string|max:255',
+            'level' => 'required|string|max:50',
+        ]);
         $item = ClassRoom::findOrFail($id);
-        $item->update($request->all());
+        $item->update($data);
         return redirect()->back()->with('success', 'Kelas berhasil diupdate');
     }
 

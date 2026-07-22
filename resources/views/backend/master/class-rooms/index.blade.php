@@ -75,11 +75,12 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Nama Kelas</label><input type="text" name="name" class="form-control form-control-solid" required></div>
+                    <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Nama Kelas</label><input type="text" name="name" class="form-control form-control-solid" placeholder="cth: X-IPA 1" required></div>
+                    <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Tingkat / Level</label><input type="text" name="level" class="form-control form-control-solid" placeholder="cth: 10" required><div class="form-text">Angka tingkat kelas, mis. 10 / 11 / 12 (atau 7 / 8 / 9).</div></div>
                 </div>
                 <div class="modal-footer flex-center">
                     <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary confirm-delete">Simpan</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
                 </div>
             </form>
         </div>
@@ -107,10 +108,11 @@
                         </select>
                     </div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Nama Kelas</label><input type="text" name="name" class="form-control form-control-solid" value="{{ $item->name }}" required></div>
+                    <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Tingkat / Level</label><input type="text" name="level" class="form-control form-control-solid" value="{{ $item->level }}" placeholder="cth: 10" required></div>
                 </div>
                 <div class="modal-footer flex-center">
                     <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary confirm-delete">Simpan</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
                 </div>
             </form>
         </div>

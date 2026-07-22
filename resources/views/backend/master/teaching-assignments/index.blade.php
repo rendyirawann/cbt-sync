@@ -121,7 +121,7 @@
                 </div>
                 <div class="modal-footer flex-center">
                     <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary confirm-delete">Simpan Penugasan</button>
+                    <button type="submit" class="btn btn-primary">Simpan Penugasan</button>
                 </div>
             </form>
         </div>
@@ -181,7 +181,7 @@
                 </div>
                 <div class="modal-footer flex-center">
                     <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary confirm-delete">Simpan Perubahan</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
                 </div>
             </form>
         </div>
