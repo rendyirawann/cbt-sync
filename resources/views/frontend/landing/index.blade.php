@@ -1,5 +1,5 @@
 @section('title', 'Platform Belajar & Ujian Online (CBT) untuk Sekolah, Bimbel & Homeschooling')
-@section('meta_description', 'LMS & CBT modern: kelola materi, tugas, absensi, e-Rapor, dan ujian online yang aman dengan anti-contek. Cocok untuk sekolah, bimbel, private, dan homeschooling.')
+@section('meta_description', 'LMS & CBT modern: kelola materi, tugas, absensi, Raport Hasil Ujian, dan ujian online yang aman dengan anti-contek. Cocok untuk sekolah, bimbel, private, dan homeschooling.')
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -258,7 +258,7 @@
                         <div>
                             <span class="eyebrow"><i data-lucide="sparkles" style="width:15px"></i> Belajar Cerdas, Masa Depan Cerah</span>
                             <h1 class="h-title">Platform <span class="grad-text">LMS &amp; CBT</span><br>untuk Sekolah Elite &amp; Ternama</h1>
-                            <p class="lead">Satu ekosistem digital untuk kelola pembelajaran, ujian online (CBT), absensi, e-rapor, hingga analitik prestasi siswa — elegan, cepat, dan terpercaya.</p>
+                            <p class="lead">Satu ekosistem digital untuk kelola pembelajaran, ujian online (CBT), absensi, Raport Hasil Ujian, hingga analitik prestasi siswa — elegan, cepat, dan terpercaya.</p>
                             <div class="hero-cta">
                                 <a href="{{ route('student.login') }}" class="btn btn-primary">Mulai Sekarang <i data-lucide="arrow-right" style="width:18px"></i></a>
                                 <a data-scroll="harga" class="btn btn-light"><i data-lucide="play" style="width:16px"></i> Lihat Paket Harga</a>
@@ -295,7 +295,7 @@
                                     ['book-open','Modul Pembelajaran','indigo','Materi PDF, dokumen & video kapan saja.'],
                                     ['file-check-2','Ujian Online (CBT)','emerald','Bank soal, timer & nilai otomatis anti-curang.'],
                                     ['fingerprint','Absensi Digital','amber','Absen harian & per mapel, notifikasi ortu.'],
-                                    ['award','E-Rapor & Peringkat','blue','Rapor digital + ranking kelas otomatis.'],
+                                    ['award','Raport Hasil Ujian & Peringkat','blue','Rapor digital + ranking kelas otomatis.'],
                                     ['trophy','Gamifikasi','pink','Lencana, poin & leaderboard motivasi belajar.'],
                                     ['bar-chart-3','Analitik Prestasi','teal','Pantau performa lewat dashboard interaktif.'],
                                 ];
@@ -358,7 +358,7 @@
                                 <li><i data-lucide="check" style="width:17px"></i> Hingga 25 anak / siswa</li>
                                 <li><i data-lucide="check" style="width:17px"></i> Modul & tugas terstruktur</li>
                                 <li><i data-lucide="check" style="width:17px"></i> Ujian online (CBT)</li>
-                                <li><i data-lucide="check" style="width:17px"></i> E-rapor & laporan ortu</li>
+                                <li><i data-lucide="check" style="width:17px"></i> Raport Hasil Ujian & laporan ortu</li>
                                 <li><i data-lucide="check" style="width:17px"></i> Dukungan email</li>
                             </ul>
                             <a href="{{ route('login') }}" class="btn btn-light" style="justify-content:center">Pilih Home</a>
@@ -388,7 +388,7 @@
                             <ul>
                                 <li><i data-lucide="check" style="width:17px"></i> Hingga 1.000 siswa</li>
                                 <li><i data-lucide="check" style="width:17px"></i> Modul & tugas unlimited</li>
-                                <li><i data-lucide="check" style="width:17px"></i> CBT, absensi & e-rapor</li>
+                                <li><i data-lucide="check" style="width:17px"></i> CBT, absensi & Raport Hasil Ujian</li>
                                 <li><i data-lucide="check" style="width:17px"></i> Notifikasi orang tua</li>
                                 <li><i data-lucide="check" style="width:17px"></i> Dukungan prioritas</li>
                             </ul>

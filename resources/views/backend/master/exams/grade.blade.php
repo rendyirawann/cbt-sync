@@ -61,11 +61,14 @@
 
                     @if($q->type === 'mc')
                         @foreach($q->options as $opt)
-                        <div class="d-flex align-items-center mb-1
+                        <div class="d-flex align-items-start mb-1
                             @if($opt->is_correct) text-success fw-bold
                             @elseif($ans && $ans->selected_option_id === $opt->id) text-danger fw-bold @endif">
                             <span class="badge badge-{{ $opt->is_correct ? 'success' : (($ans && $ans->selected_option_id === $opt->id) ? 'danger' : 'secondary') }} me-2">{{ $opt->label }}</span>
-                            {{ $opt->option_text }}
+                            <div>
+                                @if($opt->option_text){{ $opt->option_text }}@endif
+                                @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded d-block mt-1 mh-80px" alt="Gambar opsi {{ $opt->label }}">@endif
+                            </div>
                             @if($ans && $ans->selected_option_id === $opt->id)<span class="badge badge-light-dark ms-2">Jawaban siswa</span>@endif
                             @if($opt->is_correct)<i class="ki-outline ki-check-circle fs-5 text-success ms-2"></i>@endif
                         </div>

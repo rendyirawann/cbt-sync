@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>e-Rapor_{{ str_replace(' ', '_', $student->user->name) }}_{{ $classRoom->name }}</title>
+    <title>Raport_Hasil_Ujian_{{ str_replace(' ', '_', $student->user->name) }}_{{ $classRoom->name }}</title>
     <style>
         /* IMPORT GOOGLE FONTS FOR METRONIC-GRADE TYPOGRAPHY */
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Outfit:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap');
@@ -506,7 +506,7 @@
         <div class="cover-page">
             <div class="cover-header">
                 <p class="cover-kementerian">Kementerian Pendidikan, Kebudayaan,<br>Riset, dan Teknologi Republik Indonesia</p>
-                <h1 class="cover-main-title">Rapor Siswa</h1>
+                <h1 class="cover-main-title">Raport Hasil Ujian</h1>
                 <p class="cover-sub-title">Laporan Capaian Hasil Belajar Peserta Didik</p>
             </div>
 

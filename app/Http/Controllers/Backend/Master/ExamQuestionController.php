@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend\Master;
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\Question;
+use App\Models\QuestionOption;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -20,11 +21,8 @@ class ExamQuestionController extends Controller
             'points' => 'required|numeric|min:0',
             'penalty' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
-        ], [
-            'image.image' => 'Berkas yang diunggah harus berupa gambar.',
-            'image.mimes' => 'Format gambar harus JPG, JPEG, atau PNG.',
-            'image.max' => 'Ukuran gambar maksimal 3 MB.',
-        ]);
+            'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
+        ], $this->imageMessages());
 
         $exam = Exam::findOrFail($request->exam_id);
         $this->authorizeExam($exam);
@@ -58,7 +56,7 @@ class ExamQuestionController extends Controller
                 $question = Question::create($data);
 
                 if ($request->type === 'mc') {
-                    $this->syncOptions($question, $request->options, (int) $request->correct);
+                    $this->syncOptions($question, $request);
                 }
             });
 
@@ -82,11 +80,8 @@ class ExamQuestionController extends Controller
             'points' => 'required|numeric|min:0',
             'penalty' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
-        ], [
-            'image.image' => 'Berkas yang diunggah harus berupa gambar.',
-            'image.mimes' => 'Format gambar harus JPG, JPEG, atau PNG.',
-            'image.max' => 'Ukuran gambar maksimal 3 MB.',
-        ]);
+            'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
+        ], $this->imageMessages());
 
         if ($question->type === 'mc') {
             $request->validate([
@@ -113,8 +108,7 @@ class ExamQuestionController extends Controller
                 $question->update($data);
 
                 if ($question->type === 'mc') {
-                    $question->options()->delete();
-                    $this->syncOptions($question, $request->options, (int) $request->correct);
+                    $this->syncOptionsUpdate($question, $request);
                 }
             });
 
@@ -126,7 +120,7 @@ class ExamQuestionController extends Controller
 
     public function destroy($id)
     {
-        $question = Question::with('exam')->findOrFail($id);
+        $question = Question::with('exam', 'options')->findOrFail($id);
         $this->authorizeExam($question->exam);
 
         if ($question->exam->hasStartedAttempts()) {
@@ -136,27 +130,140 @@ class ExamQuestionController extends Controller
         if ($question->image_path) {
             Storage::disk('public')->delete($question->image_path);
         }
+        foreach ($question->options as $opt) {
+            $this->deleteOptionImage($opt);
+        }
         $question->delete();
 
         return redirect()->back()->with('success', 'Soal berhasil dihapus.');
     }
 
-    /** Buat opsi PG dengan label A, B, C, ... dan tandai kunci jawaban. */
-    private function syncOptions(Question $question, array $options, int $correctIndex): void
+    /**
+     * Buat ulang opsi PG dari nol (dipakai saat menambah soal baru).
+     * Tiap opsi bisa punya teks (boleh rumus $…$) dan/atau gambar.
+     */
+    private function syncOptions(Question $question, Request $request): void
     {
+        $correct = (int) $request->input('correct', 0);
         $i = 0;
-        foreach (array_values($options) as $idx => $text) {
-            if (trim((string) $text) === '') {
-                continue;
+
+        foreach ((array) $request->input('options', []) as $idx => $text) {
+            $text = trim((string) $text);
+            $hasFile = $request->hasFile("option_images.$idx");
+            if ($text === '' && !$hasFile) {
+                continue; // baris kosong (tanpa teks & tanpa gambar) dilewati
             }
+
             $question->options()->create([
-                'label' => chr(65 + $i), // A, B, C ...
+                'label' => chr(65 + $i),
                 'option_text' => $text,
-                'is_correct' => ($idx === $correctIndex),
+                'image_path' => $hasFile ? $request->file("option_images.$idx")->store('exam-options', 'public') : null,
+                'is_correct' => ($idx === $correct),
                 'order' => $i,
             ]);
             $i++;
         }
+
+        $this->ensureOneCorrect($question);
+    }
+
+    /**
+     * Perbarui opsi PG sambil MEMPERTAHANKAN gambar opsi yang sudah ada
+     * (opsi dicocokkan lewat option_ids[]). Gambar diganti bila di-upload baru,
+     * dihapus bila dicentang "Hapus gambar", dan opsi yang hilang ikut dibersihkan.
+     */
+    private function syncOptionsUpdate(Question $question, Request $request): void
+    {
+        $correct = (int) $request->input('correct', 0);
+        $ids = (array) $request->input('option_ids', []);
+        $removeImg = (array) $request->input('option_remove_image', []); // berisi ID opsi
+        $keep = [];
+        $i = 0;
+
+        foreach ((array) $request->input('options', []) as $idx => $text) {
+            $text = trim((string) $text);
+            $existing = !empty($ids[$idx]) ? $question->options()->find($ids[$idx]) : null;
+            $hasFile = $request->hasFile("option_images.$idx");
+            $imgPath = $existing?->image_path;
+
+            // Baris benar-benar kosong → buang (termasuk opsi lama bila ada).
+            if ($text === '' && !$hasFile && !$imgPath) {
+                if ($existing) {
+                    $this->deleteOptionImage($existing);
+                    $existing->delete();
+                }
+                continue;
+            }
+
+            if ($existing && $imgPath && in_array($existing->id, $removeImg, true)) {
+                Storage::disk('public')->delete($imgPath);
+                $imgPath = null;
+            }
+            if ($hasFile) {
+                if ($imgPath) {
+                    Storage::disk('public')->delete($imgPath);
+                }
+                $imgPath = $request->file("option_images.$idx")->store('exam-options', 'public');
+            }
+
+            $payload = [
+                'label' => chr(65 + $i),
+                'option_text' => $text,
+                'image_path' => $imgPath,
+                'is_correct' => ($idx === $correct),
+                'order' => $i,
+            ];
+
+            if ($existing) {
+                $existing->update($payload);
+                $keep[] = $existing->id;
+            } else {
+                $keep[] = $question->options()->create($payload)->id;
+            }
+            $i++;
+        }
+
+        // Bersihkan opsi lama yang tidak lagi dikirim.
+        foreach ($question->options()->whereNotIn('id', $keep ?: ['00000000-0000-0000-0000-000000000000'])->get() as $orphan) {
+            $this->deleteOptionImage($orphan);
+            $orphan->delete();
+        }
+
+        $this->ensureOneCorrect($question);
+    }
+
+    /** Pastikan minimal ada satu opsi ditandai sebagai kunci jawaban. */
+    private function ensureOneCorrect(Question $question): void
+    {
+        if (!$question->options()->where('is_correct', true)->exists()) {
+            $first = $question->options()->orderBy('order')->first();
+            if ($first) {
+                $first->update(['is_correct' => true]);
+            }
+        }
+    }
+
+    private function deleteOptionImage(QuestionOption $option): void
+    {
+        if ($option->image_path) {
+            try {
+                Storage::disk('public')->delete($option->image_path);
+            } catch (\Throwable $e) {
+                // abaikan — file mungkin sudah tidak ada
+            }
+        }
+    }
+
+    private function imageMessages(): array
+    {
+        return [
+            'image.image' => 'Berkas yang diunggah harus berupa gambar.',
+            'image.mimes' => 'Format gambar harus JPG, JPEG, atau PNG.',
+            'image.max' => 'Ukuran gambar maksimal 3 MB.',
+            'option_images.*.image' => 'Gambar opsi harus berupa berkas gambar.',
+            'option_images.*.mimes' => 'Format gambar opsi harus JPG, JPEG, atau PNG.',
+            'option_images.*.max' => 'Ukuran gambar opsi maksimal 3 MB.',
+        ];
     }
 
     private function authorizeExam(Exam $exam): void

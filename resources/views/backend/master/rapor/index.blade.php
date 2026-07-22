@@ -1,17 +1,17 @@
 @extends('backend.layout.app')
-@section('title', 'Manajemen e-Rapor Siswa')
+@section('title', 'Raport Hasil Ujian Siswa')
 
 @section('content')
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
-            <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">Manajemen e-Rapor</h1>
+            <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">Raport Hasil Ujian</h1>
             <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
                 <li class="breadcrumb-item text-muted">Administrasi</li>
                 <li class="breadcrumb-item"><span class="bullet bg-gray-500 w-5px h-2px"></span></li>
                 <li class="breadcrumb-item text-muted">Akademik</li>
                 <li class="breadcrumb-item"><span class="bullet bg-gray-500 w-5px h-2px"></span></li>
-                <li class="breadcrumb-item text-muted">e-Rapor</li>
+                <li class="breadcrumb-item text-muted">Raport Hasil Ujian</li>
             </ul>
         </div>
     </div>
@@ -88,7 +88,7 @@
                                             <th>NISN</th>
                                             <th>NIS</th>
                                             <th class="text-center">Gender</th>
-                                            <th class="text-end pe-4">Aksi e-Rapor</th>
+                                            <th class="text-end pe-4">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody class="text-gray-600 fw-semibold">
@@ -134,7 +134,7 @@
                         <div class="card-body text-center py-15">
                             <i class="ki-outline ki-award fs-5x text-gray-400 mb-5"></i>
                             <h3 class="fw-bold text-gray-900 mb-2">Pilih Kelas Terlebih Dahulu</h3>
-                            <p class="text-gray-500 fs-6">Silakan pilih ruang kelas di atas untuk memuat daftar siswa dan memproses e-Rapor.</p>
+                            <p class="text-gray-500 fs-6">Silakan pilih ruang kelas di atas untuk memuat daftar siswa dan memproses Raport Hasil Ujian.</p>
                         </div>
                     </div>
                 @endif
@@ -145,7 +145,7 @@
                 <div class="tab-pane fade" id="kt_rapor_grade_settings" role="tabpanel">
                     <div class="card shadow-sm border-0 max-w-800px">
                         <div class="card-header border-0 pt-6">
-                            <h3 class="card-title fw-bold text-gray-900">Konfigurasi Nilai Huruf & Predikat e-Rapor</h3>
+                            <h3 class="card-title fw-bold text-gray-900">Konfigurasi Nilai Huruf & Predikat Raport Hasil Ujian</h3>
                         </div>
                         <form action="{{ route('admin.rapor.settings') }}" method="POST">
                             @csrf

@@ -123,6 +123,8 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student'])->group(function 
     Route::post('/admin/assignments/{id}/submit', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'submit'])->name('assignments.submit');
 
     // CBT / Ujian Online (Guru & Superadmin)
+    Route::get('/admin/exams/template/{type}', [\App\Http\Controllers\Backend\Master\ExamTemplateController::class, 'download'])
+        ->where('type', 'pg|mixed|essay')->name('exams.template');
     Route::resource('/admin/exams', \App\Http\Controllers\Backend\Master\ExamController::class)->except(['create', 'edit']);
     Route::post('/admin/exams/{id}/publish', [\App\Http\Controllers\Backend\Master\ExamController::class, 'publish'])->name('exams.publish');
     Route::post('/admin/exam-questions', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'store'])->name('exam-questions.store');

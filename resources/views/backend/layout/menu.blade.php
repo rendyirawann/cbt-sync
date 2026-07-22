@@ -166,7 +166,7 @@
 										<span class="menu-icon">
 											<i class="ki-outline ki-award fs-2"></i>
 										</span>
-										<span class="menu-title">e-Rapor Siswa</span>
+										<span class="menu-title">Raport Hasil Ujian</span>
 									</a>
 								</div>
 								<!--end:Menu item-->
@@ -245,7 +245,7 @@
 										<span class="menu-icon">
 											<i class="ki-outline ki-award fs-2"></i>
 										</span>
-										<span class="menu-title">e-Rapor Saya</span>
+										<span class="menu-title">Raport Hasil Ujian</span>
 									</a>
 								</div>
 								<!--end:Menu item-->

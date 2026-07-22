@@ -111,10 +111,10 @@
 
                     <span class="elite-chip mb-4"><i class="ki-duotone ki-shield-tick fs-5 text-white"><span class="path1"></span><span class="path2"></span></i> Panel Administrasi</span>
                     <h1 class="text-white fw-bold text-center mb-3" style="font-size:clamp(24px,2.4vw,38px)">{{ $siteName }}</h1>
-                    <p class="text-white text-center mb-9" style="max-width:400px;opacity:.75">Kelola sekolah, pembelajaran, ujian online (CBT), dan e-Rapor dalam satu sistem terpadu.</p>
+                    <p class="text-white text-center mb-9" style="max-width:400px;opacity:.75">Kelola sekolah, pembelajaran, ujian online (CBT), dan Raport Hasil Ujian dalam satu sistem terpadu.</p>
 
                     <div class="d-flex flex-column gap-4" style="width:100%;max-width:330px">
-                        @foreach([['ki-data','Manajemen data sekolah & pengguna'],['ki-note-2','Ujian online (CBT) & penilaian'],['ki-chart-line-up','Analitik & laporan e-Rapor']] as $f)
+                        @foreach([['ki-data','Manajemen data sekolah & pengguna'],['ki-note-2','Ujian online (CBT) & penilaian'],['ki-chart-line-up','Analitik & laporan Raport Hasil Ujian']] as $f)
                         <div class="d-flex align-items-center text-white">
                             <span class="d-flex align-items-center justify-content-center me-3 flex-shrink-0"
                                   style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.14)">

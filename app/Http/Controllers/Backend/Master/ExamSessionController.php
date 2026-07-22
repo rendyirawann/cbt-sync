@@ -77,18 +77,31 @@ class ExamSessionController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'participant_mode' => 'required|in:class,manual',
             'starts_at' => 'required|date',
             'ends_at' => 'required|date|after:starts_at',
             'duration_minutes' => 'required|integer|min:1',
             'max_capacity' => 'nullable|integer|min:1',
         ]);
 
+        // Peserta (kelas / daftar siswa) hanya boleh diubah selama belum ada yang memulai —
+        // dijamin oleh guard hasStartedAttempts di atas.
+        if ($request->participant_mode === 'class') {
+            $request->validate(['class_room_id' => 'required|uuid|exists:class_rooms,id']);
+        } else {
+            $request->validate(['students' => 'required|array|min:1']);
+        }
+
         $session->update($request->only(['name', 'starts_at', 'ends_at', 'duration_minutes', 'max_capacity'])
             + [
+                'class_room_id' => $request->participant_mode === 'class' ? $request->class_room_id : null,
                 'shuffle_questions' => $request->has('shuffle_questions'),
                 'shuffle_options' => $request->has('shuffle_options'),
                 'show_result' => $request->has('show_result'),
             ]);
+
+        // Sinkronkan daftar siswa manual (kosongkan bila memakai mode kelas).
+        $session->students()->sync($request->participant_mode === 'manual' ? $request->students : []);
 
         return redirect()->back()->with('success', 'Sesi diperbarui.');
     }

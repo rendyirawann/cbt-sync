@@ -64,7 +64,7 @@ class ExamController extends Controller
         $exam = Exam::with([
             'teachingAssignment.subject', 'teachingAssignment.classRoom', 'teachingAssignment.teacher.user',
             'questions.options',
-            'sessions.classRoom', 'sessions.attempts',
+            'sessions.classRoom', 'sessions.attempts', 'sessions.students',
         ])->findOrFail($id);
 
         $this->authorizeExam($exam);

@@ -52,14 +52,20 @@
                     <div class="col-6 mb-4"><label class="form-label required">Poin bila benar</label><input type="number" step="0.01" name="points" class="form-control" value="1" required></div>
                     <div class="col-6 mb-4"><label class="form-label">Pengurang bila salah</label><input type="number" step="0.01" name="penalty" class="form-control" value="0"></div>
                 </div>
-                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
-                <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci jawaban)</span></label>
+                <div class="mb-4"><label class="form-label">Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
+                <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci jawaban • tiap opsi boleh teks, rumus $…$, dan/atau gambar)</span></label>
                 <div class="mc-options">
                     @for($k=0;$k<4;$k++)
-                    <div class="input-group mb-2 mc-row">
-                        <span class="input-group-text"><input class="form-check-input mt-0" type="radio" name="correct" value="{{ $k }}" {{ $k===0 ? 'checked':'' }}></span>
-                        <input type="text" name="options[]" class="form-control math-input" placeholder="Teks opsi {{ chr(65+$k) }} (boleh $rumus$)" required>
-                        <button type="button" class="btn btn-light-danger mc-remove"><i class="ki-outline ki-trash fs-6"></i></button>
+                    <div class="mc-row border border-gray-300 rounded p-3 mb-2">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="pt-2"><input class="form-check-input mt-0" type="radio" name="correct" value="{{ $k }}" title="Tandai sebagai kunci jawaban" {{ $k===0 ? 'checked':'' }}></span>
+                            <div class="flex-grow-1">
+                                <input type="hidden" name="option_ids[]" value="">
+                                <input type="text" name="options[]" class="form-control math-input mb-2" placeholder="Teks opsi {{ chr(65+$k) }} (boleh $rumus$, boleh dikosongkan bila pakai gambar)">
+                                <input type="file" name="option_images[]" class="form-control form-control-sm" accept="image/*">
+                            </div>
+                            <button type="button" class="btn btn-icon btn-light-danger mc-remove" title="Hapus opsi"><i class="ki-outline ki-trash fs-6"></i></button>
+                        </div>
                     </div>
                     @endfor
                 </div>
@@ -108,17 +114,17 @@
                 <div class="mb-4"><label class="form-label required">Nama Sesi</label><input type="text" name="name" class="form-control" placeholder="cth: Sesi 1 — Pagi" required></div>
 
                 <label class="form-label required d-block">Peserta</label>
-                <div class="d-flex gap-4 mb-3">
+                <div class="d-flex gap-4 mb-3 participant-toggle">
                     <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" checked> <span class="form-check-label ms-2">Satu Kelas</span></label>
                     <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual"> <span class="form-check-label ms-2">Pilih Siswa (lintas kelas)</span></label>
                 </div>
-                <div id="byClassWrap" class="mb-4">
+                <div class="by-class-wrap mb-4">
                     <select name="class_room_id" class="form-select">
                         <option value="">Pilih kelas...</option>
                         @foreach($classRooms as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
                     </select>
                 </div>
-                <div id="byStudentWrap" class="mb-4" style="display:none">
+                <div class="by-student-wrap mb-4" style="display:none">
                     <select name="students[]" class="form-select" multiple size="6">
                         @foreach($students as $st)<option value="{{ $st->id }}">{{ $st->user->name ?? 'Siswa' }}</option>@endforeach
                     </select>

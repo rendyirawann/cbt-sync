@@ -72,7 +72,7 @@
         <div class="tab-content">
             {{-- ================= TAB SOAL ================= --}}
             <div class="tab-pane fade show active" id="tab_soal">
-                <div class="d-flex gap-2 mb-5">
+                <div class="d-flex flex-wrap gap-2 mb-5">
                     @if($locked)
                         <span class="text-muted fs-7"><i class="ki-outline ki-lock-2 fs-5 text-primary me-1"></i> Soal terkunci — sudah ada peserta yang memulai.</span>
                     @else
@@ -83,6 +83,16 @@
                         <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addEssayModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Essay</button>
                         @endif
                     @endif
+                    <div class="dropdown ms-auto">
+                        <button class="btn btn-light-success" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Unduh template Excel untuk menyiapkan soal secara offline">
+                            <i class="ki-outline ki-file-down fs-4"></i> Unduh Template Soal (Excel)
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('exams.template', 'pg') }}"><i class="ki-outline ki-abstract-26 fs-5 me-2 text-primary"></i> Pilihan Ganda saja</a></li>
+                            <li><a class="dropdown-item" href="{{ route('exams.template', 'mixed') }}"><i class="ki-outline ki-abstract-26 fs-5 me-2 text-warning"></i> Pilihan Ganda + Essay</a></li>
+                            <li><a class="dropdown-item" href="{{ route('exams.template', 'essay') }}"><i class="ki-outline ki-abstract-26 fs-5 me-2 text-info"></i> Essay saja</a></li>
+                        </ul>
+                    </div>
                 </div>
 
                 @forelse($exam->questions as $i => $q)
@@ -104,11 +114,14 @@
                             <div class="fw-semibold text-gray-900 mb-2">{!! nl2br(e($q->question_text)) !!}</div>
                             @if($q->image_path)<img src="{{ asset('storage/'.$q->image_path) }}" class="rounded mb-3 mh-150px">@endif
                             @if($q->type === 'mc')
-                                <div class="d-flex flex-column gap-1">
+                                <div class="d-flex flex-column gap-2">
                                     @foreach($q->options as $opt)
-                                    <div class="d-flex align-items-center {{ $opt->is_correct ? 'text-success fw-bold' : 'text-gray-700' }}">
+                                    <div class="d-flex align-items-start {{ $opt->is_correct ? 'text-success fw-bold' : 'text-gray-700' }}">
                                         <span class="badge badge-{{ $opt->is_correct ? 'success' : 'secondary' }} me-2">{{ $opt->label }}</span>
-                                        {{ $opt->option_text }}
+                                        <div>
+                                            @if($opt->option_text){{ $opt->option_text }}@endif
+                                            @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded d-block mt-1 mh-80px" alt="Gambar opsi {{ $opt->label }}">@endif
+                                        </div>
                                         @if($opt->is_correct)<i class="ki-outline ki-check-circle fs-4 text-success ms-2"></i>@endif
                                     </div>
                                     @endforeach
@@ -136,15 +149,31 @@
                                         <div class="col-6 mb-4"><label class="form-label required">Poin (benar)</label><input type="number" step="0.01" name="points" class="form-control" value="{{ rtrim(rtrim((string)$q->points,'0'),'.') }}" required></div>
                                         @if($q->type === 'mc')<div class="col-6 mb-4"><label class="form-label">Pengurang (salah)</label><input type="number" step="0.01" name="penalty" class="form-control" value="{{ rtrim(rtrim((string)$q->penalty,'0'),'.') }}"></div>@endif
                                     </div>
-                                    <div class="mb-4"><label class="form-label">Ganti Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB.</div></div>
+                                    @if($q->image_path)<div class="mb-2"><img src="{{ asset('storage/'.$q->image_path) }}" class="rounded mh-100px" alt="Gambar soal"></div>@endif
+                                    <div class="mb-4"><label class="form-label">Ganti Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB.</div></div>
                                     @if($q->type === 'mc')
-                                    <label class="form-label required">Opsi Jawaban (pilih kunci)</label>
+                                    <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci • tiap opsi boleh teks, rumus $…$, dan/atau gambar)</span></label>
                                     <div class="mc-options">
                                         @foreach($q->options as $oi => $opt)
-                                        <div class="input-group mb-2 mc-row">
-                                            <span class="input-group-text"><input class="form-check-input mt-0" type="radio" name="correct" value="{{ $oi }}" {{ $opt->is_correct ? 'checked' : '' }}></span>
-                                            <input type="text" name="options[]" class="form-control math-input" value="{{ $opt->option_text }}" required>
-                                            <button type="button" class="btn btn-light-danger mc-remove"><i class="ki-outline ki-trash fs-6"></i></button>
+                                        <div class="mc-row border border-gray-300 rounded p-3 mb-2">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <span class="pt-2"><input class="form-check-input mt-0" type="radio" name="correct" value="{{ $oi }}" title="Tandai sebagai kunci jawaban" {{ $opt->is_correct ? 'checked' : '' }}></span>
+                                                <div class="flex-grow-1">
+                                                    <input type="hidden" name="option_ids[]" value="{{ $opt->id }}">
+                                                    <input type="text" name="options[]" class="form-control math-input mb-2" value="{{ $opt->option_text }}" placeholder="Teks opsi (boleh $rumus$, boleh dikosongkan bila pakai gambar)">
+                                                    @if($opt->image_path)
+                                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                                        <img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded mh-60px" alt="Gambar opsi {{ $opt->label }}">
+                                                        <label class="form-check form-check-sm form-check-custom d-flex align-items-center gap-2 mb-0">
+                                                            <input class="form-check-input" type="checkbox" name="option_remove_image[]" value="{{ $opt->id }}">
+                                                            <span class="fs-8 text-muted">Hapus gambar</span>
+                                                        </label>
+                                                    </div>
+                                                    @endif
+                                                    <input type="file" name="option_images[]" class="form-control form-control-sm" accept="image/*">
+                                                </div>
+                                                <button type="button" class="btn btn-icon btn-light-danger mc-remove" title="Hapus opsi"><i class="ki-outline ki-trash fs-6"></i></button>
+                                            </div>
                                         </div>
                                         @endforeach
                                     </div>
@@ -227,8 +256,28 @@
                                 @csrf @method('PUT')
                                 <div class="modal-header"><h3 class="modal-title">Edit Sesi</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
                                 <div class="modal-body px-8 py-6">
-                                    <div class="alert alert-light-info fs-8 py-2">Peserta sesi tidak dapat diubah di sini. Untuk mengganti kelas/daftar siswa, hapus sesi lalu buat baru.</div>
+                                    <div class="alert alert-light-success fs-8 py-2">Kelas / daftar siswa masih bisa diubah selama <b>belum ada peserta yang memulai</b> ujian ini.</div>
                                     <div class="mb-4"><label class="form-label required">Nama Sesi</label><input type="text" name="name" class="form-control" value="{{ $s->name }}" required></div>
+
+                                    @php $sMode = $s->class_room_id ? 'class' : 'manual'; $sStudentIds = $s->students->pluck('id')->all(); @endphp
+                                    <label class="form-label required d-block">Peserta</label>
+                                    <div class="d-flex gap-4 mb-3 participant-toggle">
+                                        <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" @checked($sMode==='class')> <span class="form-check-label ms-2">Satu Kelas</span></label>
+                                        <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual" @checked($sMode==='manual')> <span class="form-check-label ms-2">Pilih Siswa (lintas kelas)</span></label>
+                                    </div>
+                                    <div class="by-class-wrap mb-4" style="{{ $sMode==='class' ? '' : 'display:none' }}">
+                                        <select name="class_room_id" class="form-select">
+                                            <option value="">Pilih kelas...</option>
+                                            @foreach($classRooms as $c)<option value="{{ $c->id }}" @selected($s->class_room_id===$c->id)>{{ $c->name }}</option>@endforeach
+                                        </select>
+                                    </div>
+                                    <div class="by-student-wrap mb-4" style="{{ $sMode==='manual' ? '' : 'display:none' }}">
+                                        <select name="students[]" class="form-select" multiple size="6">
+                                            @foreach($students as $st)<option value="{{ $st->id }}" @selected(in_array($st->id,$sStudentIds))>{{ $st->user->name ?? 'Siswa' }}</option>@endforeach
+                                        </select>
+                                        <span class="text-muted fs-8">Tahan Ctrl/Cmd untuk memilih beberapa siswa.</span>
+                                    </div>
+
                                     <div class="row">
                                         <div class="col-md-6 mb-4"><label class="form-label required">Mulai</label><input type="datetime-local" name="starts_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->starts_at)->format('Y-m-d\TH:i') }}" required></div>
                                         <div class="col-md-6 mb-4"><label class="form-label required">Selesai</label><input type="datetime-local" name="ends_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->ends_at)->format('Y-m-d\TH:i') }}" required></div>
@@ -293,10 +342,16 @@
         if (e.target.closest('.mc-add')) {
             const wrap = e.target.closest('.modal-body').querySelector('.mc-options');
             const row = document.createElement('div');
-            row.className = 'input-group mb-2 mc-row';
-            row.innerHTML = '<span class="input-group-text"><input class="form-check-input mt-0" type="radio" name="correct"></span>' +
-                '<input type="text" name="options[]" class="form-control math-input" placeholder="Teks opsi (boleh $rumus$)" required>' +
-                '<button type="button" class="btn btn-light-danger mc-remove"><i class="ki-outline ki-trash fs-6"></i></button>';
+            row.className = 'mc-row border border-gray-300 rounded p-3 mb-2';
+            row.innerHTML = '<div class="d-flex align-items-start gap-3">' +
+                '<span class="pt-2"><input class="form-check-input mt-0" type="radio" name="correct" title="Tandai sebagai kunci jawaban"></span>' +
+                '<div class="flex-grow-1">' +
+                    '<input type="hidden" name="option_ids[]" value="">' +
+                    '<input type="text" name="options[]" class="form-control math-input mb-2" placeholder="Teks opsi (boleh $rumus$, boleh dikosongkan bila pakai gambar)">' +
+                    '<input type="file" name="option_images[]" class="form-control form-control-sm" accept="image/*">' +
+                '</div>' +
+                '<button type="button" class="btn btn-icon btn-light-danger mc-remove" title="Hapus opsi"><i class="ki-outline ki-trash fs-6"></i></button>' +
+            '</div>';
             wrap.appendChild(row); renumber(wrap);
         }
         if (e.target.closest('.mc-remove')) {
@@ -317,11 +372,14 @@
         });
     });
 
-    // ---- Sesi: toggle mode peserta (kelas vs manual) ----
-    document.querySelectorAll('input[name=participant_mode]').forEach(r => {
+    // ---- Sesi: toggle mode peserta (kelas vs manual) — berlaku per modal (buat & edit) ----
+    document.querySelectorAll('.participant-toggle input[name=participant_mode]').forEach(r => {
         r.addEventListener('change', function(){
-            document.getElementById('byClassWrap').style.display = this.value === 'class' ? 'block' : 'none';
-            document.getElementById('byStudentWrap').style.display = this.value === 'manual' ? 'block' : 'none';
+            const scope = this.closest('.modal-body') || document;
+            const cls = scope.querySelector('.by-class-wrap');
+            const stu = scope.querySelector('.by-student-wrap');
+            if (cls) cls.style.display = this.value === 'class' ? 'block' : 'none';
+            if (stu) stu.style.display = this.value === 'manual' ? 'block' : 'none';
         });
     });
 </script>

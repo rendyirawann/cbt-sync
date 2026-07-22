@@ -45,7 +45,7 @@
 					</div>
 					<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.rapor.index') }}" class="menu-link {{ request()->routeIs('student.rapor.*') ? 'active' : '' }}">
-							<span class="menu-title">e-Rapor</span>
+							<span class="menu-title">Raport Hasil Ujian</span>
 						</a>
 					</div>
 					<div class="menu-item me-0 me-lg-2">

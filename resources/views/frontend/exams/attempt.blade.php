@@ -119,7 +119,10 @@
                                     <input class="form-check-input me-3 ans-mc" type="radio" name="q_{{ $q->id }}" value="{{ $opt->id }}"
                                         data-question="{{ $q->id }}" {{ $ans && $ans->selected_option_id === $opt->id ? 'checked' : '' }}>
                                     <span class="badge badge-light-primary me-3">{{ $opt->label }}</span>
-                                    <span class="text-gray-800 fs-5">{{ $opt->option_text }}</span>
+                                    <span class="d-flex flex-column">
+                                        @if($opt->option_text)<span class="text-gray-800 fs-5">{{ $opt->option_text }}</span>@endif
+                                        @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded mt-1 mh-150px" alt="Gambar opsi {{ $opt->label }}">@endif
+                                    </span>
                                 </label>
                                 @endforeach
                             </div>

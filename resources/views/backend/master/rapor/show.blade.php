@@ -1,15 +1,15 @@
 @extends(auth()->user()->hasRole('Siswa') ? 'frontend.layout.app' : 'backend.layout.app')
-@section('title', 'e-Rapor Siswa - ' . $student->user->name)
+@section('title', 'Raport Hasil Ujian Siswa - ' . $student->user->name)
 
 @section('content')
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
-            <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">e-Rapor Hasil Belajar</h1>
+            <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">Raport Hasil Ujian</h1>
             <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
                 <li class="breadcrumb-item text-muted">Portal</li>
                 <li class="breadcrumb-item"><span class="bullet bg-gray-500 w-5px h-2px"></span></li>
-                <li class="breadcrumb-item text-muted">e-Rapor</li>
+                <li class="breadcrumb-item text-muted">Raport Hasil Ujian</li>
                 <li class="breadcrumb-item"><span class="bullet bg-gray-500 w-5px h-2px"></span></li>
                 <li class="breadcrumb-item text-muted">Detail</li>
             </ul>
@@ -21,7 +21,7 @@
                 </a>
             @endif
             <a href="{{ route('admin.rapor.generate', $student->id) }}" target="_blank" class="btn btn-sm fw-bold btn-success">
-                <i class="ki-outline ki-printer fs-4 me-1"></i> Generate e-Rapor (Cetak)
+                <i class="ki-outline ki-printer fs-4 me-1"></i> Generate Raport Hasil Ujian (Cetak)
             </a>
         </div>
     </div>
