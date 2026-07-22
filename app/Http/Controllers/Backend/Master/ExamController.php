@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\TeachingAssignment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ExamController extends Controller
 {
@@ -112,6 +113,12 @@ class ExamController extends Controller
             'pass_score' => $request->pass_score ?: 75,
         ];
 
+        // Ganti kategori ujian: soal yang tak lagi sesuai tipe baru ikut terhapus
+        // (mis. jadi "PG saja" → soal essay dihapus). Hanya selama belum ada yang memulai.
+        if (!$exam->hasStartedAttempts() && $request->type !== $exam->type) {
+            $this->pruneQuestionsForType($exam, $request->type);
+        }
+
         // Kelas/mapel (penugasan) hanya boleh diganti selama belum ada yang memulai.
         if (!$exam->hasStartedAttempts() && $request->filled('teaching_assignment_id')
             && $request->teaching_assignment_id !== $exam->teaching_assignment_id) {
@@ -130,6 +137,34 @@ class ExamController extends Controller
         $exam->update($data);
 
         return redirect()->back()->with('success', 'Pengaturan ujian berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus soal yang tidak sesuai kategori ujian yang baru dipilih
+     * (mixed→mc: hapus essay; mixed/mc→essay: hapus PG), termasuk file gambarnya.
+     */
+    private function pruneQuestionsForType(Exam $exam, string $newType): void
+    {
+        $remove = match ($newType) {
+            'mc' => 'essay',
+            'essay' => 'mc',
+            default => null, // 'mixed' → simpan semua
+        };
+        if (!$remove) {
+            return;
+        }
+
+        foreach ($exam->questions()->where('type', $remove)->with('options')->get() as $q) {
+            if ($q->image_path) {
+                Storage::disk('public')->delete($q->image_path);
+            }
+            foreach ($q->options as $opt) {
+                if ($opt->image_path) {
+                    Storage::disk('public')->delete($opt->image_path);
+                }
+            }
+            $q->delete(); // opsi ikut terhapus (cascade)
+        }
     }
 
     /** Saat kelas ujian berpindah, sesi ikut menyesuaikan kelas barunya. */

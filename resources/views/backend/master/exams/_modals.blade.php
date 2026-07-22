@@ -1,7 +1,7 @@
 {{-- ===== Edit Pengaturan Ujian ===== --}}
 <div class="modal fade drawer-modal" id="editExamModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
-        <form action="{{ route('exams.update', $exam->id) }}" method="POST">
+        <form action="{{ route('exams.update', $exam->id) }}" method="POST" id="editExamForm">
             @csrf @method('PUT')
             <div class="modal-header"><h3 class="modal-title">Pengaturan Ujian</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
             <div class="modal-body px-8 py-6">
@@ -18,7 +18,9 @@
                 <div class="mb-4"><label class="form-label">Deskripsi</label><textarea name="description" class="form-control" rows="2">{{ $exam->description }}</textarea></div>
                 <div class="row">
                     <div class="col-md-6 mb-4"><label class="form-label required">Kategori</label>
-                        <select name="type" class="form-select">
+                        <select name="type" class="form-select" id="examTypeSelect"
+                            data-mc-count="{{ $exam->questions->where('type','mc')->count() }}"
+                            data-essay-count="{{ $exam->questions->where('type','essay')->count() }}">
                             <option value="mixed" @selected($exam->type==='mixed')>PG + Essay</option>
                             <option value="mc" @selected($exam->type==='mc')>Pilihan Ganda saja</option>
                             <option value="essay" @selected($exam->type==='essay')>Essay saja</option>

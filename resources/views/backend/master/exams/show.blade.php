@@ -370,6 +370,30 @@
         });
     });
 
+    // ---- Pengaturan: konfirmasi bila ganti kategori menghapus soal yang tak sesuai ----
+    const editExamForm = document.getElementById('editExamForm');
+    if (editExamForm) {
+        editExamForm.addEventListener('submit', function(e){
+            const sel = document.getElementById('examTypeSelect');
+            if (!sel) return;
+            const type = sel.value;
+            const mc = parseInt(sel.dataset.mcCount || '0', 10);
+            const essay = parseInt(sel.dataset.essayCount || '0', 10);
+            let label = '';
+            if (type === 'mc' && essay > 0) label = essay + ' soal Essay';
+            else if (type === 'essay' && mc > 0) label = mc + ' soal Pilihan Ganda';
+            if (label) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Ubah kategori ujian?',
+                    html: 'Mengubah kategori akan <b>menghapus ' + label + '</b> yang sudah dibuat dan tidak bisa dikembalikan. Lanjutkan?',
+                    icon: 'warning', showCancelButton: true,
+                    confirmButtonText: 'Ya, ubah & hapus', cancelButtonText: 'Batal', confirmButtonColor: '#d33'
+                }).then(r => { if (r.isConfirmed) editExamForm.submit(); });
+            }
+        });
+    }
+
     // ---- Sesi: toggle mode peserta (kelas vs manual) — berlaku per modal (buat & edit) ----
     document.querySelectorAll('.participant-toggle input[name=participant_mode]').forEach(r => {
         r.addEventListener('change', function(){
