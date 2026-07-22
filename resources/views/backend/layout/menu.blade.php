@@ -251,7 +251,7 @@
 								<!--end:Menu item-->
                                 @endif
 
-                                @can('view_resources')
+                                @can('view_data_master')
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('enrollments.*') ? 'active' : '' }}" href="{{ route('enrollments.index') }}">
@@ -303,6 +303,9 @@
 								</div>
 								<!--end:Menu item-->
 
+								@endcan
+
+								@can('view_resources')
 								<!--begin:Menu item-->
 								<div class="menu-item pt-5">
 									<!--begin:Menu content-->
