@@ -15,6 +15,7 @@
                     <h3 class="fw-bold mb-1">Manajemen Guru</h3>
                 </div>
                 <div class="card-toolbar">
+                    @include('backend.master._import_tools', ['templateRoute' => 'teachers.template', 'importRoute' => 'teachers.import', 'label' => 'Guru'])
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Tambah Guru</button>
                 </div>
             </div>

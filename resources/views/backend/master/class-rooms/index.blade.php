@@ -9,6 +9,7 @@
                     <h3 class="fw-bold mb-1">Manajemen Ruang Kelas</h3>
                 </div>
                 <div class="card-toolbar">
+                    @include('backend.master._import_tools', ['templateRoute' => 'class-rooms.template', 'importRoute' => 'class-rooms.import', 'label' => 'Ruang Kelas'])
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Tambah Data</button>
                 </div>
             </div>

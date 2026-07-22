@@ -9,6 +9,7 @@
                     <h3 class="fw-bold mb-1">Manajemen Tahun Ajaran</h3>
                 </div>
                 <div class="card-toolbar">
+                    @include('backend.master._import_tools', ['templateRoute' => 'academic-years.template', 'importRoute' => 'academic-years.import', 'label' => 'Tahun Ajaran'])
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Tambah Data</button>
                 </div>
             </div>

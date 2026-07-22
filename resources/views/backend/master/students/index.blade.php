@@ -15,6 +15,7 @@
                     <h3 class="fw-bold mb-1">Manajemen Siswa</h3>
                 </div>
                 <div class="card-toolbar">
+                    @include('backend.master._import_tools', ['templateRoute' => 'students.template', 'importRoute' => 'students.import', 'label' => 'Siswa'])
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Tambah Siswa</button>
                 </div>
             </div>

@@ -10,6 +10,7 @@
                     <div class="fs-6 text-gray-500">Plotting Guru ke Kelas dan Mata Pelajaran</div>
                 </div>
                 <div class="card-toolbar">
+                    @include('backend.master._import_tools', ['templateRoute' => 'teaching-assignments.template', 'importRoute' => 'teaching-assignments.import', 'label' => 'Penugasan Guru'])
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Tambah Penugasan</button>
                 </div>
             </div>

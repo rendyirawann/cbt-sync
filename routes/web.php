@@ -107,6 +107,22 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student'])->group(function 
     // --- SETTINGS (accessible by ALL authenticated users) ---
     Route::get('/admin/settings', [SettingController::class, 'index'])->name('settings.index');
 
+    // Template & Import Excel Master Data (didaftarkan sebelum resource agar tidak bentrok route show)
+    Route::get('/admin/schools/template', [\App\Http\Controllers\Backend\Master\SchoolController::class, 'template'])->name('schools.template');
+    Route::post('/admin/schools/import', [\App\Http\Controllers\Backend\Master\SchoolController::class, 'import'])->name('schools.import');
+    Route::get('/admin/academic-years/template', [\App\Http\Controllers\Backend\Master\AcademicYearController::class, 'template'])->name('academic-years.template');
+    Route::post('/admin/academic-years/import', [\App\Http\Controllers\Backend\Master\AcademicYearController::class, 'import'])->name('academic-years.import');
+    Route::get('/admin/subjects/template', [\App\Http\Controllers\Backend\Master\SubjectController::class, 'template'])->name('subjects.template');
+    Route::post('/admin/subjects/import', [\App\Http\Controllers\Backend\Master\SubjectController::class, 'import'])->name('subjects.import');
+    Route::get('/admin/class-rooms/template', [\App\Http\Controllers\Backend\Master\ClassRoomController::class, 'template'])->name('class-rooms.template');
+    Route::post('/admin/class-rooms/import', [\App\Http\Controllers\Backend\Master\ClassRoomController::class, 'import'])->name('class-rooms.import');
+    Route::get('/admin/teachers/template', [\App\Http\Controllers\Backend\Master\TeacherController::class, 'template'])->name('teachers.template');
+    Route::post('/admin/teachers/import', [\App\Http\Controllers\Backend\Master\TeacherController::class, 'import'])->name('teachers.import');
+    Route::get('/admin/students/template', [\App\Http\Controllers\Backend\Master\StudentController::class, 'template'])->name('students.template');
+    Route::post('/admin/students/import', [\App\Http\Controllers\Backend\Master\StudentController::class, 'import'])->name('students.import');
+    Route::get('/admin/teaching-assignments/template', [\App\Http\Controllers\Backend\Master\TeachingAssignmentController::class, 'template'])->name('teaching-assignments.template');
+    Route::post('/admin/teaching-assignments/import', [\App\Http\Controllers\Backend\Master\TeachingAssignmentController::class, 'import'])->name('teaching-assignments.import');
+
     // Master Data Routes LMS
     Route::resource('/admin/teachers', \App\Http\Controllers\Backend\Master\TeacherController::class);
     Route::resource('/admin/students', \App\Http\Controllers\Backend\Master\StudentController::class);

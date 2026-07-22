@@ -9,6 +9,7 @@
                     <h3 class="fw-bold mb-1">Manajemen Pelajaran</h3>
                 </div>
                 <div class="card-toolbar">
+                    @include('backend.master._import_tools', ['templateRoute' => 'subjects.template', 'importRoute' => 'subjects.import', 'label' => 'Mata Pelajaran'])
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Tambah Data</button>
                 </div>
             </div>

@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
 use App\Models\School;
 use App\Traits\ValidatesMasterData;
+use App\Traits\ExcelMasterTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ClassRoomController extends Controller
 {
-    use ValidatesMasterData;
+    use ValidatesMasterData, ExcelMasterTemplate;
 
     public function index()
     {
@@ -46,6 +48,54 @@ class ClassRoomController extends Controller
     private function labels(): array
     {
         return ['school_id' => 'Sekolah', 'name' => 'Nama Kelas', 'level' => 'Tingkat/Level'];
+    }
+
+    public function template()
+    {
+        return $this->downloadExcelTemplate($this->spec());
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate(['file' => 'required|file|mimes:xlsx,xls|max:8192'], $this->idMessages(), ['file' => 'Berkas Excel']);
+        try {
+            $rows = $this->readExcelRows($request->file('file'), $this->spec()['columns']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal membaca Excel: ' . $e->getMessage());
+        }
+
+        $rules = ['school' => 'required|string', 'name' => 'required|string|max:255', 'level' => 'required|string|max:50'];
+        $labels = ['school' => 'Nama Sekolah', 'name' => 'Nama Kelas', 'level' => 'Tingkat/Level'];
+        $imported = 0; $skipped = 0; $errors = [];
+        foreach ($rows as $row) {
+            $line = $row['_row']; unset($row['_row']);
+            $v = Validator::make($row, $rules, $this->idMessages(), $labels);
+            if ($v->fails()) { $errors[] = "Baris $line: " . $v->errors()->first(); continue; }
+            $school = School::where('name', $row['school'])->first();
+            if (!$school) { $errors[] = "Baris $line: Sekolah \"{$row['school']}\" tidak ditemukan."; continue; }
+            if (ClassRoom::where('school_id', $school->id)->where('name', $row['name'])->exists()) { $skipped++; continue; }
+            try { ClassRoom::create(['school_id' => $school->id, 'name' => $row['name'], 'level' => $row['level']]); $imported++; }
+            catch (\Throwable $e) { $errors[] = "Baris $line: gagal disimpan."; }
+        }
+        return $this->importSummary($imported, $skipped, $errors);
+    }
+
+    private function spec(): array
+    {
+        return [
+            'title' => 'DATA RUANG KELAS',
+            'file' => 'Template_Ruang_Kelas.xlsx',
+            'guide' => ['Nama Sekolah harus sudah terdaftar (persis sama). Kelas yang sudah ada di sekolah itu dilewati.'],
+            'columns' => [
+                ['key' => 'school', 'label' => 'Nama Sekolah', 'required' => true, 'width' => 36, 'hint' => 'harus sudah ada di Data Sekolah'],
+                ['key' => 'name', 'label' => 'Nama Kelas', 'required' => true, 'width' => 22, 'hint' => 'mis. X-IPA 1'],
+                ['key' => 'level', 'label' => 'Tingkat/Level', 'required' => true, 'width' => 16, 'hint' => 'mis. 10'],
+            ],
+            'examples' => [
+                ['school' => 'SMA Negeri 1 Medan', 'name' => 'X-IPA 1', 'level' => '10'],
+                ['school' => 'SMA Negeri 1 Medan', 'name' => 'XI-IPS 2', 'level' => '11'],
+            ],
+        ];
     }
 
     public function destroy($id)
