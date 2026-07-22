@@ -83,16 +83,16 @@
                         <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addEssayModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Essay</button>
                         @endif
                     @endif
-                    <div class="dropdown ms-auto">
-                        <button class="btn btn-light-success" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Unduh template Excel untuk menyiapkan soal secara offline">
-                            <i class="ki-outline ki-file-down fs-4"></i> Unduh Template Soal (Excel)
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('exams.template', 'pg') }}"><i class="ki-outline ki-abstract-26 fs-5 me-2 text-primary"></i> Pilihan Ganda saja</a></li>
-                            <li><a class="dropdown-item" href="{{ route('exams.template', 'mixed') }}"><i class="ki-outline ki-abstract-26 fs-5 me-2 text-warning"></i> Pilihan Ganda + Essay</a></li>
-                            <li><a class="dropdown-item" href="{{ route('exams.template', 'essay') }}"><i class="ki-outline ki-abstract-26 fs-5 me-2 text-info"></i> Essay saja</a></li>
-                        </ul>
-                    </div>
+                    @if($exam->type === 'mixed')
+                    <a href="{{ route('exams.template', 'mixed') }}" class="btn btn-light-success ms-auto" title="Template Excel PG + Essay">
+                        <i class="ki-outline ki-file-down fs-4"></i> Unduh Template Soal (Excel)
+                    </a>
+                    @else
+                    @php $tpl = $exam->type === 'essay' ? 'essay' : 'pg'; @endphp
+                    <a href="{{ route('exams.template', $tpl) }}" class="btn btn-light-success ms-auto" title="Template Excel {{ $exam->type === 'essay' ? 'Essay' : 'Pilihan Ganda' }}">
+                        <i class="ki-outline ki-file-down fs-4"></i> Unduh Template Soal (Excel)
+                    </a>
+                    @endif
                 </div>
 
                 @forelse($exam->questions as $i => $q)
@@ -256,26 +256,24 @@
                                 @csrf @method('PUT')
                                 <div class="modal-header"><h3 class="modal-title">Edit Sesi</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
                                 <div class="modal-body px-8 py-6">
-                                    <div class="alert alert-light-success fs-8 py-2">Kelas / daftar siswa masih bisa diubah selama <b>belum ada peserta yang memulai</b> ujian ini.</div>
+                                    <div class="alert alert-light-success fs-8 py-2">Peserta masih bisa diubah selama <b>belum ada yang memulai</b>. Untuk pindah kelas, ganti di <b>Pengaturan Ujian</b>.</div>
                                     <div class="mb-4"><label class="form-label required">Nama Sesi</label><input type="text" name="name" class="form-control" value="{{ $s->name }}" required></div>
 
                                     @php $sMode = $s->class_room_id ? 'class' : 'manual'; $sStudentIds = $s->students->pluck('id')->all(); @endphp
-                                    <label class="form-label required d-block">Peserta</label>
+                                    <label class="form-label required d-block">Peserta <span class="text-muted fs-8">— kelas <b>{{ $examClass->name ?? '-' }}</b></span></label>
+                                    <input type="hidden" name="class_room_id" value="{{ $examClass->id ?? '' }}">
                                     <div class="d-flex gap-4 mb-3 participant-toggle">
-                                        <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" @checked($sMode==='class')> <span class="form-check-label ms-2">Satu Kelas</span></label>
-                                        <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual" @checked($sMode==='manual')> <span class="form-check-label ms-2">Pilih Siswa (lintas kelas)</span></label>
+                                        <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" @checked($sMode==='class')> <span class="form-check-label ms-2">Seluruh kelas {{ $examClass->name ?? '' }}</span></label>
+                                        <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual" @checked($sMode==='manual')> <span class="form-check-label ms-2">Pilih sebagian siswa</span></label>
                                     </div>
                                     <div class="by-class-wrap mb-4" style="{{ $sMode==='class' ? '' : 'display:none' }}">
-                                        <select name="class_room_id" class="form-select">
-                                            <option value="">Pilih kelas...</option>
-                                            @foreach($classRooms as $c)<option value="{{ $c->id }}" @selected($s->class_room_id===$c->id)>{{ $c->name }}</option>@endforeach
-                                        </select>
+                                        <div class="alert alert-light-primary py-2 mb-0 fs-8">Semua siswa kelas <b>{{ $examClass->name ?? '-' }}</b> ({{ $students->count() }} siswa) menjadi peserta.</div>
                                     </div>
                                     <div class="by-student-wrap mb-4" style="{{ $sMode==='manual' ? '' : 'display:none' }}">
                                         <select name="students[]" class="form-select" multiple size="6">
                                             @foreach($students as $st)<option value="{{ $st->id }}" @selected(in_array($st->id,$sStudentIds))>{{ $st->user->name ?? 'Siswa' }}</option>@endforeach
                                         </select>
-                                        <span class="text-muted fs-8">Tahan Ctrl/Cmd untuk memilih beberapa siswa.</span>
+                                        <span class="text-muted fs-8">Pilih sebagian siswa kelas {{ $examClass->name ?? '' }}. Tahan Ctrl/Cmd untuk memilih beberapa.</span>
                                     </div>
 
                                     <div class="row">

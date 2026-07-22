@@ -69,16 +69,28 @@ class ExamController extends Controller
 
         $this->authorizeExam($exam);
 
-        // Untuk pembuatan sesi: kelas yang tersedia + siswa (untuk daftar manual).
-        $classRooms = \App\Models\ClassRoom::orderBy('name')->get();
-        $students = \App\Models\Student::with('user')->get();
+        // Sesi ujian mengikuti kelas ujian (dari penugasan). Peserta = siswa kelas tsb;
+        // "Pilih Siswa" hanya untuk memilih SEBAGIAN siswa kelas yang sama.
+        $examClass = $exam->teachingAssignment?->classRoom;
+        $classStudentIds = $examClass
+            ? \App\Models\ClassStudent::where('class_room_id', $examClass->id)->pluck('student_id')
+            : collect();
+        $students = \App\Models\Student::with('user')->whereIn('id', $classStudentIds)->get();
 
-        return view('backend.master.exams.show', compact('exam', 'classRooms', 'students'));
+        // Penugasan untuk mengganti kelas/mapel ujian (Guru: hanya miliknya).
+        $user = auth()->user();
+        $taQuery = TeachingAssignment::with(['subject', 'classRoom', 'teacher.user']);
+        if ($user->hasRole('Guru')) {
+            $taQuery->where('teacher_id', $user->teacher?->id);
+        }
+        $assignments = $taQuery->get();
+
+        return view('backend.master.exams.show', compact('exam', 'examClass', 'students', 'assignments'));
     }
 
     public function update(Request $request, $id)
     {
-        $exam = Exam::findOrFail($id);
+        $exam = Exam::with('sessions.students')->findOrFail($id);
         $this->authorizeExam($exam);
 
         $request->validate([
@@ -87,9 +99,10 @@ class ExamController extends Controller
             'points_mode' => 'required|in:per_question,equal,manual',
             'wrong_penalty' => 'nullable|numeric|min:0',
             'pass_score' => 'nullable|numeric|min:0|max:100',
+            'teaching_assignment_id' => 'nullable|uuid|exists:teaching_assignments,id',
         ]);
 
-        $exam->update([
+        $data = [
             'title' => $request->title,
             'description' => $request->description,
             'type' => $request->type,
@@ -97,9 +110,45 @@ class ExamController extends Controller
             'wrong_penalty' => $request->wrong_penalty ?: 0,
             'normalize' => $request->has('normalize'),
             'pass_score' => $request->pass_score ?: 75,
-        ]);
+        ];
+
+        // Kelas/mapel (penugasan) hanya boleh diganti selama belum ada yang memulai.
+        if (!$exam->hasStartedAttempts() && $request->filled('teaching_assignment_id')
+            && $request->teaching_assignment_id !== $exam->teaching_assignment_id) {
+            $ta = TeachingAssignment::find($request->teaching_assignment_id);
+            $user = auth()->user();
+            if ($ta && $user->hasRole('Guru') && $ta->teacher_id !== $user->teacher?->id) {
+                abort(403, 'Anda hanya dapat memilih penugasan milik Anda.');
+            }
+            if ($ta) {
+                $oldClass = $exam->teachingAssignment?->class_room_id;
+                $data['teaching_assignment_id'] = $ta->id;
+                $this->moveSessionsToClass($exam, $oldClass, $ta->class_room_id);
+            }
+        }
+
+        $exam->update($data);
 
         return redirect()->back()->with('success', 'Pengaturan ujian berhasil diperbarui.');
+    }
+
+    /** Saat kelas ujian berpindah, sesi ikut menyesuaikan kelas barunya. */
+    private function moveSessionsToClass(Exam $exam, ?string $oldClass, ?string $newClass): void
+    {
+        if ($oldClass === $newClass || !$newClass) {
+            return;
+        }
+        $validStudentIds = \App\Models\ClassStudent::where('class_room_id', $newClass)->pluck('student_id')->all();
+        foreach ($exam->sessions as $sess) {
+            if ($sess->class_room_id) {
+                // Sesi mode "Satu Kelas" → pindah ke kelas baru.
+                $sess->update(['class_room_id' => $newClass]);
+            } else {
+                // Sesi mode "Pilih Siswa" → sisakan hanya siswa yang ada di kelas baru.
+                $keep = array_values(array_intersect($sess->students->pluck('id')->all(), $validStudentIds));
+                $sess->students()->sync($keep);
+            }
+        }
     }
 
     public function destroy($id)

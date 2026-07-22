@@ -5,6 +5,15 @@
             @csrf @method('PUT')
             <div class="modal-header"><h3 class="modal-title">Pengaturan Ujian</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
             <div class="modal-body px-8 py-6">
+                <div class="mb-4">
+                    <label class="form-label required">Mata Pelajaran / Kelas (Penugasan)</label>
+                    <select name="teaching_assignment_id" class="form-select">
+                        @foreach($assignments as $ta)
+                        <option value="{{ $ta->id }}" @selected($exam->teaching_assignment_id === $ta->id)>{{ $ta->subject->name ?? '-' }} — {{ $ta->classRoom->name ?? '-' }}@if(!auth()->user()->hasRole('Guru')) ({{ $ta->teacher->user->name ?? '-' }})@endif</option>
+                        @endforeach
+                    </select>
+                    <div class="form-text">Mengganti ini memindahkan ujian & sesinya ke kelas/mapel tersebut. Hanya bisa selama belum ada peserta yang memulai.</div>
+                </div>
                 <div class="mb-4"><label class="form-label required">Judul</label><input type="text" name="title" class="form-control" value="{{ $exam->title }}" required></div>
                 <div class="mb-4"><label class="form-label">Deskripsi</label><textarea name="description" class="form-control" rows="2">{{ $exam->description }}</textarea></div>
                 <div class="row">
@@ -113,22 +122,20 @@
             <div class="modal-body px-8 py-6">
                 <div class="mb-4"><label class="form-label required">Nama Sesi</label><input type="text" name="name" class="form-control" placeholder="cth: Sesi 1 — Pagi" required></div>
 
-                <label class="form-label required d-block">Peserta</label>
+                <label class="form-label required d-block">Peserta <span class="text-muted fs-8">— ujian ini untuk kelas <b>{{ $examClass->name ?? '-' }}</b></span></label>
+                <input type="hidden" name="class_room_id" value="{{ $examClass->id ?? '' }}">
                 <div class="d-flex gap-4 mb-3 participant-toggle">
-                    <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" checked> <span class="form-check-label ms-2">Satu Kelas</span></label>
-                    <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual"> <span class="form-check-label ms-2">Pilih Siswa (lintas kelas)</span></label>
+                    <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" checked> <span class="form-check-label ms-2">Seluruh kelas {{ $examClass->name ?? '' }}</span></label>
+                    <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual"> <span class="form-check-label ms-2">Pilih sebagian siswa</span></label>
                 </div>
                 <div class="by-class-wrap mb-4">
-                    <select name="class_room_id" class="form-select">
-                        <option value="">Pilih kelas...</option>
-                        @foreach($classRooms as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
-                    </select>
+                    <div class="alert alert-light-primary py-2 mb-0 fs-8">Semua siswa kelas <b>{{ $examClass->name ?? '-' }}</b> ({{ $students->count() }} siswa) otomatis menjadi peserta.</div>
                 </div>
                 <div class="by-student-wrap mb-4" style="display:none">
                     <select name="students[]" class="form-select" multiple size="6">
                         @foreach($students as $st)<option value="{{ $st->id }}">{{ $st->user->name ?? 'Siswa' }}</option>@endforeach
                     </select>
-                    <span class="text-muted fs-8">Tahan Ctrl/Cmd untuk memilih beberapa siswa.</span>
+                    <span class="text-muted fs-8">Pilih sebagian siswa kelas {{ $examClass->name ?? '' }} (mis. bagi sesi pagi/siang atau remedial). Tahan Ctrl/Cmd untuk memilih beberapa.</span>
                 </div>
 
                 <div class="row">
