@@ -8,10 +8,12 @@ use App\Models\ClassRoom;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\AcademicYear;
+use App\Traits\ValidatesMasterData;
 use Illuminate\Http\Request;
 
 class TeachingAssignmentController extends Controller
 {
+    use ValidatesMasterData;
     public function index()
     {
         $assignments = TeachingAssignment::with(['classRoom.school', 'subject', 'teacher.user', 'academicYear'])->get();
@@ -25,26 +27,16 @@ class TeachingAssignmentController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'class_room_id' => 'required',
-            'subject_id' => 'required',
-            'teacher_id' => 'required',
-            'academic_year_id' => 'required',
-        ]);
+        $data = $request->validate($this->rules(), $this->idMessages(), $this->labels());
 
         // Cek duplikasi
-        $exists = TeachingAssignment::where([
-            'class_room_id' => $request->class_room_id,
-            'subject_id' => $request->subject_id,
-            'teacher_id' => $request->teacher_id,
-            'academic_year_id' => $request->academic_year_id,
-        ])->exists();
+        $exists = TeachingAssignment::where($data)->exists();
 
         if ($exists) {
             return redirect()->back()->with('error', 'Penugasan ini sudah ada sebelumnya!');
         }
 
-        TeachingAssignment::create($request->all());
+        TeachingAssignment::create($data);
         return redirect()->back()->with('success', 'Penugasan guru berhasil ditambahkan');
     }
 
@@ -52,27 +44,17 @@ class TeachingAssignmentController extends Controller
     public function update(Request $request, $id)
     {
         $assignment = TeachingAssignment::findOrFail($id);
-        
-        $request->validate([
-            'class_room_id' => 'required',
-            'subject_id' => 'required',
-            'teacher_id' => 'required',
-            'academic_year_id' => 'required',
-        ]);
+
+        $data = $request->validate($this->rules(), $this->idMessages(), $this->labels());
 
         // Cek duplikasi
-        $exists = TeachingAssignment::where([
-            'class_room_id' => $request->class_room_id,
-            'subject_id' => $request->subject_id,
-            'teacher_id' => $request->teacher_id,
-            'academic_year_id' => $request->academic_year_id,
-        ])->where('id', '!=', $id)->exists();
+        $exists = TeachingAssignment::where($data)->where('id', '!=', $id)->exists();
 
         if ($exists) {
             return redirect()->back()->with('error', 'Penugasan ini sudah ada sebelumnya!');
         }
 
-        $assignment->update($request->all());
+        $assignment->update($data);
         return redirect()->back()->with('success', 'Penugasan guru berhasil diperbarui');
     }
 
@@ -80,5 +62,25 @@ class TeachingAssignmentController extends Controller
     {
         TeachingAssignment::findOrFail($id)->delete();
         return redirect()->back()->with('success', 'Penugasan berhasil dihapus');
+    }
+
+    private function rules(): array
+    {
+        return [
+            'class_room_id' => 'required|uuid|exists:class_rooms,id',
+            'subject_id' => 'required|uuid|exists:subjects,id',
+            'teacher_id' => 'required|uuid|exists:teachers,id',
+            'academic_year_id' => 'required|uuid|exists:academic_years,id',
+        ];
+    }
+
+    private function labels(): array
+    {
+        return [
+            'class_room_id' => 'Kelas',
+            'subject_id' => 'Mata Pelajaran',
+            'teacher_id' => 'Guru',
+            'academic_year_id' => 'Tahun Ajaran',
+        ];
     }
 }
