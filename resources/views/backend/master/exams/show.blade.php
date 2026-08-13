@@ -82,6 +82,7 @@
                         @if($exam->hasEssay())
                         <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addEssayModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Essay</button>
                         @endif
+                        <button class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#bankModal"><i class="ki-outline ki-book-open fs-4"></i> Tarik dari Bank Soal</button>
                     @endif
                     @php $tpl = $exam->type === 'mixed' ? 'mixed' : ($exam->type === 'essay' ? 'essay' : 'pg'); @endphp
                     <div class="d-flex flex-wrap gap-2 ms-auto">
@@ -124,6 +125,45 @@
                                 <div class="form-text">Maksimal 8 MB. Soal yang diimpor ditambahkan ke soal yang sudah ada.</div>
                             </div>
                             <div class="modal-footer"><button type="submit" class="btn btn-success"><i class="ki-outline ki-file-up fs-5"></i> Impor Sekarang</button></div>
+                        </form>
+                    </div></div>
+                </div>
+
+                {{-- ===== Modal Tarik dari Bank Soal Bersama ===== --}}
+                <div class="modal fade drawer-modal drawer-wide" id="bankModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog"><div class="modal-content">
+                        <form action="{{ route('exams.pull-bank', $exam->id) }}" method="POST">
+                            @csrf
+                            <div class="modal-header"><h3 class="modal-title">Tarik dari Bank Soal — {{ $exam->teachingAssignment->subject->name ?? '' }}</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
+                            <div class="modal-body px-8 py-6">
+                                <div class="alert alert-light-primary fs-8 py-2 mb-4">Soal dari <b>Bank Soal Bersama</b> (mapel sama, lintas sekolah). Centang soal, lalu <b>Salin ke Ujian</b> — soal tercopy & bisa diubah tanpa mempengaruhi bank.</div>
+                                <input type="text" id="bankSearch" class="form-control form-control-sm mb-3" placeholder="🔎 Ketik untuk menyaring soal...">
+                                @if($bankQuestions->isEmpty())
+                                    <div class="text-center text-muted py-8">Belum ada soal Bank untuk mapel ini. Tambahkan lewat menu <b>Bank Soal</b>.</div>
+                                @else
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" id="bankCheckAll"> <span class="ms-2 fs-8">Pilih semua yang tampil</span></label>
+                                        <span class="text-muted fs-8">{{ $bankQuestions->count() }} soal tersedia</span>
+                                    </div>
+                                    <div style="max-height:52vh;overflow:auto">
+                                    @foreach($bankQuestions as $b)
+                                    <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2 bank-item">
+                                        <input class="form-check-input mt-1 bank-check" type="checkbox" name="bank_ids[]" value="{{ $b->id }}">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex gap-2 mb-1">
+                                                <span class="badge badge-light-{{ $b->type==='mc'?'primary':'info' }}">{{ $b->type==='mc'?'PG':'Essay' }}</span>
+                                                @if($b->level)<span class="badge badge-light-warning">Tingkat {{ $b->level }}</span>@endif
+                                                <span class="badge badge-light">{{ rtrim(rtrim((string)$b->points,'0'),'.') }} poin</span>
+                                            </div>
+                                            <div class="fw-semibold text-gray-800 fs-7 bank-text">{{ $b->question_text }}</div>
+                                            @if($b->type==='mc')<div class="text-muted fs-8">{{ $b->options->pluck('option_text')->filter()->take(4)->implode(' · ') }}</div>@endif
+                                        </div>
+                                    </label>
+                                    @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="modal-footer"><button type="submit" class="btn btn-primary" @disabled($bankQuestions->isEmpty())><i class="ki-outline ki-copy fs-5"></i> Salin ke Ujian</button></div>
                         </form>
                     </div></div>
                 </div>
@@ -363,6 +403,25 @@
 
 @push('scripts')
 <script>
+    // ---- Bank Soal: cari & pilih semua ----
+    (function(){
+        var search = document.getElementById('bankSearch');
+        var checkAll = document.getElementById('bankCheckAll');
+        if (search) search.addEventListener('input', function(){
+            var kw = this.value.toLowerCase();
+            document.querySelectorAll('#bankModal .bank-item').forEach(function(it){
+                var t = (it.querySelector('.bank-text')?.textContent || '').toLowerCase();
+                it.style.display = t.indexOf(kw) !== -1 ? 'flex' : 'none';
+            });
+        });
+        if (checkAll) checkAll.addEventListener('change', function(){
+            document.querySelectorAll('#bankModal .bank-item').forEach(function(it){
+                if (it.style.display === 'none') return;
+                var c = it.querySelector('.bank-check'); if (c) c.checked = checkAll.checked;
+            });
+        });
+    })();
+
     // ---- Dynamic MC option rows (untuk semua container .mc-options) ----
     function renumber(container){
         container.querySelectorAll('.mc-row').forEach((row, idx) => {

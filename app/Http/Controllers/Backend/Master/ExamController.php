@@ -94,7 +94,17 @@ class ExamController extends Controller
         }
         $assignments = $taQuery->get();
 
-        return view('backend.master.exams.show', compact('exam', 'examClass', 'students', 'assignments'));
+        // Bank Soal Bersama untuk mapel ujian ini (lintas sekolah) — untuk fitur "Tarik dari Bank Soal".
+        $subjectId = $exam->teachingAssignment?->subject_id;
+        $bankQuestions = $subjectId
+            ? \App\Models\QuestionBank::with(['options', 'subject'])
+                ->where('subject_id', $subjectId)
+                ->when(!$exam->hasMc(), fn ($q) => $q->where('type', 'essay'))
+                ->when(!$exam->hasEssay(), fn ($q) => $q->where('type', 'mc'))
+                ->latest()->limit(300)->get()
+            : collect();
+
+        return view('backend.master.exams.show', compact('exam', 'examClass', 'students', 'assignments', 'bankQuestions'));
     }
 
     public function update(Request $request, $id)

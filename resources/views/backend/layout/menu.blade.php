@@ -120,6 +120,16 @@
 								</div>
 								<!--end:Menu item-->
 
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('question-banks.*') ? 'active' : '' }}" href="{{ route('question-banks.index') }}">
+										<span class="menu-icon">
+											<i class="ki-outline ki-book-open fs-2"></i>
+										</span>
+										<span class="menu-title">Bank Soal</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
 								@if(false) {{-- CBT-SYNC: non-CBT --}}
 <!--begin:Menu item-->
 								<div class="menu-item">

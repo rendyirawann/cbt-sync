@@ -148,6 +148,13 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::post('/admin/exams/{exam}/import-questions', [\App\Http\Controllers\Backend\Master\ExamTemplateController::class, 'import'])->name('exams.import');
     Route::resource('/admin/exams', \App\Http\Controllers\Backend\Master\ExamController::class)->except(['create', 'edit']);
     Route::post('/admin/exams/{id}/publish', [\App\Http\Controllers\Backend\Master\ExamController::class, 'publish'])->name('exams.publish');
+    // Bank Soal Bersama (lintas sekolah) + tarik ke ujian
+    Route::get('/admin/question-banks', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'index'])->name('question-banks.index');
+    Route::post('/admin/question-banks', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'store'])->name('question-banks.store');
+    Route::put('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'update'])->name('question-banks.update');
+    Route::delete('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'destroy'])->name('question-banks.destroy');
+    Route::post('/admin/exams/{exam}/pull-bank', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'pullFromBank'])->name('exams.pull-bank');
+
     Route::post('/admin/exam-questions', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'store'])->name('exam-questions.store');
     Route::put('/admin/exam-questions/{id}', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'update'])->name('exam-questions.update');
     Route::delete('/admin/exam-questions/{id}', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'destroy'])->name('exam-questions.destroy');

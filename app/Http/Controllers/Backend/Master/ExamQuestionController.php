@@ -138,6 +138,79 @@ class ExamQuestionController extends Controller
         return redirect()->back()->with('success', 'Soal berhasil dihapus.');
     }
 
+    /** Salin soal terpilih dari Bank Soal Bersama ke dalam ujian ini. */
+    public function pullFromBank(Request $request, $examId)
+    {
+        $exam = Exam::findOrFail($examId);
+        $this->authorizeExam($exam);
+
+        if ($exam->hasStartedAttempts()) {
+            return back()->with('error', 'Soal tidak bisa ditambah karena sudah ada siswa yang memulai ujian.');
+        }
+
+        $request->validate(['bank_ids' => 'required|array|min:1'], [], ['bank_ids' => 'Soal Bank']);
+
+        $banks = \App\Models\QuestionBank::with('options')->whereIn('id', $request->bank_ids)->get();
+        $copied = 0;
+        $skipped = 0;
+        $order = (int) ($exam->questions()->max('order') ?? 0);
+
+        DB::transaction(function () use ($banks, $exam, &$copied, &$skipped, &$order) {
+            foreach ($banks as $bank) {
+                if (($bank->type === 'mc' && !$exam->hasMc()) || ($bank->type === 'essay' && !$exam->hasEssay())) {
+                    $skipped++;
+                    continue;
+                }
+                $q = Question::create([
+                    'exam_id' => $exam->id,
+                    'type' => $bank->type,
+                    'question_text' => $bank->question_text,
+                    'image_path' => $this->copyImage($bank->image_path),
+                    'points' => $bank->points,
+                    'penalty' => $bank->type === 'mc' ? $bank->penalty : 0,
+                    'order' => ++$order,
+                ]);
+                if ($bank->type === 'mc') {
+                    foreach ($bank->options as $opt) {
+                        $q->options()->create([
+                            'label' => $opt->label,
+                            'option_text' => $opt->option_text,
+                            'image_path' => $this->copyImage($opt->image_path),
+                            'is_correct' => $opt->is_correct,
+                            'order' => $opt->order,
+                        ]);
+                    }
+                }
+                $copied++;
+            }
+        });
+
+        if ($copied === 0) {
+            return back()->with('error', 'Tidak ada soal yang disalin.' . ($skipped ? " ($skipped soal tidak sesuai kategori ujian dilewati.)" : ''));
+        }
+        return back()->with('success', "$copied soal berhasil disalin dari Bank Soal." . ($skipped ? " $skipped dilewati (beda kategori)." : ''));
+    }
+
+    /** Salin file gambar (agar independen dari Bank Soal). Kembalikan path baru atau null. */
+    private function copyImage(?string $src): ?string
+    {
+        if (!$src) {
+            return null;
+        }
+        try {
+            $disk = Storage::disk('public');
+            if (!$disk->exists($src)) {
+                return null;
+            }
+            $ext = pathinfo($src, PATHINFO_EXTENSION) ?: 'png';
+            $dest = 'exam-questions/' . \Illuminate\Support\Str::uuid() . '.' . $ext;
+            $disk->copy($src, $dest);
+            return $dest;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     /**
      * Buat ulang opsi PG dari nol (dipakai saat menambah soal baru).
      * Tiap opsi bisa punya teks (boleh rumus $…$) dan/atau gambar.
