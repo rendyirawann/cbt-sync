@@ -59,6 +59,10 @@ class RolePermissionSeeder extends Seeder
         // ================================================
         $roleSuperadmin = Role::firstOrCreate(['name' => 'Superadmin']);
         $roleAdmin      = Role::firstOrCreate(['name' => 'Admin']);
+        $roleKepsek     = Role::firstOrCreate(['name' => 'Kepala Sekolah']);
+        // Pastikan role operasional lain juga ada (dipakai di menu & scoping).
+        Role::firstOrCreate(['name' => 'Guru']);
+        Role::firstOrCreate(['name' => 'Siswa']);
 
         // ================================================
         // 3. ASSIGN PERMISSIONS TO ROLES
@@ -75,5 +79,13 @@ class RolePermissionSeeder extends Seeder
             'view_help',
         ];
         $roleAdmin->syncPermissions($adminPermissions);
+
+        // KEPALA SEKOLAH — pemantauan (dashboard + data master + bantuan).
+        // Cakupan data (per-sekolah) diberlakukan di controller scoping.
+        $roleKepsek->syncPermissions([
+            'view_dashboard',
+            'view_data_master',
+            'view_help',
+        ]);
     }
 }

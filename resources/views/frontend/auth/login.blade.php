@@ -106,7 +106,7 @@
         <div class="auth-container">
             <!-- Left Side -->
             <div class="auth-side-image">
-                <img src="{{ URL::to('assets/media/logos/lms.png') }}" class="h-50px mb-12" alt="">
+                <img src="{{ URL::to('assets/media/logos/cbt-logo.svg') }}" class="h-50px mb-12" alt="">
                 <img src="{{ URL::to('assets/media/illustrations/doofenshmirtz/13.png') }}" class="floating-img mb-10" alt="">
                 <div class="text-center px-5">
                     <h2 class="text-gray-900 fw-bolder mb-3 fs-1">Hai, Semangat Belajar!</h2>

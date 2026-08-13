@@ -76,7 +76,8 @@
 								</div>
 								<!--end:Menu item-->
 
-								<!--begin:Menu item-->
+								@if(false) {{-- CBT-SYNC: non-CBT --}}
+<!--begin:Menu item-->
 								<div class="menu-item">
 									@php
 										$moduleRoute = auth()->user()->hasRole('Siswa') ? 'student.learning-modules.index' : 'learning-modules.index';
@@ -89,8 +90,10 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+@endif
 
-								<!--begin:Menu item-->
+								@if(false) {{-- CBT-SYNC: non-CBT --}}
+<!--begin:Menu item-->
 								<div class="menu-item">
 									@php
 										$assignmentRoute = auth()->user()->hasRole('Siswa') ? 'student.assignments.index' : 'assignments.index';
@@ -103,8 +106,9 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+@endif
 
-                                @if(auth()->user()->hasRole('Superadmin') || auth()->user()->hasRole('Guru'))
+                                @if(auth()->user()->hasRole('Superadmin') || auth()->user()->hasRole('Guru') || auth()->user()->hasRole('Kepala Sekolah'))
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('exams.*') || request()->routeIs('exam-sessions.*') || request()->routeIs('exam-attempts.*') ? 'active' : '' }}" href="{{ route('exams.index') }}">
@@ -116,7 +120,8 @@
 								</div>
 								<!--end:Menu item-->
 
-								<!--begin:Menu item-->
+								@if(false) {{-- CBT-SYNC: non-CBT --}}
+<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('schedules.*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">
 										<span class="menu-icon">
@@ -126,8 +131,10 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+@endif
 
-								<!--begin:Menu item-->
+								@if(false) {{-- CBT-SYNC: non-CBT --}}
+<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('attendances.*') ? 'active' : '' }}" href="{{ route('attendances.index') }}">
 										<span class="menu-icon">
@@ -137,8 +144,10 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+@endif
 
-								<!--begin:Menu item-->
+								@if(false) {{-- CBT-SYNC: non-CBT --}}
+<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('portal.leaderboard') ? 'active' : '' }}" href="{{ route('portal.leaderboard') }}">
 										<span class="menu-icon">
@@ -148,8 +157,10 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+@endif
 
-								<!--begin:Menu item-->
+								@if(false) {{-- CBT-SYNC: non-CBT --}}
+<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('admin.analytics.index') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}">
 										<span class="menu-icon">
@@ -159,6 +170,7 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+@endif
 
 								<!--begin:Menu item-->
 								<div class="menu-item">
@@ -171,7 +183,8 @@
 								</div>
 								<!--end:Menu item-->
 
-								<!--begin:Menu item-->
+								@if(false) {{-- CBT-SYNC: non-CBT --}}
+<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('books.*') ? 'active' : '' }}" href="{{ route('books.index') }}">
 										<span class="menu-icon">
@@ -181,6 +194,7 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+@endif
                                 @endif
 
                                 @if(auth()->user()->hasRole('Siswa'))
@@ -217,7 +231,8 @@
 								</div>
 								<!--end:Menu item-->
 
-								<!--begin:Menu item-->
+								@if(false) {{-- CBT-SYNC: non-CBT --}}
+<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('portal.leaderboard') ? 'active' : '' }}" href="{{ route('portal.leaderboard') }}">
 										<span class="menu-icon">
@@ -227,6 +242,7 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+@endif
 
 								<!--begin:Menu item-->
 								<div class="menu-item">

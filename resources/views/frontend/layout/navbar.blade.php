@@ -5,7 +5,7 @@
 		<div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-lg-15">
 			<button type="button" id="portalBurger" class="btn btn-icon p-0 me-3" aria-label="Buka menu"><span style="font-size:26px;line-height:1;color:#fff">&#9776;</span></button>
 			<a href="{{ route('student.dashboard') }}">
-				<img alt="Logo" src="{{ asset('assets/media/logos/lms.png') }}" class="h-30px h-lg-40px" />
+				<img alt="Logo" src="{{ asset('assets/media/logos/cbt-logo.svg') }}" class="h-30px h-lg-40px" />
 			</a>
 		</div>
 
@@ -18,51 +18,65 @@
 							<span class="menu-title">Dashboard</span>
 						</a>
 					</div>
-					<div class="menu-item me-0 me-lg-2">
+					@if(false) {{-- CBT-SYNC: non-CBT --}}
+<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.attendance') }}" class="menu-link {{ request()->routeIs('student.attendance*') ? 'active' : '' }}">
 							<span class="menu-title">Absensi</span>
 						</a>
 					</div>
-					<div class="menu-item me-0 me-lg-2">
+@endif
+					@if(false) {{-- CBT-SYNC: non-CBT --}}
+<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.learning-modules.index') }}" class="menu-link {{ request()->routeIs('student.learning-modules.*') ? 'active' : '' }}">
 							<span class="menu-title">Materi Belajar</span>
 						</a>
 					</div>
-					<div class="menu-item me-0 me-lg-2">
+@endif
+					@if(false) {{-- CBT-SYNC: non-CBT --}}
+<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.assignments.index') }}" class="menu-link {{ request()->routeIs('student.assignments.*') ? 'active' : '' }}">
 							<span class="menu-title">Tugas Saya</span>
 						</a>
 					</div>
+@endif
 					<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.exams.index') }}" class="menu-link {{ request()->routeIs('student.exams.*') ? 'active' : '' }}">
 							<span class="menu-title">Ujian</span>
 						</a>
 					</div>
-					<div class="menu-item me-0 me-lg-2">
+					@if(false) {{-- CBT-SYNC: non-CBT --}}
+<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.timetable') }}" class="menu-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}">
 							<span class="menu-title">Jadwal</span>
 						</a>
 					</div>
+@endif
 					<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.rapor.index') }}" class="menu-link {{ request()->routeIs('student.rapor.*') ? 'active' : '' }}">
 							<span class="menu-title">Raport Hasil Ujian</span>
 						</a>
 					</div>
-					<div class="menu-item me-0 me-lg-2">
+					@if(false) {{-- CBT-SYNC: non-CBT --}}
+<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.library.index') }}" class="menu-link {{ request()->routeIs('student.library.*') ? 'active' : '' }}">
 							<span class="menu-title">Perpustakaan</span>
 						</a>
 					</div>
-					<div class="menu-item me-0 me-lg-2">
+@endif
+					@if(false) {{-- CBT-SYNC: non-CBT --}}
+<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('portal.leaderboard') }}" class="menu-link {{ request()->routeIs('portal.leaderboard') ? 'active' : '' }}">
 							<span class="menu-title">Peringkat</span>
 						</a>
 					</div>
-					<div class="menu-item me-0 me-lg-2">
+@endif
+					@if(false) {{-- CBT-SYNC: non-CBT --}}
+<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.chat.index') }}" class="menu-link {{ request()->routeIs('student.chat.*') ? 'active' : '' }}">
 							<span class="menu-title">💬 Pesan</span>
 						</a>
 					</div>
+@endif
 				</div>
 			</div>
 
