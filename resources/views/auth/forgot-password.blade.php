@@ -1,5 +1,5 @@
 @extends('auth.app')
-@section('title', 'Lupa Password - DineSync POS')
+@section('title', 'Lupa Password | CBT-SYNC')
 @section('content')
     <div class="d-flex flex-column-fluid flex-lg-row-auto justify-content-center justify-content-lg-start p-12">
 

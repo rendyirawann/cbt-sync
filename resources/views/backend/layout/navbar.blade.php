@@ -19,7 +19,7 @@
 										$dashboardRoute = auth()->user()->hasRole('Siswa') ? 'student.dashboard' : 'dashboard';
 									@endphp
 									<a href="{{ route($dashboardRoute) }}">
-										<img alt="Logo" src="{{ asset('assets/media/logos/lms_alt.jpeg') }}" class="h-30px h-lg-40px" />
+										<img alt="Logo" src="{{ asset('assets/media/logos/cbt-logo.svg') }}" class="h-30px h-lg-40px" />
 									</a>
 									<!--end::Header Logo-->
 								</div>
