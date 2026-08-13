@@ -16,7 +16,7 @@
         <div class="otp">{{ $otp }}</div>
         <p>Kode ini berlaku selama 10 menit. Jika Anda tidak merasa melakukan permintaan ini, silakan abaikan email ini.</p>
         <div class="footer">
-            &copy; {{ date('Y') }} LMS Sync. All rights reserved.
+            &copy; {{ date('Y') }} CBT Sync. All rights reserved.
         </div>
     </div>
 </body>

@@ -29,10 +29,10 @@
             @endif
         </div>
 
-        <p>Laporan ini dikirim secara otomatis oleh sistem LMS Sync sebagai bentuk transparansi kehadiran siswa.</p>
+        <p>Laporan ini dikirim secara otomatis oleh sistem CBT Sync sebagai bentuk transparansi kehadiran siswa.</p>
         
         <div class="footer">
-            &copy; {{ date('Y') }} LMS Sync. All rights reserved.
+            &copy; {{ date('Y') }} CBT Sync. All rights reserved.
         </div>
     </div>
 </body>

@@ -38,8 +38,10 @@ Route::post('/login', [\App\Http\Controllers\Frontend\PortalController::class, '
 
 
 
+// CBT-SYNC: tanpa landing/frontend — root langsung ke login siswa (portal).
+// Login guru/admin/superadmin diakses via URL /admin/login.
 Route::get('/', function () {
-    return view('frontend.landing.index');
+    return redirect()->route('student.login');
 })->name('landing');
 
 

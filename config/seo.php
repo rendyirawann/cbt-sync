@@ -2,7 +2,7 @@
 
 return [
     // Judul situs (fallback ke APP_NAME). Bisa di-override per-halaman via @section('title').
-    'title'       => env('SEO_TITLE', env('APP_NAME', 'LMS Sync')),
+    'title'       => env('SEO_TITLE', env('APP_NAME', 'CBT Sync')),
     'description' => env('SEO_DESCRIPTION', 'Platform Belajar & Ujian Online (CBT) untuk sekolah, bimbel, dan homeschooling.'),
     'keywords'    => env('SEO_KEYWORDS', 'LMS, CBT, ujian online, e-learning, sekolah, bimbel, homeschool'),
     'og_image'    => env('SEO_OG_IMAGE', 'og-image.jpg'),      // relatif ke public/

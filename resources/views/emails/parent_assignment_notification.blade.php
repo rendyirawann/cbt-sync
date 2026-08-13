@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Pemberitahuan Tugas LMS Sync</title>
+    <title>Pemberitahuan Tugas CBT Sync</title>
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333333; margin: 0; padding: 0; }
         .wrapper { width: 100%; background-color: #f4f6f9; padding: 20px 0; }
@@ -28,7 +28,7 @@
     <div class="wrapper">
         <div class="container">
             <div class="header">
-                <h1>LMS SYNC NOTIFICATION</h1>
+                <h1>CBT SYNC NOTIFICATION</h1>
             </div>
             <div class="content">
                 <p class="greeting">Halo Bapak/Ibu {{ $parentName }},</p>
@@ -77,8 +77,8 @@
                 </div>
             </div>
             <div class="footer">
-                <p>Email ini dikirimkan secara otomatis oleh sistem LMS Sync.</p>
-                <p>&copy; {{ date('Y') }} LMS Sync. All rights reserved.</p>
+                <p>Email ini dikirimkan secara otomatis oleh sistem CBT Sync.</p>
+                <p>&copy; {{ date('Y') }} CBT Sync. All rights reserved.</p>
             </div>
         </div>
     </div>

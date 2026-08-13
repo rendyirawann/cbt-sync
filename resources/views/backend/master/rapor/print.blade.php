@@ -541,7 +541,7 @@
                     <tr>
                         <td class="label">Satuan Pendidikan</td>
                         <td class="colon">:</td>
-                        <td class="value">{{ $student->school->name ?? 'LMS-Sync School' }}</td>
+                        <td class="value">{{ $student->school->name ?? 'CBT-Sync School' }}</td>
                     </tr>
                 </table>
             </div>
@@ -562,7 +562,7 @@
                         <span>L</span>
                     </div>
                     <div class="kop-text-container">
-                        <h1 class="school-title">{{ $student->school->name ?? 'LMS-SYNC SCHOOL' }}</h1>
+                        <h1 class="school-title">{{ $student->school->name ?? 'CBT-SYNC SCHOOL' }}</h1>
                         <p class="school-details">
                             Alamat: {{ $student->school->address ?? 'Jalan Raya Pendidikan No. 1' }} | Telp: {{ $student->school->phone ?? '-' }}
                         </p>

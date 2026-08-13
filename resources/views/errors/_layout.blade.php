@@ -1,5 +1,5 @@
 @php
-    $siteName = $appSettings['site_name'] ?? config('seo.title', config('app.name', 'LMS Sync'));
+    $siteName = $appSettings['site_name'] ?? config('seo.title', config('app.name', 'CBT Sync'));
     $logo     = 'assets/media/logos/' . ($appSettings['site_logo'] ?? 'base-logo.png');
     $code     = $code ?? 500;
     $title    = $title ?? 'Terjadi Kesalahan';

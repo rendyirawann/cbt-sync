@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Pemberitahuan Materi/Pengumuman LMS Sync</title>
+    <title>Pemberitahuan Materi/Pengumuman CBT Sync</title>
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f6f9; color: #333333; margin: 0; padding: 0; }
         .wrapper { width: 100%; background-color: #f4f6f9; padding: 20px 0; }
@@ -62,15 +62,15 @@
                     @endif
                 </div>
 
-                <p>Materi pembelajaran ini sudah dapat diakses dan diunduh oleh putra/putri Anda melalui portal LMS Sync.</p>
+                <p>Materi pembelajaran ini sudah dapat diakses dan diunduh oleh putra/putri Anda melalui portal CBT Sync.</p>
 
                 <div style="text-align: center;">
                     <a href="{{ $loginUrl }}" class="btn" target="_blank">Buka Portal LMS</a>
                 </div>
             </div>
             <div class="footer">
-                <p>Email ini dikirimkan secara otomatis oleh sistem LMS Sync.</p>
-                <p>&copy; {{ date('Y') }} LMS Sync. All rights reserved.</p>
+                <p>Email ini dikirimkan secara otomatis oleh sistem CBT Sync.</p>
+                <p>&copy; {{ date('Y') }} CBT Sync. All rights reserved.</p>
             </div>
         </div>
     </div>
