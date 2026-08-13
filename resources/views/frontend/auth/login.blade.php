@@ -109,8 +109,8 @@
                 <img src="{{ URL::to('assets/media/logos/cbt-logo.svg') }}" class="h-50px mb-12" alt="">
                 <img src="{{ URL::to('assets/media/illustrations/doofenshmirtz/13.png') }}" class="floating-img mb-10" alt="">
                 <div class="text-center px-5">
-                    <h2 class="text-gray-900 fw-bolder mb-3 fs-1">Hai, Semangat Belajar!</h2>
-                    <p class="text-gray-600 fs-6">Masuk ke portal digitalmu untuk melanjutkan petualangan ilmu hari ini.</p>
+                    <h2 class="text-gray-900 fw-bolder mb-3 fs-1">Selamat Datang di CBT-SYNC</h2>
+                    <p class="text-gray-600 fs-6">Masuk untuk mengikuti ujian online (CBT) sekolahmu.</p>
                 </div>
             </div>
 
@@ -125,7 +125,7 @@
                     <form class="form w-100" id="form_login_siswa">
                         <div class="fv-row mb-7">
                             <label class="form-label fs-8 fw-bolder text-uppercase ls-1">Email Sekolah</label>
-                            <input type="text" placeholder="siswa@lms.com" name="email" autocomplete="off" class="form-control form-control-pixel" required />
+                            <input type="text" placeholder="email@sekolah.id" name="email" autocomplete="off" class="form-control form-control-pixel" required />
                         </div>
 
                         <div class="fv-row mb-10">

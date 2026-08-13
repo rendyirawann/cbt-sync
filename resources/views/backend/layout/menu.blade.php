@@ -311,7 +311,7 @@
 												<span class="path4"></span>
 											</i>
 										</span>
-										<span class="menu-title">Master LMS</span>
+										<span class="menu-title">Data Master</span>
 										<span class="menu-arrow"></span>
 									</span>
 									<!--end:Menu link-->
