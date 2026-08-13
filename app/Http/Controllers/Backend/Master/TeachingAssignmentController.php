@@ -18,10 +18,17 @@ class TeachingAssignmentController extends Controller
     use ValidatesMasterData, ExcelMasterTemplate;
     public function index()
     {
-        $assignments = TeachingAssignment::with(['classRoom.school', 'subject', 'teacher.user', 'academicYear'])->get();
-        $classRooms = ClassRoom::with('school')->get();
+        $sid = \App\Support\SchoolScope::id();
+        $assignments = TeachingAssignment::with(['classRoom.school', 'subject', 'teacher.user', 'academicYear'])
+            ->when($sid, fn ($q) => $q->whereHas('classRoom', fn ($c) => $c->where('school_id', $sid)))
+            ->get();
+        $classRooms = ClassRoom::with('school')
+            ->when($sid, fn ($q) => $q->where('school_id', $sid))
+            ->get();
         $subjects = Subject::all();
-        $teachers = Teacher::with('user')->get();
+        $teachers = Teacher::with('user')
+            ->when($sid, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('school_id', $sid)))
+            ->get();
         $academicYears = AcademicYear::where('is_active', 1)->get();
         
         return view('backend.master.teaching-assignments.index', compact('assignments', 'classRooms', 'subjects', 'teachers', 'academicYears'));

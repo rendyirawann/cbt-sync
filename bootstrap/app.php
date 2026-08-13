@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'forbid-banned-user' => \Cog\Laravel\Ban\Http\Middleware\ForbidBannedUser::class,
             'no-student' => \App\Http\Middleware\RedirectStudentFromAdmin::class,
+            'kepsek.readonly' => \App\Http\Middleware\KepalaSekolahReadonly::class,
         ]);
 
         // 🔥 TAMBAHKAN BARIS INI (Agar logoutOtherDevices berfungsi)

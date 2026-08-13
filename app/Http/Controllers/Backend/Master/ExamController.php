@@ -16,6 +16,8 @@ class ExamController extends Controller
         $query = Exam::with(['teachingAssignment.subject', 'teachingAssignment.classRoom', 'teachingAssignment.teacher.user'])
             ->withCount(['questions', 'sessions']);
 
+        $sid = \App\Support\SchoolScope::id();
+
         if ($user->hasRole('Guru')) {
             if (!$user->teacher) {
                 return redirect()->route('dashboard')->with('error', 'Profil guru tidak ditemukan.');
@@ -25,7 +27,13 @@ class ExamController extends Controller
             $assignments = TeachingAssignment::with(['subject', 'classRoom'])
                 ->where('teacher_id', $teacherId)->get();
         } else {
-            $assignments = TeachingAssignment::with(['subject', 'classRoom', 'teacher.user'])->get();
+            // Kepala Sekolah / user yang discope → hanya ujian di sekolahnya (via kelas).
+            if ($sid) {
+                $query->whereHas('teachingAssignment.classRoom', fn ($c) => $c->where('school_id', $sid));
+            }
+            $assignments = TeachingAssignment::with(['subject', 'classRoom', 'teacher.user'])
+                ->when($sid, fn ($q) => $q->whereHas('classRoom', fn ($c) => $c->where('school_id', $sid)))
+                ->get();
         }
 
         $exams = $query->latest()->get();

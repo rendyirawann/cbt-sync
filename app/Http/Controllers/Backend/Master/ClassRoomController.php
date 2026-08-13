@@ -16,8 +16,11 @@ class ClassRoomController extends Controller
 
     public function index()
     {
-        $classRooms = ClassRoom::with('school')->get();
-        $schools = School::all();
+        $sid = \App\Support\SchoolScope::id();
+        $classRooms = ClassRoom::with('school')
+            ->when($sid, fn ($q) => $q->where('school_id', $sid))
+            ->get();
+        $schools = $sid ? School::where('id', $sid)->get() : School::all();
         return view('backend.master.class-rooms.index', compact('classRooms', 'schools'));
     }
 

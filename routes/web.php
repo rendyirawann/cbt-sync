@@ -81,7 +81,7 @@ Route::get('/admin/debug-session', function () {
 // - 'forbid-banned-user' : user yang di-banned tidak bisa akses
 // - 'no-student'         : role Siswa dipantulkan ke portal-nya, tidak boleh
 //                          masuk ke area /admin (mencegah kebocoran layout admin)
-Route::middleware(['auth', 'forbid-banned-user', 'no-student'])->group(function () {
+Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'])->group(function () {
 
     // --- SHARED ROLE ROUTES (generate-permissions helper, select) ---
     Route::post('/admin/roles/generate-permissions', [RoleController::class, 'generatePermissions'])->name('roles.generate');

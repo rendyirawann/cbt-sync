@@ -173,6 +173,21 @@ class DemoAccountSeeder extends Seeder
             ]
         );
 
+        // 7. Akun Kepala Sekolah Demo (pemantau read-only, ter-scope ke sekolahnya)
+        $roleKepsek = Role::firstOrCreate(['name' => 'Kepala Sekolah', 'guard_name' => 'web']);
+        $userKepsek = User::updateOrCreate(
+            ['email' => 'kepsek@lms.com'],
+            [
+                'name' => 'Kepala Sekolah Demo',
+                'username' => 'kepsek_demo',
+                'school_id' => $school->id,
+                'password' => Hash::make('password123'),
+                'email_verified_at' => now(),
+                'is_active' => 1,
+            ]
+        );
+        $userKepsek->syncRoles([$roleKepsek]);
+
         $this->command->info('Semua Data Demo Berhasil Dibuat!');
     }
 }

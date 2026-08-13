@@ -15,7 +15,8 @@ class SchoolController extends Controller
 
     public function index()
     {
-        $schools = School::all();
+        $sid = \App\Support\SchoolScope::id();
+        $schools = $sid ? School::where('id', $sid)->get() : School::all();
         return view('backend.master.schools.index', compact('schools'));
     }
 

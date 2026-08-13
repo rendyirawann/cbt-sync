@@ -23,8 +23,11 @@ class StudentController extends Controller
 
     public function index()
     {
-        $students = Student::with(['user', 'school'])->get();
-        $schools = School::all();
+        $sid = \App\Support\SchoolScope::id();
+        $students = Student::with(['user', 'school'])
+            ->when($sid, fn ($q) => $q->where('school_id', $sid))
+            ->get();
+        $schools = $sid ? School::where('id', $sid)->get() : School::all();
         return view('backend.master.students.index', compact('students', 'schools'));
     }
 

@@ -19,7 +19,10 @@ class TeacherController extends Controller
 
     public function index()
     {
-        $teachers = Teacher::with('user')->get();
+        $sid = \App\Support\SchoolScope::id();
+        $teachers = Teacher::with('user')
+            ->when($sid, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('school_id', $sid)))
+            ->get();
         return view('backend.master.teachers.index', compact('teachers'));
     }
 
