@@ -13,6 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
 
+        // TLS diterminasi reverse-proxy di depan, lalu diteruskan ke nginx lokal
+        // sebagai http. Tanpa mempercayai proxy, Laravel menganggap request tidak
+        // aman: URL absolut jadi http:// dan cookie SESSION_SECURE_COOKIE tidak
+        // pernah terkirim. Ada dua lapis proxy, jadi header dibaca apa adanya.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
