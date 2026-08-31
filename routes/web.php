@@ -30,6 +30,11 @@ use App\Http\Controllers\Backend\Settings\SettingController;
 |
 */
 
+// --- LISENSI APLIKASI ---
+Route::get('/license/activate', [\App\Http\Controllers\LicenseController::class, 'index'])->name('license.index');
+Route::post('/license/activate', [\App\Http\Controllers\LicenseController::class, 'activate'])->name('license.activate');
+
+
 // --- PORTAL SISWA (FRONTEND) ---
 Route::get('/login', [\App\Http\Controllers\Frontend\PortalController::class, 'login'])->name('student.login');
 Route::post('/login', [\App\Http\Controllers\Frontend\PortalController::class, 'authenticate'])->middleware('throttle:login')->name('student.authenticate');
