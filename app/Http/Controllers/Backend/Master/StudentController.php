@@ -41,9 +41,12 @@ class StudentController extends Controller
             'school_id' => 'required'
         ]);
 
+        // Admin sekolah dipaksa ke sekolahnya sendiri (tidak bisa buat data sekolah lain).
+        $schoolId = \App\Support\SchoolScope::id() ?: $request->school_id;
+
         try {
             DB::beginTransaction();
-            
+
             // Buat User
             $user = User::create([
                 'name' => $request->name,
@@ -51,19 +54,20 @@ class StudentController extends Controller
                 'username' => $request->nisn,
                 'no_wa' => $request->phone,
                 'phone' => $request->phone,
+                'school_id' => $schoolId,
                 'email_verified_at' => now(),
                 'is_active' => 1,
                 'password' => Hash::make($request->password),
             ]);
-            
+
             // Set Role
             $role = Role::firstOrCreate(['name' => 'Siswa', 'guard_name' => 'web']);
             $user->assignRole($role);
-            
+
             // Buat Profil Siswa
             Student::create([
                 'user_id' => $user->id,
-                'school_id' => $request->school_id,
+                'school_id' => $schoolId,
                 'nisn' => $request->nisn,
                 'phone' => $request->phone,
                 'gender' => $request->gender,
@@ -137,7 +141,9 @@ class StudentController extends Controller
             return back()->with('error', 'Gagal membaca Excel: ' . $e->getMessage());
         }
 
-        $rules = ['name' => 'required|string|max:255', 'email' => 'required|email', 'school' => 'required|string', 'gender' => 'nullable|in:L,P'];
+        // Admin sekolah: semua siswa dipaksa ke sekolahnya (kolom Sekolah di file diabaikan).
+        $sid = \App\Support\SchoolScope::id();
+        $rules = ['name' => 'required|string|max:255', 'email' => 'required|email', 'school' => ($sid ? 'nullable' : 'required') . '|string', 'gender' => 'nullable|in:L,P'];
         $labels = ['name' => 'Nama', 'email' => 'Email', 'school' => 'Nama Sekolah', 'gender' => 'Gender'];
         $activeYear = AcademicYear::where('is_active', 1)->first() ?? AcademicYear::first();
         $imported = 0; $skipped = 0; $errors = [];
@@ -146,7 +152,7 @@ class StudentController extends Controller
             $v = Validator::make($row, $rules, $this->idMessages(), $labels);
             if ($v->fails()) { $errors[] = "Baris $line: " . $v->errors()->first(); continue; }
             if (User::where('email', $row['email'])->exists()) { $skipped++; continue; }
-            $school = School::where('name', $row['school'])->first();
+            $school = $sid ? School::find($sid) : School::where('name', $row['school'])->first();
             if (!$school) { $errors[] = "Baris $line: Sekolah \"{$row['school']}\" tidak ditemukan."; continue; }
             $nisn = $row['nisn'] ?? '';
             if ($nisn !== '' && Student::where('nisn', $nisn)->exists()) { $errors[] = "Baris $line: NISN \"$nisn\" sudah dipakai."; continue; }
@@ -158,6 +164,7 @@ class StudentController extends Controller
                         'username' => $nisn !== '' ? $nisn : $row['email'],
                         'no_wa' => $row['phone'] ?? null,
                         'phone' => $row['phone'] ?? null,
+                        'school_id' => $school->id,
                         'email_verified_at' => now(),
                         'is_active' => 1,
                         'password' => Hash::make($row['password'] !== '' ? $row['password'] : 'siswa12345'),

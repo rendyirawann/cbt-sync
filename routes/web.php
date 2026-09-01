@@ -115,8 +115,8 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::get('/admin/settings', [SettingController::class, 'index'])->name('settings.index');
 
     // Template & Import Excel Master Data (didaftarkan sebelum resource agar tidak bentrok route show)
-    Route::get('/admin/schools/template', [\App\Http\Controllers\Backend\Master\SchoolController::class, 'template'])->name('schools.template');
-    Route::post('/admin/schools/import', [\App\Http\Controllers\Backend\Master\SchoolController::class, 'import'])->name('schools.import');
+    Route::get('/admin/schools/template', [\App\Http\Controllers\Backend\Master\SchoolController::class, 'template'])->name('schools.template')->middleware('role:Superadmin');
+    Route::post('/admin/schools/import', [\App\Http\Controllers\Backend\Master\SchoolController::class, 'import'])->name('schools.import')->middleware('role:Superadmin');
     Route::get('/admin/academic-years/template', [\App\Http\Controllers\Backend\Master\AcademicYearController::class, 'template'])->name('academic-years.template');
     Route::post('/admin/academic-years/import', [\App\Http\Controllers\Backend\Master\AcademicYearController::class, 'import'])->name('academic-years.import');
     Route::get('/admin/subjects/template', [\App\Http\Controllers\Backend\Master\SubjectController::class, 'template'])->name('subjects.template');
@@ -133,7 +133,7 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     // Master Data Routes LMS
     Route::resource('/admin/teachers', \App\Http\Controllers\Backend\Master\TeacherController::class);
     Route::resource('/admin/students', \App\Http\Controllers\Backend\Master\StudentController::class);
-    Route::resource('/admin/schools', \App\Http\Controllers\Backend\Master\SchoolController::class);
+    Route::resource('/admin/schools', \App\Http\Controllers\Backend\Master\SchoolController::class)->middleware('role:Superadmin');
     Route::resource('/admin/academic-years', \App\Http\Controllers\Backend\Master\AcademicYearController::class);
     Route::resource('/admin/subjects', \App\Http\Controllers\Backend\Master\SubjectController::class);
     Route::resource('/admin/class-rooms', \App\Http\Controllers\Backend\Master\ClassRoomController::class);

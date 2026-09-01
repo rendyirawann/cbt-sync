@@ -45,6 +45,7 @@ class TeacherController extends Controller
                 'username' => $request->nip,
                 'no_wa' => $request->phone,
                 'phone' => $request->phone,
+                'school_id' => \App\Support\SchoolScope::id(),   // Admin sekolah → guru ikut sekolahnya
                 'email_verified_at' => now(),
                 'is_active' => 1,
                 'password' => Hash::make($request->password),
@@ -124,6 +125,7 @@ class TeacherController extends Controller
 
         $rules = ['name' => 'required|string|max:255', 'email' => 'required|email', 'gender' => 'nullable|in:L,P'];
         $labels = ['name' => 'Nama', 'email' => 'Email', 'gender' => 'Gender'];
+        $sid = \App\Support\SchoolScope::id();   // Admin sekolah → guru ikut sekolahnya
         $imported = 0; $skipped = 0; $errors = [];
         foreach ($rows as $row) {
             $line = $row['_row']; unset($row['_row']);
@@ -133,13 +135,14 @@ class TeacherController extends Controller
             $nip = $row['nip'] ?? '';
             if ($nip !== '' && Teacher::where('nip', $nip)->exists()) { $errors[] = "Baris $line: NIP \"$nip\" sudah dipakai."; continue; }
             try {
-                DB::transaction(function () use ($row, $nip) {
+                DB::transaction(function () use ($row, $nip, $sid) {
                     $user = User::create([
                         'name' => $row['name'],
                         'email' => $row['email'],
                         'username' => $nip !== '' ? $nip : $row['email'],
                         'no_wa' => $row['phone'] ?? null,
                         'phone' => $row['phone'] ?? null,
+                        'school_id' => $sid,
                         'email_verified_at' => now(),
                         'is_active' => 1,
                         'password' => Hash::make($row['password'] !== '' ? $row['password'] : 'guru12345'),

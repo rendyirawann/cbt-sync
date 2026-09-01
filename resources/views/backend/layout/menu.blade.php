@@ -317,7 +317,9 @@
 									<!--end:Menu link-->
 									<!--begin:Menu sub-->
 									<div class="menu-sub menu-sub-accordion">
+										@if(auth()->user()->hasRole('Superadmin'))
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('schools.*') ? 'active' : '' }}" href="{{ route('schools.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Data Sekolah</span></a></div>
+										@endif
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('academic-years.*') ? 'active' : '' }}" href="{{ route('academic-years.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Tahun Ajaran</span></a></div>
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('subjects.*') ? 'active' : '' }}" href="{{ route('subjects.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Mata Pelajaran</span></a></div>
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('class-rooms.*') ? 'active' : '' }}" href="{{ route('class-rooms.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Ruang Kelas</span></a></div>

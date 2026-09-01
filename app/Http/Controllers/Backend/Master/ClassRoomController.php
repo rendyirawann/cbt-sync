@@ -27,6 +27,9 @@ class ClassRoomController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate($this->rules(), $this->idMessages(), $this->labels());
+        if ($sid = \App\Support\SchoolScope::id()) {
+            $data['school_id'] = $sid;   // Admin sekolah tidak bisa buat kelas untuk sekolah lain
+        }
         ClassRoom::create($data);
         return redirect()->back()->with('success', 'Kelas berhasil ditambahkan');
     }
@@ -67,14 +70,16 @@ class ClassRoomController extends Controller
             return back()->with('error', 'Gagal membaca Excel: ' . $e->getMessage());
         }
 
-        $rules = ['school' => 'required|string', 'name' => 'required|string|max:255', 'level' => 'required|string|max:50'];
+        // Admin sekolah: semua kelas dipaksa ke sekolahnya (kolom Sekolah di file diabaikan).
+        $sid = \App\Support\SchoolScope::id();
+        $rules = ['school' => ($sid ? 'nullable' : 'required') . '|string', 'name' => 'required|string|max:255', 'level' => 'required|string|max:50'];
         $labels = ['school' => 'Nama Sekolah', 'name' => 'Nama Kelas', 'level' => 'Tingkat/Level'];
         $imported = 0; $skipped = 0; $errors = [];
         foreach ($rows as $row) {
             $line = $row['_row']; unset($row['_row']);
             $v = Validator::make($row, $rules, $this->idMessages(), $labels);
             if ($v->fails()) { $errors[] = "Baris $line: " . $v->errors()->first(); continue; }
-            $school = School::where('name', $row['school'])->first();
+            $school = $sid ? School::find($sid) : School::where('name', $row['school'])->first();
             if (!$school) { $errors[] = "Baris $line: Sekolah \"{$row['school']}\" tidak ditemukan."; continue; }
             if (ClassRoom::where('school_id', $school->id)->where('name', $row['name'])->exists()) { $skipped++; continue; }
             try { ClassRoom::create(['school_id' => $school->id, 'name' => $row['name'], 'level' => $row['level']]); $imported++; }
