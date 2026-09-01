@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Session\Middleware\AuthenticateSession::class,
             \App\Http\Middleware\CheckMaintenanceMode::class,
             \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\CheckLicense::class,
         ]);
 
         // 🔥 TAMBAHKAN KODE INI UNTUK MENGECUALIKAN WEBHOOK MIDTRANS DARI CSRF
