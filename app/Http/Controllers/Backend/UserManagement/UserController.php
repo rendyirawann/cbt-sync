@@ -66,7 +66,11 @@ class UserController extends Controller implements HasMiddleware
     public function getDataUsers(Request $request)
     {
         if ($request->ajax()) {
-            $postsQuery = User::with('roles')->orderBy('created_at', 'desc');
+            $sid = \App\Support\SchoolScope::id();
+            $postsQuery = User::with('roles')
+                ->when($sid, fn ($q) => $q->where('school_id', $sid))   // Superadmin/Admin sekolah: hanya user sekolahnya
+                ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Developer'))   // akun Developer disembunyikan
+                ->orderBy('created_at', 'desc');
 
             // --- FIX BAGIAN INI ---
             // Gunakan $request->filterrole agar lebih aman dibanding $_GET
@@ -323,12 +327,13 @@ class UserController extends Controller implements HasMiddleware
                 $data->avatar = $filename;
             }
 
-            $data->id       = Uuid::uuid4();
-            $data->name     = $request->name;
-            $data->username = $request->username;
-            $data->no_wa    = $request->no_wa;
-            $data->email    = $request->email;
-            $data->password = Hash::make($request->password);
+            $data->id        = Uuid::uuid4();
+            $data->name      = $request->name;
+            $data->username  = $request->username;
+            $data->no_wa     = $request->no_wa;
+            $data->email     = $request->email;
+            $data->school_id = \App\Support\SchoolScope::id();   // Superadmin/Admin sekolah → user baru ikut sekolahnya
+            $data->password  = Hash::make($request->password);
             $data->assignRole($request->input('roles'));
 
 
