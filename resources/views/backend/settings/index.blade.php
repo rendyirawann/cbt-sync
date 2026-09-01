@@ -60,14 +60,14 @@
                                         <div class="fv-row mb-7">
                                             <label class="fs-6 fw-semibold mb-2">Application Name</label>
                                             <input type="text" class="form-control form-control-solid" name="site_name"
-                                                value="{{ $settings['site_name'] ?? 'StarterTemp' }}" placeholder="Your App Name" />
+                                                value="{{ $settings['site_name'] ?? 'CBT-SYNC' }}" placeholder="Your App Name" />
                                         </div>
 
                                         <div class="fv-row mb-3">
                                             <label class="fs-6 fw-semibold mb-2">Application Logo</label>
                                             <div class="d-flex align-items-center mb-4">
                                                 <div class="symbol symbol-100px symbol-fixed me-5 border rounded p-2 bg-light">
-                                                    <img src="{{ asset('assets/media/logos/' . ($settings['site_logo'] ?? 'base-logo.png')) }}"
+                                                    <img src="{{ asset('assets/media/logos/' . ($settings['site_logo'] ?? 'cbt-logo.svg')) }}"
                                                         alt="Current Logo" id="logoPreview" class="mw-100" />
                                                 </div>
                                                 <div class="flex-grow-1">

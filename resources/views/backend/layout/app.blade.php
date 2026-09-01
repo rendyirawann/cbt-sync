@@ -16,7 +16,7 @@ License: For each use you must have a valid license purchased only from above li
 		<base href="{{ url('/') }}/" />
 		@include('partials.head-meta')
 		<meta charset="utf-8" />
-		<meta name="description" content="{{ $appSettings['site_name'] ?? 'StarterTemp' }} — Admin Dashboard" />
+		<meta name="description" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }} — Admin Dashboard" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 										<meta name="csrf-token" content="{{ csrf_token() }}" />
 						<link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />

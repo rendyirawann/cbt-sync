@@ -11,9 +11,9 @@
 
                 <div class="d-flex flex-center flex-column flex-column-fluid mb-2">
                     <img alt="Logo" class="theme-light-show h-40px h-lg-80px"
-                        src="{{ asset('assets/media/logos/cbt-logo.svg') }}" />
+                        src="{{ asset('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" />
                     <img alt="Logo" class="theme-dark-show h-40px h-lg-80px"
-                        src="{{ asset('assets/media/logos/cbt-logo.svg') }}" />
+                        src="{{ asset('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" />
                 </div>
 
                 <div class="d-flex flex-center flex-column flex-column-fluid pb-15 pb-lg-20 my-12">

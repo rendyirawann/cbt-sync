@@ -4,21 +4,21 @@
 
 <head>
 
-    <title>@yield('title') — {{ $appSettings['site_name'] ?? 'StarterTemp' }}</title>
+    <title>@yield('title') — {{ $appSettings['site_name'] ?? 'CBT-SYNC' }}</title>
     <meta charset="utf-8" />
-    <meta name="description" content="{{ $appSettings['site_name'] ?? 'StarterTemp' }} — Authentication" />
+    <meta name="description" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }} — Authentication" />
     <meta name="author" content="Rendy Irawan" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta property="og:locale" content="id_ID" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="{{ $appSettings['site_name'] ?? 'StarterTemp' }} — Login" />
+    <meta property="og:title" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }} — Login" />
     <meta property="og:url" content="{{ url()->current() }}" />
-    <meta property="og:site_name" content="{{ $appSettings['site_name'] ?? 'StarterTemp' }}" />
+    <meta property="og:site_name" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }}" />
     <link rel="canonical" href="{{ url()->current() }}" />
     @php
-        $siteLogo = $appSettings['site_logo'] ?? 'base-logo.png';
+        $siteLogo = $appSettings['site_logo'] ?? 'cbt-logo.svg';
         $siteFont = $appSettings['site_font'] ?? 'Plus Jakarta Sans';
-        $siteName = $appSettings['site_name'] ?? 'StarterTemp';
+        $siteName = $appSettings['site_name'] ?? 'CBT-SYNC';
     @endphp
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/' . $siteLogo) }}" />
     <!--begin::Fonts-->

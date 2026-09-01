@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Login Siswa | CBT-SYNC</title>
+    <title>Login Siswa | {{ $appSettings['site_name'] ?? 'CBT-SYNC' }}</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -106,10 +106,10 @@
         <div class="auth-container">
             <!-- Left Side -->
             <div class="auth-side-image">
-                <img src="{{ URL::to('assets/media/logos/cbt-logo.svg') }}" class="h-50px mb-12" alt="">
+                <img src="{{ URL::to('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" class="h-50px mb-12" alt="">
                 <img src="{{ URL::to('assets/media/illustrations/doofenshmirtz/13.png') }}" class="floating-img mb-10" alt="">
                 <div class="text-center px-5">
-                    <h2 class="text-gray-900 fw-bolder mb-3 fs-1">Selamat Datang di CBT-SYNC</h2>
+                    <h2 class="text-gray-900 fw-bolder mb-3 fs-1">Selamat Datang di {{ $appSettings['site_name'] ?? 'CBT-SYNC' }}</h2>
                     <p class="text-gray-600 fs-6">Masuk untuk mengikuti ujian online (CBT) sekolahmu.</p>
                 </div>
             </div>

@@ -2,10 +2,10 @@
 <html lang="en">
 <!--begin::Head-->
 <head>
-    <title>Maintenance Mode — {{ $appSettings['site_name'] ?? 'StarterTemp' }}</title>
+    <title>Maintenance Mode — {{ $appSettings['site_name'] ?? 'CBT-SYNC' }}</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="shortcut icon" href="{{ asset('assets/media/logos/' . ($appSettings['site_logo'] ?? 'base-logo.png')) }}" />
+    <link rel="shortcut icon" href="{{ asset('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
@@ -35,7 +35,7 @@
                         <!--begin::Logo-->
                         <div class="mb-14">
                             <a href="#" class="">
-                                <img alt="Logo" src="{{ asset('assets/media/logos/' . ($appSettings['site_logo'] ?? 'base-logo.png')) }}" class="h-60px" />
+                                <img alt="Logo" src="{{ asset('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" class="h-60px" />
                             </a>
                         </div>
                         <!--end::Logo-->
