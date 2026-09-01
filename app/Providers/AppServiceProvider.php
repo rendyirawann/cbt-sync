@@ -26,9 +26,11 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        // Implicitly grant "Superadmin" role all permissions
+        // Developer (vendor, tertinggi) & Superadmin (top admin sekolah) lolos semua
+        // gate/izin FITUR. Isolasi DATA antar-sekolah ditangani terpisah oleh SchoolScope
+        // (Superadmin tetap dibatasi ke sekolahnya; hanya Developer yang global).
         Gate::before(function ($user, $ability) {
-            return $user->hasRole(['Superadmin', 'superadmin']) ? true : null;
+            return $user->hasRole(['Developer', 'Superadmin', 'superadmin']) ? true : null;
         });
 
         // Rate limiter login: wajar (5x/menit per email+IP), melengkapi progressive-lockout di LoginRequest.

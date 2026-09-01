@@ -74,8 +74,8 @@ class RoleController extends Controller implements HasMiddleware
 
     public function getDataRoles(Request $request, Role $role)
     {
-        // $postsQuery = Role::where('id','!=','1')->orderBy('id', 'desc');
-        $postsQuery = Role::orderBy('id', 'desc');
+        // Role Developer disembunyikan dari daftar (hanya dibuat/dipakai lewat seeder).
+        $postsQuery = Role::where('name', '!=', 'Developer')->orderBy('id', 'desc');
 
         if (!empty($request->search['value'])) {
             $searchValue = $request->search['value'];

@@ -55,7 +55,8 @@ class UserController extends Controller implements HasMiddleware
      */
     public function index(): View
     {
-        $roles = Role::orderBy('id', 'desc')
+        $roles = Role::where('name', '!=', 'Developer')   // role Developer disembunyikan (hanya via seeder)
+            ->orderBy('id', 'desc')
             ->get();
         return view('backend.user_management.user.index', compact('roles'));
     }
@@ -611,7 +612,7 @@ class UserController extends Controller implements HasMiddleware
             'user' => $user,
             // 'skpd' => $skpd,
             'userRole' => $user->getRoleNames()->toArray(),
-            'roles' => Role::where('guard_name', '=', 'web')->select(['id', 'name'])->get(),
+            'roles' => Role::where('guard_name', '=', 'web')->where('name', '!=', 'Developer')->select(['id', 'name'])->get(),
         ])->render();
 
         return response()->json(['html' => $html]);

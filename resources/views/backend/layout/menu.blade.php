@@ -108,7 +108,7 @@
 								<!--end:Menu item-->
 @endif
 
-                                @if(auth()->user()->hasRole('Superadmin') || auth()->user()->hasRole('Guru') || auth()->user()->hasRole('Kepala Sekolah'))
+                                @if(auth()->user()->hasRole('Developer') || auth()->user()->hasRole('Superadmin') || auth()->user()->hasRole('Guru') || auth()->user()->hasRole('Kepala Sekolah'))
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('exams.*') || request()->routeIs('exam-sessions.*') || request()->routeIs('exam-attempts.*') ? 'active' : '' }}" href="{{ route('exams.index') }}">
@@ -278,7 +278,16 @@
                                 @endif
 
                                 @can('view_data_master')
+								@if(auth()->user()->hasRole('Developer'))
 								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('onboarding.*') ? 'active' : '' }}" href="{{ route('onboarding.index') }}">
+										<span class="menu-icon"><i class="ki-outline ki-abstract-41 fs-2"></i></span>
+										<span class="menu-title">Onboarding Sekolah</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
+								@endif								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('enrollments.*') ? 'active' : '' }}" href="{{ route('enrollments.index') }}">
 										<span class="menu-icon">
@@ -317,7 +326,7 @@
 									<!--end:Menu link-->
 									<!--begin:Menu sub-->
 									<div class="menu-sub menu-sub-accordion">
-										@if(auth()->user()->hasRole('Superadmin'))
+										@if(auth()->user()->hasRole('Developer'))
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('schools.*') ? 'active' : '' }}" href="{{ route('schools.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Data Sekolah</span></a></div>
 										@endif
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('academic-years.*') ? 'active' : '' }}" href="{{ route('academic-years.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Tahun Ajaran</span></a></div>

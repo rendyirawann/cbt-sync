@@ -9,4 +9,14 @@ class School extends Model
 {
     protected $guarded = [];
     use HasUuids;
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function students()
+    {
+        return $this->hasMany(Student::class);
+    }
 }

@@ -5,11 +5,11 @@ namespace App\Support;
 /**
  * Pembatasan data per-sekolah untuk CBT-SYNC.
  *
- * - Superadmin : melihat & mengelola SEMUA sekolah (tidak dibatasi) — satu-satunya
- *   yang boleh menambah/mengubah master sekolah.
- * - Admin / Guru / Kepala Sekolah : dibatasi ke sekolahnya (users.school_id), BILA diisi.
- *   Jika school_id user belum diisi → tidak dibatasi (fallback aman, tidak memblokir).
- *   (Admin = admin sekolah: hanya mengelola datanya sendiri, tidak bisa ke sekolah lain.)
+ * - Developer : role TERTINGGI (vendor/kita) — melihat & mengelola SEMUA sekolah &
+ *   akun (tidak dibatasi). Tersembunyi, hanya dibuat lewat seeder.
+ * - Superadmin / Admin / Guru / Kepala Sekolah : dibatasi ke sekolahnya (users.school_id),
+ *   BILA diisi. Jika school_id user belum diisi → tidak dibatasi (fallback aman).
+ *   (Superadmin = top admin per-sekolah; hanya mengelola sekolahnya, tidak ke sekolah lain.)
  */
 class SchoolScope
 {
@@ -20,7 +20,7 @@ class SchoolScope
         if (!$u) {
             return null;
         }
-        if ($u->hasRole('Superadmin')) {
+        if ($u->hasRole('Developer')) {
             return null;
         }
         return $u->school_id ?: null;

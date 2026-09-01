@@ -57,6 +57,7 @@ class RolePermissionSeeder extends Seeder
         // ================================================
         // 2. CREATE ROLES (if they don't exist)
         // ================================================
+        $roleDeveloper  = Role::firstOrCreate(['name' => 'Developer']);       // TERTINGGI (vendor) — tersembunyi
         $roleSuperadmin = Role::firstOrCreate(['name' => 'Superadmin']);
         $roleAdmin      = Role::firstOrCreate(['name' => 'Admin']);
         $roleKepsek     = Role::firstOrCreate(['name' => 'Kepala Sekolah']);
@@ -68,8 +69,8 @@ class RolePermissionSeeder extends Seeder
         // 3. ASSIGN PERMISSIONS TO ROLES
         // ================================================
 
-        // SUPERADMIN — gets everything implicitly via Gate::before in AppServiceProvider
-        // But we still assign explicitly for completeness
+        // DEVELOPER (vendor, tertinggi) & SUPERADMIN — semua izin fitur.
+        $roleDeveloper->syncPermissions(Permission::all());
         $roleSuperadmin->syncPermissions(Permission::all());
 
         // ADMIN — All except Resources (User/Role Management)
