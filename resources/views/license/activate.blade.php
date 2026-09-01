@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aktivasi Lisensi - {{ config('app.name', 'CBT-SYNC') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         /* Fallback if Vite is not running */
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #f3f4f6; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
