@@ -53,7 +53,7 @@ class LicenseController extends Controller
         }
 
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout(5)->get('http://license-server.local/api/verify', [
+            $response = \Illuminate\Support\Facades\Http::timeout(5)->get('https://dicotriyadi.site/license-server/api/verify', [
                 'key' => $key
             ]);
 
