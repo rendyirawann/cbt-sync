@@ -274,6 +274,9 @@ Route::middleware(['auth', 'role:Siswa'])->prefix('portal')->group(function () {
     Route::post('/exam-answers/photo/delete', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'deletePhoto'])->name('student.exam-answers.photo.delete');
     Route::post('/exams/lock', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'lock'])->name('student.exams.lock');
     Route::post('/exams/unlock', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'unlock'])->name('student.exams.unlock');
+    // Keluar sekejap dari layar ujian: dicatat saja (tidak mengunci) selama masih
+    // dalam tenggang toleransi — lihat ExamPortalController@leaveWarning.
+    Route::post('/exams/leave-warning', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'leaveWarning'])->name('student.exams.leave-warning');
     Route::post('/exams/{sessionId}/submit', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'submit'])->name('student.exams.submit');
     Route::get('/exam-attempts/{attemptId}/result', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'result'])->name('student.exams.result');
 

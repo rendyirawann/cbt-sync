@@ -212,7 +212,7 @@ class ExamPortalController extends Controller
 
         $request->validate([
             'question_id' => 'required|uuid|exists:questions,id',
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:3072',
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:1024',   // 1 MB — foto sudah dikecilkan di HP sebelum dikirim
         ]);
 
         $ans = ExamAnswer::firstOrNew(['exam_attempt_id' => $attempt->id, 'question_id' => $request->question_id]);
@@ -221,14 +221,79 @@ class ExamPortalController extends Controller
             return response()->json(['message' => 'Maksimal 3 foto per soal.'], 422);
         }
         $path = $request->file('photo')->store('exam-answers', 'public');
+        // Foto kamera HP bisa 3–12 MP; kalau disimpan mentah, memuatnya di halaman
+        // koreksi jadi sangat lambat. Kecilkan + buat thumbnail untuk pratinjau.
+        $this->kompresFoto($path);
         $imgs[] = $path;
         $ans->answer_images = $imgs;
         $ans->save();
 
         return response()->json([
             'message' => 'Foto terunggah.',
-            'images' => array_map(fn ($p) => ['path' => $p, 'url' => asset('storage/'.$p)], $imgs),
+            'images' => array_map(fn ($p) => self::fotoUrl($p), $imgs),
         ]);
+    }
+
+    /**
+     * Perkecil foto jawaban (sisi terpanjang maks 1600px, JPEG mutu 78) lalu buat
+     * thumbnail 400px bernama <nama>_thumb.jpg. Dipakai untuk pratinjau grid.
+     * Memakai GD (tanpa paket tambahan); bila gagal, berkas asli dibiarkan apa adanya.
+     */
+    private function kompresFoto(string $path): void
+    {
+        try {
+            $full = Storage::disk('public')->path($path);
+            if (!is_file($full)) {
+                return;
+            }
+            $info = @getimagesize($full);
+            if (!$info) {
+                return;
+            }
+            [$w, $h] = $info;
+            $src = match ($info['mime']) {
+                'image/jpeg' => @imagecreatefromjpeg($full),
+                'image/png'  => @imagecreatefrompng($full),
+                default      => null,
+            };
+            if (!$src) {
+                return;
+            }
+
+            $buat = function ($maks, $tujuan) use ($src, $w, $h) {
+                $skala = min(1, $maks / max($w, $h));
+                $nw = max(1, (int) round($w * $skala));
+                $nh = max(1, (int) round($h * $skala));
+                $dst = imagecreatetruecolor($nw, $nh);
+                imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255)); // PNG transparan → putih
+                imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                imagejpeg($dst, $tujuan, 78);
+                imagedestroy($dst);
+            };
+
+            $buat(1600, $full);                                     // ganti berkas asli (lebih kecil)
+            $buat(400, Storage::disk('public')->path(self::thumbPath($path)));
+            imagedestroy($src);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Kompres foto jawaban gagal: '.$e->getMessage());
+        }
+    }
+
+    /** Nama berkas thumbnail dari path foto. */
+    private static function thumbPath(string $path): string
+    {
+        return preg_replace('/\.[^.]+$/', '', $path).'_thumb.jpg';
+    }
+
+    /** Bentuk data foto untuk frontend: url penuh + url thumbnail (bila ada). */
+    private static function fotoUrl(string $p): array
+    {
+        $thumb = self::thumbPath($p);
+        return [
+            'path' => $p,
+            'url' => asset('storage/'.$p),
+            'thumb' => Storage::disk('public')->exists($thumb) ? asset('storage/'.$thumb) : asset('storage/'.$p),
+        ];
     }
 
     /** Hapus satu foto jawaban essay (sebelum submit). */
@@ -246,10 +311,29 @@ class ExamPortalController extends Controller
             $imgs = array_values(array_filter($ans->answer_images ?: [], fn ($p) => $p !== $request->path));
             $ans->answer_images = $imgs;
             $ans->save();
-            try { Storage::disk('public')->delete($request->path); } catch (\Throwable $e) {}
-            return response()->json(['message' => 'Foto dihapus.', 'images' => array_map(fn ($p) => ['path' => $p, 'url' => asset('storage/'.$p)], $imgs)]);
+            try { Storage::disk('public')->delete([$request->path, self::thumbPath($request->path)]); } catch (\Throwable $e) {}
+            return response()->json(['message' => 'Foto dihapus.', 'images' => array_map(fn ($p) => self::fotoUrl($p), $imgs)]);
         }
         return response()->json(['message' => 'Tidak ditemukan.', 'images' => []]);
+    }
+
+    /**
+     * Siswa keluar dari layar ujian tapi KEMBALI dalam tenggang waktu → tidak dikunci,
+     * hanya dicatat (leave_count) supaya guru tahu siapa yang sering keluar.
+     * Setelah melewati batas toleransi, klien akan langsung mengunci (lock()).
+     */
+    public function leaveWarning(Request $request)
+    {
+        $student = auth()->user()->student;
+        $attempt = ExamAttempt::findOrFail($request->attempt_id);
+        if (!$student || $attempt->student_id !== $student->id) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+        if ($attempt->status === 'in_progress' && !$attempt->locked_at) {
+            $attempt->leave_count = (int) $attempt->leave_count + 1;
+            $attempt->save();
+        }
+        return response()->json(['leave_count' => (int) $attempt->leave_count]);
     }
 
     /** Kunci attempt karena siswa keluar dari layar ujian (pindah tab / keluar fullscreen). Timer dijeda. */

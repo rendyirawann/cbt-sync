@@ -18,7 +18,21 @@
     .exam-q{overflow-wrap:anywhere}
     .rdev-thumb img{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid #e4e6ef;display:block}
     .photo-del{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;border:none;background:#E11D48;color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
-    @media (max-width:991.98px){
+    /* Dialog konfirmasi (SweetAlert) default z-index 1060, sedangkan gerbang layar penuh /
+       kunci sesi memakai 3000–3500. Tanpa ini, dialog "Keluar & Selesai Ujian" muncul di
+       BELAKANG overlay sehingga tombol terlihat seperti tidak berfungsi. */
+    .swal2-container{z-index:6000 !important}
+    /* ---- Perbesar gambar (soal / opsi PG / foto jawaban) ----
+       z-index 2900: di atas isi halaman, tapi TETAP di bawah gerbang layar penuh (3000),
+       gerbang foto (3400) & kunci sesi (3500) supaya penguncian selalu menang. */
+    .exam-q img, .rdev-thumb img{cursor:zoom-in}
+    /* Petak foto yang sedang diunggah: pratinjau diredupkan + spinner di atasnya */
+    .rdev-thumb.foto-memuat img{filter:brightness(.55) blur(1px);cursor:default}
+    .rdev-thumb.foto-memuat{position:relative}
+    .foto-spinner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:rgba(17,24,39,.45);border-radius:10px;color:#fff}
+    .foto-spinner-teks{font-size:10px;font-weight:700;letter-spacing:.02em}
+    .rdev-thumb.foto-memuat:not(:has(img)){width:88px;height:88px;background:#e4e6ef;border-radius:10px}
+@media (max-width:991.98px){
         .exam-panel{position:static;margin-bottom:1.25rem}
         .qnav-grid{grid-template-columns:repeat(8,1fr)}
     }
@@ -118,10 +132,13 @@
                                 <label class="d-flex align-items-center border rounded p-4 opt-label {{ $ans && $ans->selected_option_id === $opt->id ? 'border-primary bg-light-primary' : 'border-gray-300' }}">
                                     <input class="form-check-input me-3 ans-mc" type="radio" name="q_{{ $q->id }}" value="{{ $opt->id }}"
                                         data-question="{{ $q->id }}" {{ $ans && $ans->selected_option_id === $opt->id ? 'checked' : '' }}>
-                                    <span class="badge badge-light-primary me-3">{{ $opt->label }}</span>
+                                    {{-- Label MENGIKUTI POSISI TAMPIL (A,B,C,...), bukan label asli DB.
+                                         Kalau opsi diacak, huruf asli tak boleh bocor — jawaban benar tetap
+                                         ditentukan oleh option id, jadi penilaian tidak terpengaruh. --}}
+                                    <span class="badge badge-light-primary me-3">{{ chr(65 + $loop->index) }}</span>
                                     <span class="d-flex flex-column">
                                         @if($opt->option_text)<span class="text-gray-800 fs-5">{{ $opt->option_text }}</span>@endif
-                                        @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded mt-1 mh-150px" alt="Gambar opsi {{ $opt->label }}">@endif
+                                        @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded mt-1 mh-150px" alt="Gambar opsi {{ chr(65 + $loop->index) }}">@endif
                                     </span>
                                 </label>
                                 @endforeach
@@ -133,17 +150,27 @@
                                 <div class="math-preview" id="prev_essay_{{ $q->id }}"></div>
                             </div>
                             <div class="mt-3">
-                                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                                    <label class="btn btn-sm btn-light-primary mb-0">
-                                        <i class="ki-outline ki-picture fs-5"></i> Unggah Foto Jawaban
-                                        <input type="file" accept="image/*" capture="environment" class="d-none ans-photo" data-question="{{ $q->id }}">
+                                {{-- Unggah foto HANYA untuk perangkat berlayar sentuh (HP/tablet):
+                                     capture=environment membuat kamera langsung terbuka sehingga siswa tidak
+                                     bisa memakai foto siapan dari galeri. Di laptop/PC atribut capture
+                                     DIABAIKAN browser (berubah jadi pemilih berkas biasa) — itu celah contek,
+                                     jadi seluruh blok ini disembunyikan lewat JS di perangkat non-sentuh. --}}
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-2 js-photo-tools">
+                                    <label class="btn btn-sm btn-primary mb-0">
+                                        <i class="ki-outline ki-camera fs-5"></i> <span class="js-cam-label">Ambil Foto (Kamera)</span>
+                                        <input type="file" accept="image/jpeg,image/jpg,image/png" capture="environment" class="d-none ans-photo" data-question="{{ $q->id }}">
                                     </label>
-                                    <span class="text-muted fs-8">Maks 3 foto, JPG/JPEG/PNG ≤ 3 MB — cocok untuk rumus/coretan/diagram.</span>
+                                    <span class="text-muted fs-8">Maks 3 foto, JPG/JPEG/PNG. Foto <b>otomatis dikecilkan</b> di HP sebelum dikirim (≤ 1 MB). <b class="js-cam-note">Wajib foto langsung dari kamera</b> — cocok untuk rumus/coretan/diagram.</span>
                                 </div>
                                 <div class="d-flex flex-wrap gap-2 photo-list" id="photos_{{ $q->id }}">
                                     @foreach(($ans->answer_images ?? []) as $img)
+                                    @php
+                                        // Pratinjau pakai thumbnail bila tersedia supaya halaman tidak berat.
+                                        $thumb = preg_replace('/\.[^.]+$/', '', $img).'_thumb.jpg';
+                                        $thumbUrl = \Illuminate\Support\Facades\Storage::disk('public')->exists($thumb) ? asset('storage/'.$thumb) : asset('storage/'.$img);
+                                    @endphp
                                     <div class="position-relative rdev-thumb" data-path="{{ $img }}">
-                                        <img src="{{ asset('storage/'.$img) }}" alt="Foto jawaban">
+                                        <img src="{{ $thumbUrl }}" data-full="{{ asset('storage/'.$img) }}" loading="lazy" alt="Foto jawaban">
                                         <button type="button" class="photo-del" data-question="{{ $q->id }}" data-path="{{ $img }}" title="Hapus">&times;</button>
                                     </div>
                                     @endforeach
@@ -171,6 +198,30 @@
     <p id="fsDesc" class="text-white opacity-75 mb-6" style="max-width:480px">Ujian berlangsung dalam layar penuh. Klik tombol di bawah untuk mulai, dan jangan keluar dari layar penuh sampai ujian selesai.</p>
     <button type="button" id="fsEnter" class="btn btn-light btn-lg fw-bold"><i class="ki-outline ki-rocket fs-3"></i> Masuk &amp; Mulai Ujian</button>
     <p class="text-white opacity-50 fs-8 mt-8">Darurat keluar: tekan <b>Ctrl + Shift + C</b></p>
+</div>
+
+{{-- Pratinjau gambar diperbesar: gambar soal, gambar opsi PG, & foto jawaban bisa diketuk.
+     Menutupnya sengaja dibuat mudah: tombol × besar, ketuk gambarnya, atau ketuk area gelap.
+     TIDAK memakai tombol Esc — di mode layar penuh Esc justru keluar fullscreen dan
+     akan mengunci sesi ujian. --}}
+{{-- Gerbang Lanjut Foto: muncul saat layar penuh terlepas KARENA membuka kamera/galeri
+     (aksi sah untuk jawaban essay). Tidak perlu PIN — cukup satu ketukan untuk kembali
+     ke layar penuh; browser memang mewajibkan gestur pengguna untuk masuk fullscreen. --}}
+{{-- Peringatan tenggang: muncul saat siswa keluar layar ujian. Selama hitungan belum
+     habis, sesi BELUM dikunci — supaya keluar sekejap (mis. notifikasi/salah tekan)
+     tidak langsung memerlukan PIN guru. Setiap kejadian tetap DICATAT untuk guru. --}}
+<div id="graceBar" style="position:fixed;left:0;right:0;top:0;z-index:3450;display:none;background:linear-gradient(90deg,#b45309,#f59e0b);color:#fff;padding:12px 16px;text-align:center;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.2)">
+    <span id="graceMsg">Kembali ke ujian sekarang.</span>
+    <b> Sesi terkunci dalam <span id="graceCount">10</span> detik.</b>
+    <button type="button" id="graceResume" class="btn btn-sm btn-light fw-bold ms-3">Lanjutkan Ujian</button>
+    <div class="fs-8 fw-normal mt-1 opacity-75">Kejadian ini dicatat dan dilaporkan ke guru. Sisa toleransi: <span id="graceLeft">-</span>×</div>
+</div>
+
+<div id="camGate" style="position:fixed;inset:0;z-index:3400;background:linear-gradient(180deg,#0B1F3A,#142C52);flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:24px;display:none">
+    <i class="ki-outline ki-picture fs-5x text-white mb-4"><span class="path1"></span><span class="path2"></span></i>
+    <h2 class="text-white fw-bold mb-2">Lanjutkan Ujian</h2>
+    <p class="text-white opacity-75 mb-6" style="max-width:520px">Kamu baru saja membuka kamera/galeri untuk foto jawaban. Ini <b>bukan pelanggaran</b> — timer tetap berjalan. Ketuk tombol di bawah untuk kembali ke layar penuh.</p>
+    <button type="button" id="camResume" class="btn btn-light btn-lg fw-bold"><i class="ki-outline ki-arrow-right fs-3"></i> Kembali ke Ujian</button>
 </div>
 
 {{-- Gerbang Kunci (anti-contek): muncul saat siswa keluar layar ujian; butuh PIN dari guru --}}
@@ -272,9 +323,18 @@
             headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'Accept':'application/json'},
             body: JSON.stringify(Object.assign({attempt_id: ATTEMPT_ID}, payload))
         }).then(async res => {
-            if (res.status === 422){ const d = await res.json(); if (d.expired){ clearInterval(timerInt); autoSubmit(); } else if (d.locked){ showLockOverlay(); } setStatus('Gagal menyimpan', false); return; }
-            setStatus('✓ Tersimpan');
-        }).catch(() => setStatus('Gagal menyimpan', false));
+            // Dulu hanya status 422 yang dianggap gagal, sehingga kegagalan lain
+            // (419 sesi berakhir, 404, 500) tetap dilaporkan "✓ Tersimpan" padahal
+            // jawaban TIDAK tersimpan. Sekarang keberhasilan ditentukan oleh res.ok
+            // dan alasan gagalnya ditampilkan apa adanya.
+            if (res.ok){ setStatus('✓ Tersimpan'); return; }
+            var d = {};
+            try { d = await res.json(); } catch (e) {}
+            if (res.status === 422 && d.expired){ clearInterval(timerInt); autoSubmit(); return; }
+            if (res.status === 422 && d.locked){ showLockOverlay(); setStatus('Sesi terkunci — minta PIN pengawas', false); return; }
+            if (res.status === 419){ setStatus('Sesi login berakhir — muat ulang halaman', false); return; }
+            setStatus(d.message ? ('Gagal: ' + d.message) : ('Gagal menyimpan (kode ' + res.status + ')'), false);
+        }).catch(() => setStatus('Gagal menyimpan — periksa koneksi', false));
     }
 
     document.querySelectorAll('.ans-mc').forEach(r => {
@@ -311,24 +371,122 @@
     function renderPhotos(qid, images){
         var box = document.getElementById('photos_'+qid); if (!box) return;
         box.innerHTML = (images || []).map(function(im){
-            return '<div class="position-relative rdev-thumb" data-path="'+im.path+'"><img src="'+im.url+'" alt="Foto"><button type="button" class="photo-del" data-question="'+qid+'" data-path="'+im.path+'" title="Hapus">&times;</button></div>';
+            // Grid memakai thumbnail (ringan); versi penuh dibuka saat gambar diketuk.
+            return '<div class="position-relative rdev-thumb" data-path="'+im.path+'"><img src="'+(im.thumb || im.url)+'" data-full="'+im.url+'" loading="lazy" alt="Foto"><button type="button" class="photo-del" data-question="'+qid+'" data-path="'+im.path+'" title="Hapus">&times;</button></div>';
         }).join('');
         updateEssayAnswered(qid);
+    }
+    // Foto yang gagal diunggah karena sesi sedang terkunci disimpan dulu, lalu dikirim
+    // otomatis setelah PIN dibuka — supaya jepretan siswa tidak hilang begitu saja.
+    const pendingPhotos = [];
+    /* Petak sementara + pemutar (spinner) selama foto dikirim ke server, memakai
+       pratinjau lokal dari kamera supaya siswa tahu jepretannya sedang diproses. */
+    function tambahPemuatFoto(qid, file){
+        var box = document.getElementById('photos_'+qid);
+        if (!box) return null;
+        var el = document.createElement('div');
+        el.className = 'position-relative rdev-thumb foto-memuat';
+        var pratinjau = '';
+        try { pratinjau = '<img src="'+URL.createObjectURL(file)+'" alt="Foto sedang diunggah">'; } catch(e){}
+        el.innerHTML = pratinjau + '<div class="foto-spinner"><span class="spinner-border spinner-border-sm text-white" role="status" aria-hidden="true"></span><span class="foto-spinner-teks">Mengunggah…</span></div>';
+        box.appendChild(el);
+        updateEssayAnswered(qid);
+        return el;
+    }
+    function hapusPemuatFoto(el){
+        if (!el) return;
+        var img = el.querySelector('img');
+        if (img && img.src && img.src.indexOf('blob:') === 0) { try { URL.revokeObjectURL(img.src); } catch(e){} }
+        if (el.parentNode) el.parentNode.removeChild(el);
+    }
+    /* Kecilkan foto DI HP sebelum dikirim. Jepretan kamera bisa 3–12 MB sehingga
+       ditolak server (batas 1 MB) dan lambat diunggah lewat data seluler. Gambar
+       digambar ulang ke kanvas (sisi terpanjang maks 1600px) lalu disimpan sebagai
+       JPEG; mutunya diturunkan bertahap sampai ukurannya di bawah target. */
+    const TARGET_BYTES = 950 * 1024;   // aman di bawah batas 1 MB milik server
+    function kompresGambar(file){
+        return new Promise(function(resolve){
+            try {
+                if (!file || !/^image\//.test(file.type || '')) return resolve(file);
+                var url = URL.createObjectURL(file);
+                var img = new Image();
+                img.onload = function(){
+                    try {
+                        var maks = 1600;
+                        var s = Math.min(1, maks / Math.max(img.width, img.height));
+                        var w = Math.max(1, Math.round(img.width * s));
+                        var h = Math.max(1, Math.round(img.height * s));
+                        var c = document.createElement('canvas'); c.width = w; c.height = h;
+                        var ctx = c.getContext('2d');
+                        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);   // PNG transparan → putih
+                        ctx.drawImage(img, 0, 0, w, h);
+                        URL.revokeObjectURL(url);
+                        var mutu = [0.75, 0.6, 0.45, 0.35], i = 0;
+                        var coba = function(){
+                            c.toBlob(function(blob){
+                                if (!blob) return resolve(file);                       // gagal → kirim aslinya
+                                if (blob.size <= TARGET_BYTES || i >= mutu.length - 1) return resolve(blob);
+                                i++; coba();
+                            }, 'image/jpeg', mutu[i]);
+                        };
+                        coba();
+                    } catch(e){ resolve(file); }
+                };
+                img.onerror = function(){ try { URL.revokeObjectURL(url); } catch(e){} resolve(file); };
+                img.src = url;
+            } catch(e){ resolve(file); }
+        });
+    }
+    function uploadPhoto(qid, file, pemuat){
+        var fd = new FormData(); fd.append('attempt_id', ATTEMPT_ID); fd.append('question_id', qid);
+        fd.append('photo', file, (file && file.name) ? file.name : 'foto.jpg');   // Blob perlu nama berkas
+        setStatus('Mengunggah foto...');
+        if (!pemuat) pemuat = tambahPemuatFoto(qid, file);
+        return fetch(PHOTO_URL, { method:'POST', headers:{'X-CSRF-TOKEN':CSRF, 'Accept':'application/json'}, body:fd })
+            .finally(function(){ hapusPemuatFoto(pemuat); })
+            .then(async r => { var d = await r.json();
+                if (!r.ok){
+                    if (d.expired){ clearInterval(timerInt); autoSubmit(); return; }
+                    if (d.locked){                       // simpan; kirim ulang setelah unlock
+                        pendingPhotos.push({ qid: qid, file: file });
+                        setStatus('Foto menunggu sesi dibuka', false);
+                        return;
+                    }
+                    Swal.fire('Gagal', d.message || 'Gagal unggah foto', 'error'); setStatus('Gagal unggah', false); return;
+                }
+                renderPhotos(qid, d.images); setStatus('✓ Foto tersimpan');
+            }).catch(() => { pendingPhotos.push({ qid: qid, file: file }); setStatus('Gagal unggah — akan dicoba lagi', false); });
+    }
+    function flushPendingPhotos(){
+        if (!pendingPhotos.length) return;
+        var queue = pendingPhotos.splice(0, pendingPhotos.length);
+        queue.reduce(function(p, item){ return p.then(function(){ return uploadPhoto(item.qid, item.file); }); }, Promise.resolve());
     }
     document.querySelectorAll('.ans-photo').forEach(inp => {
         inp.addEventListener('change', function(){
             if (!this.files || !this.files[0]) return;
-            var qid = this.dataset.question, file = this.files[0];
-            var fd = new FormData(); fd.append('attempt_id', ATTEMPT_ID); fd.append('question_id', qid); fd.append('photo', file);
-            setStatus('Mengunggah foto...');
-            fetch(PHOTO_URL, { method:'POST', headers:{'X-CSRF-TOKEN':CSRF, 'Accept':'application/json'}, body:fd })
-                .then(async r => { var d = await r.json();
-                    if (!r.ok){ if (d.expired){ clearInterval(timerInt); autoSubmit(); } Swal.fire('Gagal', d.message || 'Gagal unggah foto', 'error'); setStatus('Gagal unggah', false); return; }
-                    renderPhotos(qid, d.images); setStatus('✓ Foto tersimpan');
-                }).catch(() => setStatus('Gagal unggah', false));
+            var qid = this.dataset.question, asli = this.files[0];
             this.value = '';
+            // Spinner langsung tampil: proses mengecilkan foto besar bisa 1–2 detik.
+            var pemuat = tambahPemuatFoto(qid, asli);
+            var teks = pemuat && pemuat.querySelector('.foto-spinner-teks');
+            if (teks) teks.textContent = 'Menyiapkan…';
+            setStatus('Menyiapkan foto...');
+            kompresGambar(asli).then(function(siap){
+                if (teks) teks.textContent = 'Mengunggah…';
+                uploadPhoto(qid, siap, pemuat);
+            });
         });
     });
+    // Unggah foto jawaban hanya tersedia di perangkat berlayar sentuh (HP/tablet), karena
+    // di sana capture=environment memaksa kamera. Di laptop/PC capture diabaikan browser
+    // sehingga akan berubah menjadi pemilih berkas (celah memakai foto siapan) → blok
+    // unggah disembunyikan sepenuhnya. Foto yang sudah pernah diunggah dari HP tetap tampil.
+    (function(){
+        var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0;
+        if (isTouch) return;
+        document.querySelectorAll('.js-photo-tools').forEach(function(el){ el.remove(); });
+    })();
     document.addEventListener('click', function(e){
         var b = e.target.closest && e.target.closest('.photo-del'); if (!b) return;
         var qid = b.dataset.question, path = b.dataset.path;
@@ -364,12 +522,19 @@
         if (isFs()){
             started = true;                 // sudah masuk mode ujian
             fsGate.style.display = 'none';
+            if (typeof hideCamGate === 'function') hideCamGate();
+            if (typeof batalTenggang === 'function') batalTenggang(false);  // kembali fullscreen → aman
         } else if (!started){
             // Belum pernah masuk fullscreen → tampilkan gerbang masuk.
             fsGate.style.display = 'flex';
+        } else if (pickingFile){
+            // Fullscreen lepas KARENA membuka kamera/galeri (foto jawaban essay) → BUKAN pelanggaran.
+            // Langsung lanjut mengerjakan (tanpa gerbang & tanpa PIN); layar penuh dipulihkan
+            // otomatis pada ketukan berikutnya karena browser mewajibkan gestur pengguna.
+            armFsOnNextTap();
         } else if (!locked){
-            // Sudah mulai lalu keluar fullscreen → pelanggaran → kunci (butuh PIN guru).
-            doLock();
+            // Keluar layar penuh (mis. tekan Esc) → beri tenggang untuk kembali dulu.
+            mulaiTenggang('Kamu keluar dari mode layar penuh.');
         }
     }
     document.addEventListener('fullscreenchange', onFsChange);
@@ -393,6 +558,8 @@
     }
     function doLock(){
         if (submitting || examExiting || locked || !started) return;
+        if (typeof graceT !== 'undefined' && graceT){ clearTimeout(graceT); graceT = null; }
+        if (typeof hideGrace === 'function') hideGrace();   // banner tenggang tak perlu lagi
         showLockOverlay();       // tampilkan overlay dulu (instan)
         sendLockBeacon();        // catat di server (andal walau tab disembunyikan)
     }
@@ -429,6 +596,7 @@
                 if (typeof d.remaining === 'number') remaining = d.remaining;
                 input.value = '';
                 lockGate.style.display = 'none';
+                flushPendingPhotos();   // kirim ulang foto yang tertahan saat sesi terkunci
                 fsRequest();     // kembali ke layar penuh (gestur klik tombol ini valid)
             })
             .catch(() => { btn.classList.remove('disabled'); btn.innerHTML = old; errEl.textContent = 'Gagal terhubung. Coba lagi.'; });
@@ -447,19 +615,149 @@
             }).then(function(res){ if (res.isConfirmed){ doSubmit(); } });
         });
     }
-    // Abaikan penyembunyian tab akibat membuka kamera/galeri saat unggah foto jawaban (khusus HP).
+    // Abaikan penyembunyian tab / keluar layar penuh akibat membuka kamera-galeri untuk foto jawaban.
+    // Di HP, membuka kamera MENYEMBUNYIKAN tab SEKALIGUS MELEPAS fullscreen; keduanya harus dimaafkan,
+    // kalau tidak sesi terkunci dan unggahan foto ditolak server (locked) sehingga foto hilang.
+    const camGate = document.getElementById('camGate');
+    const PICK_GRACE_MS = 120000;   // batas wajar memotret; lewat ini dianggap pelanggaran biasa
     let pickingFile = false, pickT = null;
+    function beginPick(){
+        pickingFile = true;
+        clearTimeout(pickT);
+        pickT = setTimeout(function(){ pickingFile = false; }, PICK_GRACE_MS);
+    }
+    function endPick(){ pickingFile = false; clearTimeout(pickT); }
+    function showCamGate(){ if (camGate && !locked) camGate.style.display = 'flex'; }
+    function hideCamGate(){ if (camGate) camGate.style.display = 'none'; }
     document.querySelectorAll('.ans-photo').forEach(function(inp){
-        inp.addEventListener('click', function(){ pickingFile = true; clearTimeout(pickT); pickT = setTimeout(function(){ pickingFile = false; }, 2500); });
+        inp.addEventListener('click', beginPick);
     });
-    // Pemicu kunci: pindah tab / minimize / beralih aplikasi.
+    if (camGate){
+        document.getElementById('camResume').addEventListener('click', function(){
+            hideCamGate(); endPick(); fsRequest();   // gestur klik → boleh masuk fullscreen lagi
+        });
+    }
+    // Sepulang dari kamera, layar penuh ikut terlepas. Browser melarang masuk fullscreen
+    // tanpa gestur pengguna, jadi siswa TIDAK dihadang gerbang: ujian langsung bisa
+    // dilanjutkan, dan layar penuh dipulihkan diam-diam pada ketukan/klik berikutnya.
+    var fsArmed = false;
+    function armFsOnNextTap(){
+        hideCamGate();
+        if (fsArmed) return;
+        fsArmed = true;
+        var pulihkan = function(){
+            fsArmed = false;
+            document.removeEventListener('click', pulihkan, true);
+            document.removeEventListener('touchend', pulihkan, true);
+            if (started && !locked && !submitting && !examExiting && FS_SUPPORTED && !isFs()) fsRequest();
+        };
+        document.addEventListener('click', pulihkan, true);
+        document.addEventListener('touchend', pulihkan, true);
+        setStatus('Lanjutkan mengerjakan — layar penuh kembali otomatis');
+    }
+    // Kembali ke halaman setelah memotret: beri jeda agar event change (unggah foto)
+    // sempat berjalan, lalu lepas status "sedang memotret".
+    window.addEventListener('focus', function(){
+        if (!pickingFile) return;
+        setTimeout(function(){
+            if (!pickingFile) return;
+            endPick();
+            if (started && !locked && !submitting && !examExiting && FS_SUPPORTED && !isFs()) armFsOnNextTap();
+        }, 1500);
+    });
+    /* ---------- TOLERANSI KELUAR LAYAR UJIAN ----------
+       Keluar sekejap (notifikasi, salah tekan, kamera) tidak langsung mengunci:
+       ada tenggang GRACE_MS untuk kembali. Namun tiap kejadian DICATAT ke server
+       (leave_count) dan ditampilkan ke guru, dan toleransi hanya MAX_TOLERANSI kali —
+       setelah itu keluar = langsung terkunci. Timer ujian tetap berjalan saat keluar,
+       jadi toleransi ini tidak bisa dipakai untuk mencuri waktu mencontek. */
+    const LEAVE_URL = "{{ route('student.exams.leave-warning') }}";
+    const GRACE_MS = 10000;        // tenggang kembali (10 detik)
+    const MAX_TOLERANSI = 2;       // setelah 2 kali ditoleransi → keluar berikutnya mengunci
+    let leaveCount = {{ (int) ($attempt->leave_count ?? 0) }};
+    let graceT = null, graceTick = null;
+    const graceBar = document.getElementById('graceBar');
+
+    function sisaToleransi(){ return Math.max(0, MAX_TOLERANSI - leaveCount); }
+    function tampilSisa(){ var el = document.getElementById('graceLeft'); if (el) el.textContent = sisaToleransi(); }
+    function hideGrace(){
+        if (graceBar) graceBar.style.display = 'none';
+        clearInterval(graceTick); graceTick = null;
+    }
+    function showGrace(pesan){
+        if (!graceBar) return;
+        var m = document.getElementById('graceMsg'); if (m && pesan) m.textContent = pesan;
+        tampilSisa();
+        graceBar.style.display = 'block';
+        var sisa = Math.round(GRACE_MS / 1000);
+        var c = document.getElementById('graceCount'); if (c) c.textContent = sisa;
+        clearInterval(graceTick);
+        graceTick = setInterval(function(){
+            sisa--; if (c) c.textContent = Math.max(0, sisa);
+            if (sisa <= 0) clearInterval(graceTick);
+        }, 1000);
+    }
+    function catatKeluar(){    // catat di server tanpa mengunci
+        try {
+            var fd = new FormData(); fd.append('_token', CSRF); fd.append('attempt_id', ATTEMPT_ID);
+            fetch(LEAVE_URL, {method:'POST', headers:{'X-CSRF-TOKEN':CSRF,'Accept':'application/json'}, body:fd, keepalive:true})
+                .then(function(r){ return r.json(); })
+                .then(function(d){ if (d && typeof d.leave_count === 'number'){ leaveCount = d.leave_count; tampilSisa(); } })
+                .catch(function(){});
+        } catch(e){}
+    }
+    function mulaiTenggang(pesan){
+        if (submitting || examExiting || locked || !started || pickingFile) return;
+        if (sisaToleransi() <= 0){ doLock(); return; }      // toleransi habis → kunci langsung
+        if (graceT) return;                                  // tenggang sudah berjalan
+        showGrace(pesan);
+        graceT = setTimeout(function(){
+            graceT = null; hideGrace();
+            doLock();                                        // tidak kembali → kunci (butuh PIN)
+        }, GRACE_MS);
+    }
+    function batalTenggang(hitung){
+        if (!graceT) return;
+        clearTimeout(graceT); graceT = null; hideGrace();
+        if (hitung){ leaveCount++; catatKeluar(); }          // ditoleransi, tetapi dicatat
+    }
+    if (graceBar){
+        document.getElementById('graceResume').addEventListener('click', function(){
+            batalTenggang(true);
+            if (FS_SUPPORTED && !isFs()) fsRequest();        // gestur klik → boleh fullscreen lagi
+        });
+    }
+
+    // Pemicu: pindah tab / minimize / beralih aplikasi → beri tenggang dulu.
     document.addEventListener('visibilitychange', function(){
-        if (!document.hidden) return;
-        if (pickingFile){ pickingFile = false; return; }   // sekali jalan: akibat pemilih file, bukan pindah tab
-        doLock();
+        if (pickingFile) return;   // akibat pemilih file/kamera, bukan pindah tab
+        if (document.hidden){
+            mulaiTenggang('Kamu meninggalkan layar ujian.');
+        } else {
+            batalTenggang(true);   // kembali dalam tenggang → tidak dikunci, hanya dicatat
+        }
     });
+    // Pemicu kunci tambahan: JENDELA KEHILANGAN FOKUS (mis. Alt+Tab).
+    // Firefox tidak menandai halaman "hidden" saat Alt+Tab selama masih layar penuh,
+    // jadi visibilitychange di atas tidak jalan — hanya minimize (Win+D) yang terdeteksi.
+    // Diberi jeda + cek document.hasFocus() agar blur sekejap (transisi layar penuh atau
+    // membuka pemilih berkas) tidak salah dianggap pelanggaran.
+    var blurLockT = null;
+    window.addEventListener('blur', function(){
+        if (pickingFile || submitting || examExiting || locked || !started) return;
+        clearTimeout(blurLockT);
+        blurLockT = setTimeout(function(){
+            if (pickingFile || submitting || examExiting || locked || !started) return;
+            if (document.hasFocus()) return;   // ternyata sudah kembali → bukan pindah aplikasi
+            mulaiTenggang('Jendela ujian kehilangan fokus.');
+        }, 400);
+    });
+    window.addEventListener('focus', function(){ batalTenggang(true); });
+
     // Muat ulang dalam keadaan terkunci → pastikan overlay tampil & anggap sudah mulai.
     if (locked){ started = true; if (lockGate) lockGate.style.display = 'flex'; }
 </script>
 @endpush
+
+@include('partials.img-zoom', ['sel' => '.exam-q img, .rdev-thumb img', 'closeOnBlur' => true, 'z' => 2900])
 @endsection
