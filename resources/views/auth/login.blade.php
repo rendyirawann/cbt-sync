@@ -10,9 +10,9 @@
             <div class="d-flex flex-center flex-column align-items-stretch h-lg-100 w-md-400px">
 
                 <div class="d-flex flex-center flex-column flex-column-fluid mb-2">
-                    <img alt="Logo" class="theme-light-show h-40px h-lg-80px"
+                    <img alt="Logo" class="theme-light-show h-60px h-lg-125px"
                         src="{{ asset('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" />
-                    <img alt="Logo" class="theme-dark-show h-40px h-lg-80px"
+                    <img alt="Logo" class="theme-dark-show h-60px h-lg-125px"
                         src="{{ asset('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" />
                 </div>
 

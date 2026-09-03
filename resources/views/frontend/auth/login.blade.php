@@ -7,8 +7,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="shortcut icon" href="{{ URL::to('assets/media/logos/favicon.ico') }}" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Outfit:300,400,500,600,700" />
-    <link href="{{ URL::to('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
-    <link href="{{ URL::to('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::to('assets/plugins/global/plugins.bundle.css') }}?v={{ filemtime(public_path('assets/plugins/global/plugins.bundle.css')) }}" rel="stylesheet" type="text/css" />
+    <link href="{{ URL::to('assets/css/style.bundle.css') }}?v={{ filemtime(public_path('assets/css/style.bundle.css')) }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('assets/css/keenicons-fix.css') }}?v={{ filemtime(public_path('assets/css/keenicons-fix.css')) }}" rel="stylesheet" type="text/css" />
     <link href="{{ URL::to('assets/css/elite-theme.css') }}?v=2" rel="stylesheet" type="text/css" />
     <style>
         :root { --pixel-size: 30px; }
@@ -106,7 +107,7 @@
         <div class="auth-container">
             <!-- Left Side -->
             <div class="auth-side-image">
-                <img src="{{ URL::to('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" class="h-50px mb-12" alt="">
+                <img src="{{ URL::to('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" class="h-100px mb-12" alt="">
                 <img src="{{ URL::to('assets/media/illustrations/doofenshmirtz/13.png') }}" class="floating-img mb-10" alt="">
                 <div class="text-center px-5">
                     <h2 class="text-gray-900 fw-bolder mb-3 fs-1">Selamat Datang di {{ $appSettings['site_name'] ?? 'CBT-SYNC' }}</h2>
