@@ -36,7 +36,20 @@ class SettingController extends Controller
             Setting::set('site_font', $request->input('site_font'));
         }
 
-        Setting::set('maintenance_mode', $request->has('maintenance_mode') ? '1' : '0');
+        // --- Kendali tingkat vendor: HANYA Developer ---
+        //
+        // Diperiksa DI SINI, bukan hanya disembunyikan di tampilan. Halaman
+        // /admin/settings tidak punya gerbang peran sama sekali, jadi tanpa
+        // pemeriksaan ini siapa pun yang bisa membuka halaman itu dapat
+        // mengunci seluruh aplikasi hanya dengan mengirim POST langsung.
+        if ($request->user()?->hasRole('Developer')) {
+            Setting::set('maintenance_mode', $request->has('maintenance_mode') ? '1' : '0');
+            Setting::set('license_enabled', $request->has('license_enabled') ? '1' : '0');
+
+            if ($request->has('app_license_key')) {
+                Setting::set('app_license_key', trim((string) $request->input('app_license_key')));
+            }
+        }
 
         // --- Logo Upload ---
         if ($request->hasFile('site_logo')) {

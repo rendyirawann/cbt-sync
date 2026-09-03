@@ -103,6 +103,9 @@
                                             <div class="form-text text-muted mt-2">This font will apply globally across the entire application.</div>
                                         </div>
 
+                                        @if(auth()->user()?->hasRole('Developer'))
+                                        {{-- Kendali tingkat vendor: mode maintenance & gerbang lisensi.
+                                             Hanya Developer (vendor) yang melihat & mengaturnya. --}}
                                         <div class="fv-row mb-7">
                                             <div class="d-flex flex-stack">
                                                 <div class="d-flex flex-column">
@@ -114,6 +117,26 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {{-- Gerbang lisensi. Menyembunyikan field di tampilan BUKAN penjagaan;
+                                             pemeriksaan peran yang sama diulang di SettingController@update. --}}
+                                        <div class="fv-row mb-7">
+                                            <div class="d-flex flex-stack">
+                                                <div class="d-flex flex-column">
+                                                    <span class="fs-6 fw-bold text-dark">Gerbang Lisensi</span>
+                                                    <span class="fs-7 fw-semibold text-muted">Saat mati, aplikasi tidak pernah dialihkan ke halaman aktivasi. Saat nyala, setiap permintaan memverifikasi kunci ke server penerbit.</span>
+                                                </div>
+                                                <div class="form-check form-switch form-check-custom form-check-solid">
+                                                    <input class="form-check-input h-25px w-45px" type="checkbox" name="license_enabled" {{ ($settings['license_enabled'] ?? '0') === '1' ? 'checked' : '' }} />
+                                                </div>
+                                            </div>
+                                            <div class="mt-5">
+                                                <label class="fs-6 fw-semibold mb-2" for="app_license_key">Kunci Lisensi</label>
+                                                <input type="text" class="form-control form-control-solid" id="app_license_key" name="app_license_key" value="{{ $settings['app_license_key'] ?? '' }}" placeholder="Boleh dikosongkan bila gerbang lisensi dimatikan" autocomplete="off" />
+                                                <div class="form-text">Verifikasinya memanggil server penerbit dengan batas waktu 5 detik pada <em>setiap</em> permintaan halaman. Biarkan gerbangnya mati bila server itu tidak selalu terjangkau.</div>
+                                            </div>
+                                        </div>
+                                        @endif
 
                                         <div class="fv-row">
                                             <label class="fs-6 fw-semibold mb-3">Font Preview</label>

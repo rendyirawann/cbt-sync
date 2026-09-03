@@ -19,7 +19,7 @@ class CheckMaintenanceMode
             if (Setting::get('maintenance_mode', '0') === '1') {
                 
                 // Allow superadmins to bypass
-                if (Auth::check() && Auth::user()->hasRole(['Superadmin', 'superadmin'])) {
+                if (Auth::check() && Auth::user()->hasRole(['Developer', 'Superadmin', 'superadmin'])) {
                     return $next($request);
                 }
 

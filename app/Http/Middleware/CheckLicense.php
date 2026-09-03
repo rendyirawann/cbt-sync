@@ -21,6 +21,18 @@ class CheckLicense
             return $next($request);
         }
 
+        // Gerbang lisensi bisa dimatikan dari Pengaturan (khusus Superadmin).
+        //
+        // Bawaannya MATI, dan itu disengaja: sebelum ini middleware langsung
+        // mengalihkan SETIAP halaman ke /license/activate begitu
+        // Setting::get('app_license_key') kosong — yang persis terjadi di server
+        // yang baru memasang pembaruan ini, karena tabel settings belum punya
+        // baris lisensi sama sekali. Satu setelan yang belum diisi tidak boleh
+        // menutup seluruh aplikasi.
+        if (Setting::get('license_enabled', '0') !== '1') {
+            return $next($request);
+        }
+
         $licenseKey = Setting::get('app_license_key');
 
         // Check if the license is valid (for now, simply check if it equals the static key)
