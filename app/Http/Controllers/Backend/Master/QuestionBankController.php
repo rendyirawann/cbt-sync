@@ -18,33 +18,45 @@ class QuestionBankController extends Controller
 {
     public function index(Request $request)
     {
-        $q = QuestionBank::with(['subject', 'options', 'creator', 'school', 'sourceSchool'])->latest();
+        // Filter yang sama dipakai dua kali: untuk daftar kelompok dan untuk isinya.
+        $filter = fn ($q) => $q
+            ->when($request->filled('school_id'), fn ($x) => $x->where('school_id', $request->school_id))
+            ->when($request->filled('subject_id'), fn ($x) => $x->where('subject_id', $request->subject_id))
+            ->when($request->filled('level'), fn ($x) => $x->where('level', $request->level))
+            ->when($request->filled('type'), fn ($x) => $x->where('type', $request->type))
+            ->when($request->filled('search'), fn ($x) => $x->where('question_text', 'ilike', '%' . $request->search . '%'));
 
         // Bank ini memang lintas sekolah (tidak discope): filter sekolah dipakai
         // untuk MELIHAT soal buatan sekolah tertentu, bukan untuk membatasi akses.
-        if ($request->filled('school_id')) {
-            $q->where('school_id', $request->school_id);
-        }
-        if ($request->filled('subject_id')) {
-            $q->where('subject_id', $request->subject_id);
-        }
-        if ($request->filled('level')) {
-            $q->where('level', $request->level);
-        }
-        if ($request->filled('type')) {
-            $q->where('type', $request->type);
-        }
-        if ($request->filled('search')) {
-            $q->where('question_text', 'ilike', '%' . $request->search . '%');
-        }
+        // Yang dipaginasi adalah KELOMPOK ujian, bukan soal satu per satu.
+        $groups = QuestionBank::query()
+            ->selectRaw('source_exam_id, source_exam_title, count(*) as jumlah, max(created_at) as terakhir')
+            ->tap($filter)
+            ->groupBy('source_exam_id', 'source_exam_title')
+            ->orderByDesc('terakhir')
+            ->paginate(10)
+            ->withQueryString();
 
-        $banks = $q->paginate(20)->withQueryString();
+        // Isi seluruh kelompok di halaman ini diambil sekali jalan, lalu dipetakan
+        // per ujian agar tampilan tidak melakukan kueri di dalam loop.
+        $idUjian = $groups->pluck('source_exam_id');
+        $items = QuestionBank::with(['subject', 'options', 'creator', 'school', 'sourceSchool'])
+            ->tap($filter)
+            ->where(function ($q) use ($idUjian) {
+                $q->whereIn('source_exam_id', $idUjian->filter()->values()->all());
+                if ($idUjian->contains(null)) {
+                    $q->orWhereNull('source_exam_id');
+                }
+            })
+            ->orderBy('created_at')
+            ->get()
+            ->groupBy(fn ($b) => $b->source_exam_id ?? 'tanpa');
+
         $subjects = Subject::orderBy('name')->get();
         $levels = QuestionBank::whereNotNull('level')->distinct()->orderBy('level')->pluck('level');
-
         $schools = \App\Models\School::orderBy('name')->get();
 
-        return view('backend.master.question-banks.index', compact('banks', 'subjects', 'levels', 'schools'));
+        return view('backend.master.question-banks.index', compact('groups', 'items', 'subjects', 'levels', 'schools'));
     }
 
     public function store(Request $request)

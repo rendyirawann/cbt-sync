@@ -146,29 +146,52 @@
                                 <div class="alert alert-light-primary fs-8 py-2 mb-4">Soal dari <b>Bank Soal Bersama</b> (mapel & tingkat sama, boleh dari sekolah mana pun). Soal yang ditarik <b>disalin</b> menjadi milik ujian ini.</div>
                                 <input type="text" id="bankSearch" class="form-control form-control-sm mb-3" placeholder="🔎 Ketik untuk menyaring soal...">
                                 @if($bankQuestions->isEmpty())
-                                    <div class="text-center text-muted py-8">Belum ada soal Bank untuk mapel ini. Tambahkan lewat menu <b>Bank Soal</b>.</div>
+                                    <div class="text-center text-muted py-8">Belum ada soal Bank yang cocok. Soal
+                                        ditawarkan hanya bila <b>mapel dan tingkatnya sama</b> dengan ujian ini, dan
+                                        masuk ke Bank otomatis saat guru menyusun ujian.</div>
                                 @else
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" id="bankCheckAll"> <span class="ms-2 fs-8">Pilih semua yang tampil</span></label>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" id="bankCheckAll"><span class="form-check-label fs-8 ms-2">Pilih semua ujian</span></label>
                                         <span class="text-muted fs-8">{{ $bankQuestions->count() }} soal tersedia</span>
                                     </div>
                                     <div style="max-height:52vh;overflow:auto">
-                                    @foreach($bankQuestions as $b)
-                                    <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2 bank-item"
-                                        data-cari="{{ strtolower($b->question_text . ' ' . ($b->school->name ?? '') . ' ' . ($b->level ?? '')) }}">
-                                        <input class="form-check-input mt-1 bank-check" type="checkbox" name="bank_ids[]" value="{{ $b->id }}">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex gap-2 mb-1">
-                                                <span class="badge badge-light-{{ $b->type==='mc'?'primary':'info' }}">{{ $b->type==='mc'?'PG':'Essay' }}</span>
-                                                @if($b->level)<span class="badge badge-light-warning">Tingkat {{ $b->level }}</span>@endif
-                                                <span class="badge badge-light-dark">{{ $b->school->name ?? 'Tanpa sekolah' }}</span>
-                                                @if($b->sourceSchool)<span class="badge badge-light text-muted">sumber: {{ $b->sourceSchool->name }}</span>@endif
-                                                <span class="badge badge-light">{{ rtrim(rtrim((string)$b->points,'0'),'.') }} poin</span>
+                                    {{-- Dikelompokkan per UJIAN asal: pilih dulu ujian sumbernya, lalu centang
+                                         semua soal ujian itu sekaligus atau buka dan pilih satu per satu. --}}
+                                    @foreach($bankQuestions->groupBy(fn ($b) => $b->source_exam_id ?? 'tanpa') as $grup)
+                                        @php $awal = $grup->first(); @endphp
+                                        <div class="border rounded mb-3 bank-grup">
+                                            <div class="d-flex flex-stack flex-wrap gap-2 bg-light-primary px-3 py-2">
+                                                <label class="form-check form-check-sm">
+                                                    <input class="form-check-input bank-grup-all" type="checkbox">
+                                                    <span class="form-check-label fw-bold fs-7 ms-2">{{ $awal->source_exam_title ?? 'Tanpa ujian asal' }}</span>
+                                                </label>
+                                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                                    <span class="badge badge-light-dark">{{ $awal->school->name ?? 'Tanpa sekolah' }}</span>
+                                                    <span class="badge badge-light-primary bank-grup-jml">{{ $grup->count() }} soal</span>
+                                                    <button class="btn btn-sm btn-light py-1 px-3" type="button" data-bs-toggle="collapse"
+                                                        data-bs-target="#bankGrup{{ $loop->index }}">Lihat soal</button>
+                                                </div>
                                             </div>
-                                            <div class="fw-semibold text-gray-800 fs-7 bank-text">{{ $b->question_text }}</div>
-                                            @if($b->type==='mc')<div class="text-muted fs-8">{{ $b->options->pluck('option_text')->filter()->take(4)->implode(' · ') }}</div>@endif
+                                            <div class="collapse p-3" id="bankGrup{{ $loop->index }}">
+                                            @foreach($grup as $b)
+                                            <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2 bank-item"
+                                                data-cari="{{ strtolower($b->question_text . ' ' . ($b->school->name ?? '') . ' ' . ($b->level ?? '') . ' ' . ($b->source_exam_title ?? '')) }}">
+                                                <input class="form-check-input mt-1 bank-check" type="checkbox" name="bank_ids[]" value="{{ $b->id }}">
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex flex-wrap gap-2 mb-1">
+                                                        <span class="badge badge-light-{{ $b->type==='mc'?'primary':'info' }}">{{ $b->type==='mc'?'PG':'Essay' }}</span>
+                                                        @if($b->level)<span class="badge badge-light-warning">Tingkat {{ $b->level }}</span>@endif
+                                                        <span class="badge badge-light-dark">{{ $b->school->name ?? 'Tanpa sekolah' }}</span>
+                                                        @if($b->sourceSchool)<span class="badge badge-light text-muted">sumber: {{ $b->sourceSchool->name }}</span>@endif
+                                                        <span class="badge badge-light">{{ rtrim(rtrim((string)$b->points,'0'),'.') }} poin</span>
+                                                    </div>
+                                                    <div class="fw-semibold text-gray-800 fs-7 bank-text">{{ $b->question_text }}</div>
+                                                    @if($b->type==='mc')<div class="text-muted fs-8">{{ $b->options->pluck('option_text')->filter()->take(4)->implode(' · ') }}</div>@endif
+                                                </div>
+                                            </label>
+                                            @endforeach
+                                            </div>
                                         </div>
-                                    </label>
                                     @endforeach
                                     </div>
                                 @endif
@@ -479,11 +502,30 @@
                 var t = (it.dataset.cari || it.querySelector('.bank-text')?.textContent || '').toLowerCase();
                 it.style.display = t.indexOf(kw) !== -1 ? 'flex' : 'none';
             });
+            // Kelompok ujian yang tidak punya soal cocok ikut disembunyikan.
+            document.querySelectorAll('#bankModal .bank-grup').forEach(function(g){
+                var terlihat = Array.prototype.filter.call(g.querySelectorAll('.bank-item'),
+                    function(it){ return it.style.display !== 'none'; }).length;
+                g.style.display = terlihat ? '' : 'none';
+                var badge = g.querySelector('.bank-grup-jml');
+                if (badge) badge.textContent = terlihat + ' soal';
+            });
         });
         if (checkAll) checkAll.addEventListener('change', function(){
             document.querySelectorAll('#bankModal .bank-item').forEach(function(it){
                 if (it.style.display === 'none') return;
                 var c = it.querySelector('.bank-check'); if (c) c.checked = checkAll.checked;
+            });
+            document.querySelectorAll('#bankModal .bank-grup-all').forEach(function(g){ g.checked = checkAll.checked; });
+        });
+
+        // Centang kepala kelompok = pilih semua soal dari ujian itu (yang sedang terlihat).
+        document.querySelectorAll('#bankModal .bank-grup-all').forEach(function(head){
+            head.addEventListener('change', function(){
+                head.closest('.bank-grup').querySelectorAll('.bank-item').forEach(function(it){
+                    if (it.style.display === 'none') return;
+                    var c = it.querySelector('.bank-check'); if (c) c.checked = head.checked;
+                });
             });
         });
     })();

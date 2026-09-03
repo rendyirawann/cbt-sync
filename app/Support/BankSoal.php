@@ -47,6 +47,10 @@ class BankSoal
             // agar bisa ditampilkan sebagai badge "sumber: <sekolah>".
             'source_school_id' => $sumber?->school_id,
             'source_bank_id'   => $sumber?->id,
+            // Ujian asal dipakai untuk mengelompokkan daftar bank; judulnya ikut
+            // dipotret agar kelompok tetap bernama walau ujiannya nanti dihapus.
+            'source_exam_id'    => $exam->id,
+            'source_exam_title' => $exam->title,
             'level'         => self::tingkat($exam),
             'type'          => $question->type,
             'question_text' => $teks,

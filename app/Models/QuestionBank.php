@@ -34,6 +34,12 @@ class QuestionBank extends Model
         return $this->belongsTo(School::class, 'source_school_id');
     }
 
+    /** Ujian tempat soal ini pertama dibuat (dasar pengelompokan di halaman bank). */
+    public function sourceExam()
+    {
+        return $this->belongsTo(Exam::class, 'source_exam_id');
+    }
+
     public function options()
     {
         return $this->hasMany(QuestionBankOption::class)->orderBy('order');
