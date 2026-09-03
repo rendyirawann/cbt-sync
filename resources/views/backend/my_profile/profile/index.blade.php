@@ -104,6 +104,72 @@
 
 
 
+    @php
+        $sekolahSaya = auth()->user()?->school;
+        $bolehUbahSekolah = auth()->user()?->hasRole(\App\Http\Controllers\Backend\MyProfile\SchoolProfileController::BOLEH) && $sekolahSaya;
+    @endphp
+    @if($bolehUbahSekolah)
+        {{-- ===== Data Sekolah =====
+             Hanya sekolah MILIK akun ini. Menyembunyikan kartu di tampilan bukan
+             penjagaan: pemeriksaan peran yang sama diulang di
+             SchoolProfileController@update, dan school_id tidak pernah diambil
+             dari request. Daftar sekolah tetap milik Developer (Data Master). --}}
+        <div class="card mb-5 mb-xl-10 shadow-sm border border-gray-300" id="kt_school_details_view">
+            <div class="card-header cursor-pointer border-bottom border-gray-300">
+                <div class="card-title m-0">
+                    <h3 class="fw-bold m-0">Data Sekolah</h3>
+                </div>
+                <div class="card-toolbar">
+                    <span class="badge badge-light-primary">{{ $sekolahSaya->name }}</span>
+                </div>
+            </div>
+            <div class="card-body p-9">
+                <form id="FormDataSekolah" class="form">
+                    @csrf
+                    <div class="row mb-6">
+                        <label class="col-lg-4 col-form-label required fw-semibold fs-6">Nama Sekolah</label>
+                        <div class="col-lg-8">
+                            <input type="text" name="name" class="form-control form-control-solid"
+                                value="{{ old('name', $sekolahSaya->name) }}" />
+                            <span class="text-danger error-text name_error_sekolah"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-6">
+                        <label class="col-lg-4 col-form-label fw-semibold fs-6">Alamat</label>
+                        <div class="col-lg-8">
+                            <textarea name="address" rows="3" class="form-control form-control-solid">{{ old('address', $sekolahSaya->address) }}</textarea>
+                            <span class="text-danger error-text address_error_sekolah"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-6">
+                        <label class="col-lg-4 col-form-label fw-semibold fs-6">Telepon</label>
+                        <div class="col-lg-8">
+                            <input type="text" name="phone" class="form-control form-control-solid"
+                                value="{{ old('phone', $sekolahSaya->phone) }}" />
+                            <span class="text-danger error-text phone_error_sekolah"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-6">
+                        <label class="col-lg-4 col-form-label fw-semibold fs-6">Email Sekolah</label>
+                        <div class="col-lg-8">
+                            <input type="email" name="email" class="form-control form-control-solid"
+                                value="{{ old('email', $sekolahSaya->email) }}" />
+                            <span class="text-danger error-text email_error_sekolah"></span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary" id="btn-save-sekolah">
+                            <span class="indicator-label">Simpan Data Sekolah</span>
+                            <span class="indicator-progress">Menyimpan...
+                                <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+
     <!-- Edit Article Modal -->
     <div class="modal fade" id="Modal_Edit_Data" data-bs-backdrop="static" data-bs-focus="false" data-bs-keyboard="false"
         tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
@@ -349,5 +415,42 @@
                 }
             });
         </script>
+        @if(auth()->user()?->school_id && auth()->user()?->hasRole(\App\Http\Controllers\Backend\MyProfile\SchoolProfileController::BOLEH))
+        {{-- Handler ikut dijaga agar tidak ikut terkirim ke peran yang tak punya kartunya. --}}
+        <script>
+            $(function () {
+                $('#FormDataSekolah').on('submit', function (e) {
+                    e.preventDefault();
+                    var btn = document.querySelector('#btn-save-sekolah');
+                    btn.setAttribute('data-kt-indicator', 'on');
+                    btn.disabled = true;
+                    $('[class*="_error_sekolah"]').text('');
+                    $.ajax({
+                        url: "{{ route('my-school.update') }}",
+                        type: 'POST',
+                        data: $(this).serialize(),
+                        success: function (res) {
+                            btn.removeAttribute('data-kt-indicator');
+                            btn.disabled = false;
+                            if (res.errors) {
+                                $.each(res.errors, function (k, v) { $('.' + k + '_error_sekolah').text(v[0]); });
+                            } else if (res.error) {
+                                Swal.fire({ icon: 'error', title: res.judul || 'Gagal', text: res.error });
+                            } else {
+                                Swal.fire({ icon: 'success', title: res.judul || 'Berhasil', text: res.success })
+                                    .then(function () { location.reload(); });
+                            }
+                        },
+                        error: function (x) {
+                            btn.removeAttribute('data-kt-indicator');
+                            btn.disabled = false;
+                            var m = (x.responseJSON && (x.responseJSON.error || x.responseJSON.message)) || 'Terjadi galat.';
+                            Swal.fire({ icon: 'error', title: 'Gagal', text: m });
+                        }
+                    });
+                });
+            });
+        </script>
+        @endif
     @endpush
 @endsection

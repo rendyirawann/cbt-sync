@@ -101,6 +101,9 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::post('/admin/my-account/{id}/update-avatar', [AccountController::class, 'updateAvatar'])->name('avatar-update');
 
     Route::resource('/admin/my-profile', ProfileController::class);
+
+    // Data sekolah milik akun sendiri (Admin/Superadmin) — lihat SchoolProfileController.
+    Route::post('/admin/my-school', [\App\Http\Controllers\Backend\MyProfile\SchoolProfileController::class, 'update'])->name('my-school.update');
     Route::resource('/admin/my-security', SecurityController::class);
     Route::post('/admin/my-security', [SecurityController::class, 'store'])->name('change.password');
     Route::post('/admin/my-security/logout-other-devices', [SecurityController::class, 'logoutOtherDevices'])->name('security.logout-other-devices');

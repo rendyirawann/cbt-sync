@@ -124,6 +124,21 @@
     <span class="text-danger error-text roles_error_edit"></span> <!--end::Input-->
 </div>
 
+@if(auth()->user()?->hasRole('Developer'))
+    {{-- Hanya Developer boleh memindahkan akun antar sekolah; pemeriksaan peran
+         yang sama diulang di UserController@update. --}}
+    <div class="mb-7">
+        <label for="Editschool" class="fw-semibold fs-6 mb-2">Sekolah</label>
+        <select class="form-control form-control-solid mb-3 mb-lg-0" name="school_id" id="Editschool">
+            <option value="">(Tanpa sekolah — melihat semua sekolah)</option>
+            @foreach ($schools as $sch)
+                <option value="{{ $sch->id }}" @selected($user->school_id === $sch->id)>{{ $sch->name }}</option>
+            @endforeach
+        </select>
+        <span class="text-danger error-text school_id_error_edit"></span>
+    </div>
+@endif
+
 
 <!--end::Input group-->
 

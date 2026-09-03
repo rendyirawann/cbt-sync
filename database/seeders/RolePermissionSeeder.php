@@ -73,13 +73,11 @@ class RolePermissionSeeder extends Seeder
         $roleDeveloper->syncPermissions(Permission::all());
         $roleSuperadmin->syncPermissions(Permission::all());
 
-        // ADMIN — All except Resources (User/Role Management)
-        $adminPermissions = [
-            'view_dashboard',
-            'view_data_master',
-            'view_help',
-        ];
-        $roleAdmin->syncPermissions($adminPermissions);
+        // ADMIN — akses fitur penuh, setara Superadmin.
+        // Yang TIDAK didapat Admin adalah kendali tingkat vendor: mode
+        // maintenance & gerbang lisensi. Keduanya bukan permission, melainkan
+        // dijaga pemeriksaan peran di SettingController@update + view settings.
+        $roleAdmin->syncPermissions(Permission::all());
 
         // KEPALA SEKOLAH — pemantauan (dashboard + data master + bantuan).
         // Cakupan data (per-sekolah) diberlakukan di controller scoping.

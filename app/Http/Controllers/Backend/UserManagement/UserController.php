@@ -58,7 +58,10 @@ class UserController extends Controller implements HasMiddleware
         $roles = Role::where('name', '!=', 'Developer')   // role Developer disembunyikan (hanya via seeder)
             ->orderBy('id', 'desc')
             ->get();
-        return view('backend.user_management.user.index', compact('roles'));
+        // Daftar sekolah untuk pemilih di form (hanya dipakai bila yang login Developer).
+        $schools = \App\Models\School::orderBy('name')->get();
+
+        return view('backend.user_management.user.index', compact('roles', 'schools'));
     }
 
 
@@ -268,6 +271,7 @@ class UserController extends Controller implements HasMiddleware
             'password' => 'required|string|min:8|confirmed',
             'avatar'   => 'nullable|mimes:jpg,png,svg|max:2048',
             'roles'    => 'required',
+            'school_id' => 'nullable|uuid|exists:schools,id',
         ], [
             'name.required'    => 'Nama Lengkap wajib diisi',
             'name.max'         => 'Nama Lengkap maksimal 255 karakter',
@@ -332,7 +336,11 @@ class UserController extends Controller implements HasMiddleware
             $data->username  = $request->username;
             $data->no_wa     = $request->no_wa;
             $data->email     = $request->email;
-            $data->school_id = \App\Support\SchoolScope::id();   // Superadmin/Admin sekolah → user baru ikut sekolahnya
+            // Developer (vendor) boleh menempatkan akun ke sekolah mana pun; peran lain
+            // otomatis mewarisi sekolahnya sendiri. Dijaga di sini, bukan di tampilan.
+            $data->school_id = $request->user()?->hasRole('Developer')
+                ? ($request->input('school_id') ?: null)
+                : \App\Support\SchoolScope::id();
             $data->password  = Hash::make($request->password);
             $data->assignRole($request->input('roles'));
 
@@ -618,6 +626,7 @@ class UserController extends Controller implements HasMiddleware
             // 'skpd' => $skpd,
             'userRole' => $user->getRoleNames()->toArray(),
             'roles' => Role::where('guard_name', '=', 'web')->where('name', '!=', 'Developer')->select(['id', 'name'])->get(),
+            'schools' => \App\Models\School::orderBy('name')->get(),
         ])->render();
 
         return response()->json(['html' => $html]);
@@ -642,6 +651,7 @@ class UserController extends Controller implements HasMiddleware
             'password' => 'confirmed',
             'avatar' => 'nullable|mimes:jpg,png,svg|max:2048',
             'roles' => 'required',
+            'school_id' => 'nullable|uuid|exists:schools,id',
             // 'skpd_id' => 'required',
         ], [
             'name.required' => 'Nama Lengkap wajib diisi',
@@ -692,6 +702,11 @@ class UserController extends Controller implements HasMiddleware
 
             $data->name = $request->name;
             $data->email = $request->email;
+
+            // Hanya Developer boleh memindahkan akun antar sekolah.
+            if ($request->user()?->hasRole('Developer')) {
+                $data->school_id = $request->input('school_id') ?: null;
+            }
             if (!empty($request->password)) {
                 $data->password = Hash::make($request->password);
             }

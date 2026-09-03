@@ -275,6 +275,20 @@
                                     </select>
                                     <span class="text-danger error-text roles_error_add"></span>
                                 </div>
+                                @if(auth()->user()?->hasRole('Developer'))
+                                    {{-- Hanya Developer (vendor) boleh menempatkan akun ke sekolah mana pun.
+                                         Peran lain otomatis mewarisi sekolahnya sendiri — lihat store(). --}}
+                                    <div class="mb-5">
+                                        <label class="fw-semibold fs-6 mb-5">Sekolah</label>
+                                        <select class="form-control mb-3 mb-lg-0" name="school_id" id="school_id">
+                                            <option value="">(Tanpa sekolah — melihat semua sekolah)</option>
+                                            @foreach ($schools as $sch)
+                                                <option value="{{ $sch->id }}">{{ $sch->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <span class="text-danger error-text school_id_error_add"></span>
+                                    </div>
+                                @endif
                             </div>
                             <div class="text-center pt-10">
                                 <button type="reset" class="btn btn-sm btn-secondary me-3" data-bs-dismiss="modal"
