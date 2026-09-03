@@ -36,10 +36,52 @@ class Exam extends Model
     /** Total skor maksimal seluruh soal. */
     public function maxPoints(): float
     {
-        if ($this->points_mode === 'equal') {
-            return $this->normalize ? 100 : (float) $this->questions->count();
+        return $this->mcMaxPoints() + $this->essayMaxPoints();
+    }
+
+    /**
+     * Skor maksimal satu bagian ('mc' atau 'essay') = 100 bila bagian itu ada soalnya.
+     * Tiap bagian memang dirancang berskala 0–100: PG dibagi rata (100 ÷ jumlah soal PG),
+     * sedangkan essay bertotal 100 (dibagi rata pada mode auto, atau dibagi guru pada
+     * mode manual dengan batas total 100).
+     */
+    private function sectionMaxPoints(string $type): float
+    {
+        return $this->questions->where('type', $type)->isNotEmpty() ? 100.0 : 0.0;
+    }
+
+    /** Skor maksimal bagian Pilihan Ganda. */
+    public function mcMaxPoints(): float
+    {
+        return $this->sectionMaxPoints('mc');
+    }
+
+    /** Skor maksimal bagian Essay. */
+    public function essayMaxPoints(): float
+    {
+        return $this->sectionMaxPoints('essay');
+    }
+
+    /**
+     * Bobot tiap bagian (%) pada nilai akhir. Ujian campuran selalu 50 : 50
+     * (nilai akhir = rata-rata nilai PG dan nilai Essay). Bila hanya ada satu
+     * jenis soal, bagian itu menjadi 100% agar nilai tetap berskala 0–100.
+     */
+    public function sectionWeights(): array
+    {
+        $mcAda = $this->mcMaxPoints() > 0;
+        $esAda = $this->essayMaxPoints() > 0;
+
+        if ($mcAda && $esAda) {
+            return ['mc' => 50, 'essay' => 50];
         }
-        return (float) $this->questions->sum('points');
+        if ($mcAda) {
+            return ['mc' => 100, 'essay' => 0];
+        }
+        if ($esAda) {
+            return ['mc' => 0, 'essay' => 100];
+        }
+        return ['mc' => 0, 'essay' => 0];
     }
 
     /**

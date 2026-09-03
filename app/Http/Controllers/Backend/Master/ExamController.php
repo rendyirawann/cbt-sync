@@ -47,7 +47,7 @@ class ExamController extends Controller
             'teaching_assignment_id' => 'required|uuid|exists:teaching_assignments,id',
             'title' => 'required|string|max:255',
             'type' => 'required|in:mixed,mc,essay',
-            'points_mode' => 'required|in:per_question,equal,manual',
+            'points_mode' => 'required|in:manual,auto',
             'wrong_penalty' => 'nullable|numeric|min:0',
             'pass_score' => 'nullable|numeric|min:0|max:100',
         ]);
@@ -96,9 +96,14 @@ class ExamController extends Controller
 
         // Bank Soal Bersama untuk mapel ujian ini (lintas sekolah) — untuk fitur "Tarik dari Bank Soal".
         $subjectId = $exam->teachingAssignment?->subject_id;
+        // Soal bank hanya ditawarkan bila MAPEL dan TINGKAT-nya sama dengan ujian
+        // ini — lintas sekolah tetap boleh (sekolah A boleh memakai soal sekolah B),
+        // dan soal yang ditarik disalin menjadi milik ujian ini.
+        $bankLevel = \App\Support\BankSoal::tingkat($exam);
         $bankQuestions = $subjectId
-            ? \App\Models\QuestionBank::with(['options', 'subject'])
+            ? \App\Models\QuestionBank::with(['options', 'subject', 'school', 'sourceSchool'])
                 ->where('subject_id', $subjectId)
+                ->when($bankLevel, fn ($q) => $q->where('level', $bankLevel))
                 ->when(!$exam->hasMc(), fn ($q) => $q->where('type', 'essay'))
                 ->when(!$exam->hasEssay(), fn ($q) => $q->where('type', 'mc'))
                 ->latest()->limit(300)->get()
@@ -115,7 +120,7 @@ class ExamController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'type' => 'required|in:mixed,mc,essay',
-            'points_mode' => 'required|in:per_question,equal,manual',
+            'points_mode' => 'required|in:manual,auto',
             'wrong_penalty' => 'nullable|numeric|min:0',
             'pass_score' => 'nullable|numeric|min:0|max:100',
             'teaching_assignment_id' => 'nullable|uuid|exists:teaching_assignments,id',

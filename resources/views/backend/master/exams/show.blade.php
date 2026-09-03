@@ -4,7 +4,7 @@
 @section('content')
 @php
     $typeLabel = ['mixed'=>'PG + Essay','mc'=>'Pilihan Ganda','essay'=>'Essay'][$exam->type] ?? $exam->type;
-    $modeLabel = ['per_question'=>'Per soal','equal'=>'Bagi rata otomatis','manual'=>'Manual'][$exam->points_mode] ?? $exam->points_mode;
+    $modeLabel = ['manual'=>'Manual (poin diisi guru)','auto'=>'Otomatis (poin dibagi rata)'][$exam->points_mode] ?? $exam->points_mode;
     // Ujian terkunci begitu ada minimal 1 siswa yang memulai (attempt). Soal & publish dikunci.
     $locked = $exam->hasStartedAttempts();
 @endphp
@@ -16,6 +16,14 @@
     <div class="app-container container-xxl d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
             <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">{{ $exam->title }}</h1>
+            {{-- Breadcrumb berjenjang: jalan pintas cepat kembali ke daftar ujian --}}
+            <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
+                <li class="breadcrumb-item text-muted">Akademik</li>
+                <li class="breadcrumb-item"><span class="bullet bg-gray-500 w-5px h-2px"></span></li>
+                <li class="breadcrumb-item"><a href="{{ route('exams.index') }}" class="text-primary text-hover-dark">Ujian / CBT</a></li>
+                <li class="breadcrumb-item"><span class="bullet bg-gray-500 w-5px h-2px"></span></li>
+                <li class="breadcrumb-item text-gray-700">{{ \Illuminate\Support\Str::limit($exam->title, 40) }}</li>
+            </ul>
             <span class="text-muted fs-7 pt-1">
                 {{ $exam->teachingAssignment->subject->name ?? '-' }} • {{ $exam->teachingAssignment->classRoom->name ?? '-' }}
                 • <span class="badge badge-light-info">{{ $typeLabel }}</span>
@@ -128,15 +136,14 @@
                         </form>
                     </div></div>
                 </div>
-
                 {{-- ===== Modal Tarik dari Bank Soal Bersama ===== --}}
-                <div class="modal fade drawer-modal drawer-wide" id="bankModal" tabindex="-1" aria-hidden="true">
+                <div class="modal fade drawer-modal" id="bankModal" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog"><div class="modal-content">
                         <form action="{{ route('exams.pull-bank', $exam->id) }}" method="POST">
                             @csrf
                             <div class="modal-header"><h3 class="modal-title">Tarik dari Bank Soal — {{ $exam->teachingAssignment->subject->name ?? '' }}</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
                             <div class="modal-body px-8 py-6">
-                                <div class="alert alert-light-primary fs-8 py-2 mb-4">Soal dari <b>Bank Soal Bersama</b> (mapel sama, lintas sekolah). Centang soal, lalu <b>Salin ke Ujian</b> — soal tercopy & bisa diubah tanpa mempengaruhi bank.</div>
+                                <div class="alert alert-light-primary fs-8 py-2 mb-4">Soal dari <b>Bank Soal Bersama</b> (mapel & tingkat sama, boleh dari sekolah mana pun). Soal yang ditarik <b>disalin</b> menjadi milik ujian ini.</div>
                                 <input type="text" id="bankSearch" class="form-control form-control-sm mb-3" placeholder="🔎 Ketik untuk menyaring soal...">
                                 @if($bankQuestions->isEmpty())
                                     <div class="text-center text-muted py-8">Belum ada soal Bank untuk mapel ini. Tambahkan lewat menu <b>Bank Soal</b>.</div>
@@ -147,12 +154,15 @@
                                     </div>
                                     <div style="max-height:52vh;overflow:auto">
                                     @foreach($bankQuestions as $b)
-                                    <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2 bank-item">
+                                    <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2 bank-item"
+                                        data-cari="{{ strtolower($b->question_text . ' ' . ($b->school->name ?? '') . ' ' . ($b->level ?? '')) }}">
                                         <input class="form-check-input mt-1 bank-check" type="checkbox" name="bank_ids[]" value="{{ $b->id }}">
                                         <div class="flex-grow-1">
                                             <div class="d-flex gap-2 mb-1">
                                                 <span class="badge badge-light-{{ $b->type==='mc'?'primary':'info' }}">{{ $b->type==='mc'?'PG':'Essay' }}</span>
                                                 @if($b->level)<span class="badge badge-light-warning">Tingkat {{ $b->level }}</span>@endif
+                                                <span class="badge badge-light-dark">{{ $b->school->name ?? 'Tanpa sekolah' }}</span>
+                                                @if($b->sourceSchool)<span class="badge badge-light text-muted">sumber: {{ $b->sourceSchool->name }}</span>@endif
                                                 <span class="badge badge-light">{{ rtrim(rtrim((string)$b->points,'0'),'.') }} poin</span>
                                             </div>
                                             <div class="fw-semibold text-gray-800 fs-7 bank-text">{{ $b->question_text }}</div>
@@ -167,7 +177,59 @@
                         </form>
                     </div></div>
                 </div>
+
                 @endunless
+
+                {{-- ===== Komposisi bobot nilai (PG vs Essay) =====
+                     Guru sering tidak sadar poin default tiap soal = 1, sehingga PG hanya
+                     menyumbang sebagian kecil nilai akhir. Tampilkan proporsi sebenarnya
+                     (memakai bobot efektif sesuai mode penilaian) + aksi cepat menyeimbangkan. --}}
+                @php
+                    $qCount = $exam->questions->count();
+                    $mcW = 0; $esW = 0;
+                    foreach ($exam->questions as $qq) {
+                        $w = \App\Services\CbtScoringService::questionWeight($exam, $qq, $qCount);
+                        if ($qq->type === 'mc') { $mcW += $w; } else { $esW += $w; }
+                    }
+                    $totW = $mcW + $esW;
+                    $bothTypes = $mcW > 0 && $esW > 0;
+                    $isAuto = $exam->points_mode === 'auto';
+                    // Porsi bagian pada nilai akhir SELALU 50:50 untuk ujian campuran
+                    // (nilai akhir = rata-rata nilai PG dan nilai Essay).
+                    $sw = $exam->sectionWeights();
+                    $mcPct = round($sw['mc']);
+                    $esPct = round($sw['essay']);
+                    $skewed = false;
+                    $fmt = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+                @endphp
+                @if($qCount > 0)
+                <div class="card mb-4 border border-dashed {{ $skewed ? 'border-warning' : 'border-gray-300' }}">
+                    <div class="card-body py-4">
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold text-gray-800 mb-1">
+                                    Komposisi nilai
+                                    <span class="text-muted fw-normal fs-8">— menentukan porsi tiap bagian pada nilai akhir</span>
+                                </div>
+                                <div class="fs-7">
+                                    <span class="badge badge-light-primary">PG {{ $fmt($mcW) }} poin • {{ $mcPct }}%</span>
+                                    <span class="badge badge-light-info ms-1">Essay {{ $fmt($esW) }} poin • {{ $esPct }}%</span>
+                                    <span class="text-muted ms-2">total maks {{ $fmt($totW) }} poin</span>
+                                </div>
+                                <div class="progress mt-2" style="height:6px;max-width:420px">
+                                    <div class="progress-bar bg-primary" style="width: {{ $mcPct }}%"></div>
+                                    <div class="progress-bar bg-info" style="width: {{ $esPct }}%"></div>
+                                </div>
+                                @if($isAuto)
+                                    <div class="text-success fs-8 mt-2"><i class="ki-outline ki-check-circle fs-6 text-success"></i> Mode <b>Otomatis</b>: poin dibagi rata sistem — tiap bagian bertotal 100. Nilai akhir = <b>(Nilai PG + Nilai Essay) ÷ 2</b>.</div>
+                                @else
+                                    <div class="text-muted fs-8 mt-2">Mode <b>Manual</b>: poin tiap soal diisi guru. Nilai tiap bagian dihitung 0–100 dari total poin bagiannya, lalu nilai akhir = <b>(Nilai PG + Nilai Essay) ÷ 2</b>.</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
 
                 @forelse($exam->questions as $i => $q)
                 <div class="card mb-4">
@@ -186,7 +248,7 @@
                                 @endunless
                             </div>
                             <div class="fw-semibold text-gray-900 mb-2">{!! nl2br(e($q->question_text)) !!}</div>
-                            @if($q->image_path)<img src="{{ asset('storage/'.$q->image_path) }}" class="rounded mb-3 mh-150px">@endif
+                            @if($q->image_path)<img src="{{ asset('storage/'.$q->image_path) }}" class="zoomable rounded mb-3 mh-150px">@endif
                             @if($q->type === 'mc')
                                 <div class="d-flex flex-column gap-2">
                                     @foreach($q->options as $opt)
@@ -194,7 +256,7 @@
                                         <span class="badge badge-{{ $opt->is_correct ? 'success' : 'secondary' }} me-2">{{ $opt->label }}</span>
                                         <div>
                                             @if($opt->option_text){{ $opt->option_text }}@endif
-                                            @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded d-block mt-1 mh-80px" alt="Gambar opsi {{ $opt->label }}">@endif
+                                            @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="zoomable rounded d-block mt-1 mh-80px" alt="Gambar opsi {{ $opt->label }}">@endif
                                         </div>
                                         @if($opt->is_correct)<i class="ki-outline ki-check-circle fs-4 text-success ms-2"></i>@endif
                                     </div>
@@ -206,7 +268,7 @@
                 </div>
 
                 {{-- edit modal per soal --}}
-                <div class="modal fade drawer-modal drawer-wide" id="editQ{{ $q->id }}" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+                <div class="modal fade drawer-modal" id="editQ{{ $q->id }}" tabindex="-1" data-bs-focus="false" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">
                             <form action="{{ route('exam-questions.update', $q->id) }}" method="POST" enctype="multipart/form-data">
@@ -220,10 +282,13 @@
                                         <div class="math-preview" id="prev_edit_{{ $q->id }}"></div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-6 mb-4"><label class="form-label required">Poin (benar)</label><input type="number" step="0.01" name="points" class="form-control" value="{{ rtrim(rtrim((string)$q->points,'0'),'.') }}" required></div>
-                                        @if($q->type === 'mc')<div class="col-6 mb-4"><label class="form-label">Pengurang (salah)</label><input type="number" step="0.01" name="penalty" class="form-control" value="{{ rtrim(rtrim((string)$q->penalty,'0'),'.') }}"></div>@endif
+                                        <div class="col-12 mb-4"><div class="alert alert-light-primary py-2 mb-0 fs-8">
+                                            <i class="ki-outline ki-information-5 fs-5 text-primary me-1"></i>
+                                            Bobot soal ini dihitung sistem: <b>{{ rtrim(rtrim(number_format((float)\App\Services\CbtScoringService::questionWeight($exam,$q),2,'.',''),'0'),'.') }} poin</b>
+                                            @if($q->type === 'essay' && $exam->points_mode !== 'auto') (mode Manual: nilai essay ditentukan guru saat memeriksa, total maksimal 100) @endif
+                                        </div></div>
                                     </div>
-                                    @if($q->image_path)<div class="mb-2"><img src="{{ asset('storage/'.$q->image_path) }}" class="rounded mh-100px" alt="Gambar soal"></div>@endif
+                                    @if($q->image_path)<div class="mb-2"><img src="{{ asset('storage/'.$q->image_path) }}" class="zoomable rounded mh-100px" alt="Gambar soal"></div>@endif
                                     <div class="mb-4"><label class="form-label">Ganti Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB.</div></div>
                                     @if($q->type === 'mc')
                                     <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci • tiap opsi boleh teks, rumus $…$, dan/atau gambar)</span></label>
@@ -237,7 +302,7 @@
                                                     <input type="text" name="options[]" class="form-control math-input mb-2" value="{{ $opt->option_text }}" placeholder="Teks opsi (boleh $rumus$, boleh dikosongkan bila pakai gambar)">
                                                     @if($opt->image_path)
                                                     <div class="d-flex align-items-center gap-3 mb-2">
-                                                        <img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded mh-60px" alt="Gambar opsi {{ $opt->label }}">
+                                                        <img src="{{ asset('storage/'.$opt->image_path) }}" class="zoomable rounded mh-60px" alt="Gambar opsi {{ $opt->label }}">
                                                         <label class="form-check form-check-sm form-check-custom d-flex align-items-center gap-2 mb-0">
                                                             <input class="form-check-input" type="checkbox" name="option_remove_image[]" value="{{ $opt->id }}">
                                                             <span class="fs-8 text-muted">Hapus gambar</span>
@@ -351,8 +416,9 @@
                                     </div>
 
                                     <div class="row">
-                                        <div class="col-md-6 mb-4"><label class="form-label required">Mulai</label><input type="datetime-local" name="starts_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->starts_at)->format('Y-m-d\TH:i') }}" required></div>
-                                        <div class="col-md-6 mb-4"><label class="form-label required">Selesai</label><input type="datetime-local" name="ends_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->ends_at)->format('Y-m-d\TH:i') }}" required></div>
+                                        {{-- flatpickr: pemilih tanggal + jam (picker bawaan browser tak punya jam) --}}
+                                        <div class="col-md-6 mb-4"><label class="form-label required">Mulai</label><input type="text" name="starts_at" class="form-control js-datetime" value="{{ \Carbon\Carbon::parse($s->starts_at)->format('Y-m-d H:i') }}" placeholder="Pilih tanggal &amp; jam" autocomplete="off" required></div>
+                                        <div class="col-md-6 mb-4"><label class="form-label required">Selesai</label><input type="text" name="ends_at" class="form-control js-datetime" value="{{ \Carbon\Carbon::parse($s->ends_at)->format('Y-m-d H:i') }}" placeholder="Pilih tanggal &amp; jam" autocomplete="off" required></div>
                                         <div class="col-md-6 mb-4"><label class="form-label required">Durasi (menit)</label><input type="number" name="duration_minutes" class="form-control" value="{{ $s->duration_minutes }}" required></div>
                                         <div class="col-md-6 mb-4"><label class="form-label">Kuota maks (kosong = ∞)</label><input type="number" name="max_capacity" class="form-control" value="{{ $s->max_capacity }}"></div>
                                     </div>
@@ -410,7 +476,7 @@
         if (search) search.addEventListener('input', function(){
             var kw = this.value.toLowerCase();
             document.querySelectorAll('#bankModal .bank-item').forEach(function(it){
-                var t = (it.querySelector('.bank-text')?.textContent || '').toLowerCase();
+                var t = (it.dataset.cari || it.querySelector('.bank-text')?.textContent || '').toLowerCase();
                 it.style.display = t.indexOf(kw) !== -1 ? 'flex' : 'none';
             });
         });
@@ -463,6 +529,33 @@
         });
     });
 
+    // ---- Pemilih tanggal + JAM untuk jadwal sesi (flatpickr, sudah ada di plugins.bundle) ----
+    // Nilai yang dikirim tetap "Y-m-d H:i" (diterima validasi `date` di server).
+    (function(){
+        var els = document.querySelectorAll('.js-datetime');
+        if (!els.length) return;
+        if (typeof flatpickr === 'undefined'){
+            // Plugin tidak tersedia → kembalikan ke input datetime bawaan browser agar tetap bisa dipakai.
+            els.forEach(function(i){ i.type = 'datetime-local'; i.value = (i.value || '').replace(' ', 'T'); });
+            return;
+        }
+        els.forEach(function(i){
+            flatpickr(i, {
+                enableTime: true,
+                time_24hr: true,
+                dateFormat: 'Y-m-d H:i',     // format yang dikirim ke server
+                altInput: true,
+                altFormat: 'd/m/Y H:i',      // yang dilihat pengguna
+                minuteIncrement: 5,
+                allowInput: true,
+                static: true,                // penting: agar kalender ikut di dalam modal/drawer
+            });
+            // flatpickr menyembunyikan input asli; pindahkan atribut required ke input tampak
+            // supaya validasi "wajib diisi" di browser tetap berjalan.
+            if (i._flatpickr && i._flatpickr.altInput && i.required) i._flatpickr.altInput.required = true;
+        });
+    })();
+
     // ---- Pengaturan: konfirmasi bila ganti kategori menghapus soal yang tak sesuai ----
     const editExamForm = document.getElementById('editExamForm');
     if (editExamForm) {
@@ -498,5 +591,6 @@
         });
     });
 </script>
+@include('partials.img-zoom', ['sel' => 'img.zoomable'])
 @endpush
 @endsection

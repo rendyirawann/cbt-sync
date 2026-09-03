@@ -27,16 +27,17 @@
                         </select>
                     </div>
                     <div class="col-md-6 mb-4"><label class="form-label required">Mode Penilaian</label>
-                        <select name="points_mode" class="form-select">
-                            <option value="per_question" @selected($exam->points_mode==='per_question')>Per soal</option>
-                            <option value="equal" @selected($exam->points_mode==='equal')>Bagi rata otomatis</option>
-                            <option value="manual" @selected($exam->points_mode==='manual')>Manual</option>
+                        <select name="points_mode" id="eModeSel" class="form-select">
+                            <option value="auto" @selected($exam->points_mode==='auto')>Otomatis — poin dibagi rata sistem</option>
+                            <option value="manual" @selected($exam->points_mode==='manual')>Manual — poin tiap soal diisi guru</option>
                         </select>
+                        <div class="form-text">Poin soal dihitung sistem (tiap bagian bertotal 100). Bedanya saat memeriksa essay:
+                            <b>Otomatis</b> = tandai Benar/Salah, <b>Manual</b> = guru mengisi nilai tiap essay (total maks 100).
+                            Nilai akhir = (Nilai PG + Nilai Essay) ÷ 2.</div>
                     </div>
-                    <div class="col-md-6 mb-4"><label class="form-label">Pengurang salah (bagi rata)</label><input type="number" step="0.01" name="wrong_penalty" class="form-control" value="{{ rtrim(rtrim((string)$exam->wrong_penalty,'0'),'.') }}"></div>
                     <div class="col-md-6 mb-4"><label class="form-label">KKM</label><input type="number" step="0.01" name="pass_score" class="form-control" value="{{ rtrim(rtrim((string)$exam->pass_score,'0'),'.') }}"></div>
                 </div>
-                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="normalize" id="enorm" @checked($exam->normalize)><label class="form-check-label" for="enorm">Normalisasi nilai ke 0–100</label></div>
+                <div class="text-muted fs-7"><i class="ki-outline ki-information-5 fs-6 text-primary me-1"></i> Nilai akhir selalu berskala 0–100 (rata-rata nilai PG dan nilai Essay).</div>
             </div>
             <div class="modal-footer"><button type="submit" class="btn btn-primary">Simpan</button></div>
         </form>
@@ -45,7 +46,7 @@
 
 {{-- ===== Tambah Soal Pilihan Ganda ===== --}}
 @if($exam->hasMc())
-<div class="modal fade drawer-modal drawer-wide" id="addMcModal" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+<div class="modal fade drawer-modal" id="addMcModal" tabindex="-1" data-bs-focus="false" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <form action="{{ route('exam-questions.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
@@ -59,9 +60,9 @@
                     <textarea name="question_text" class="form-control math-input" data-preview="#prev_addmc" rows="3" required></textarea>
                     <div class="math-preview" id="prev_addmc"></div>
                 </div>
-                <div class="row">
-                    <div class="col-6 mb-4"><label class="form-label required">Poin bila benar</label><input type="number" step="0.01" name="points" class="form-control" value="1" required></div>
-                    <div class="col-6 mb-4"><label class="form-label">Pengurang bila salah</label><input type="number" step="0.01" name="penalty" class="form-control" value="0"></div>
+                <div class="alert alert-light-primary py-3 mb-4 fs-7">
+                    <i class="ki-outline ki-information-5 fs-4 text-primary me-1"></i>
+                    Poin tidak perlu diisi — sistem membagi rata otomatis: <b>100 ÷ jumlah soal PG</b>.
                 </div>
                 <div class="mb-4"><label class="form-label">Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
                 <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci jawaban • tiap opsi boleh teks, rumus $…$, dan/atau gambar)</span></label>
@@ -90,7 +91,7 @@
 
 {{-- ===== Tambah Soal Essay ===== --}}
 @if($exam->hasEssay())
-<div class="modal fade drawer-modal drawer-wide" id="addEssayModal" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+<div class="modal fade drawer-modal" id="addEssayModal" tabindex="-1" data-bs-focus="false" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <form action="{{ route('exam-questions.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
@@ -104,7 +105,12 @@
                     <textarea name="question_text" class="form-control math-input" data-preview="#prev_addessay" rows="4" required></textarea>
                     <div class="math-preview" id="prev_addessay"></div>
                 </div>
-                <div class="mb-4"><label class="form-label required">Skor Maksimal</label><input type="number" step="0.01" name="points" class="form-control" value="10" required></div>
+                <div class="alert alert-light-info py-3 mb-4 fs-7">
+                    <i class="ki-outline ki-information-5 fs-4 text-info me-1"></i>
+                    Skor tidak perlu diisi. Mode <b>Otomatis</b>: 100 ÷ jumlah soal essay, guru cukup menandai
+                    Benar/Salah. Mode <b>Manual</b>: guru menentukan nilai tiap essay saat memeriksa (total maksimal 100).
+                </div>
+
                 <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
                 <div class="alert alert-light-info fs-7">Jawaban essay dinilai manual oleh guru di menu "Peserta & Nilai".</div>
             </div>

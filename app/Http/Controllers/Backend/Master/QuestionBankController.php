@@ -18,8 +18,13 @@ class QuestionBankController extends Controller
 {
     public function index(Request $request)
     {
-        $q = QuestionBank::with(['subject', 'options', 'creator'])->latest();
+        $q = QuestionBank::with(['subject', 'options', 'creator', 'school', 'sourceSchool'])->latest();
 
+        // Bank ini memang lintas sekolah (tidak discope): filter sekolah dipakai
+        // untuk MELIHAT soal buatan sekolah tertentu, bukan untuk membatasi akses.
+        if ($request->filled('school_id')) {
+            $q->where('school_id', $request->school_id);
+        }
         if ($request->filled('subject_id')) {
             $q->where('subject_id', $request->subject_id);
         }
@@ -37,7 +42,9 @@ class QuestionBankController extends Controller
         $subjects = Subject::orderBy('name')->get();
         $levels = QuestionBank::whereNotNull('level')->distinct()->orderBy('level')->pluck('level');
 
-        return view('backend.master.question-banks.index', compact('banks', 'subjects', 'levels'));
+        $schools = \App\Models\School::orderBy('name')->get();
+
+        return view('backend.master.question-banks.index', compact('banks', 'subjects', 'levels', 'schools'));
     }
 
     public function store(Request $request)

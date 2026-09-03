@@ -108,7 +108,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-5">
                             <label class="form-label required">Kategori Ujian</label>
-                            <select name="type" class="form-select" required>
+                            <select name="type" id="cTypeSel" class="form-select" required>
                                 <option value="mixed">Pilihan Ganda + Essay</option>
                                 <option value="mc" selected>Pilihan Ganda saja</option>
                                 <option value="essay">Essay saja</option>
@@ -116,24 +116,26 @@
                         </div>
                         <div class="col-md-6 mb-5">
                             <label class="form-label required">Mode Penilaian</label>
-                            <select name="points_mode" class="form-select" required>
-                                <option value="per_question" selected>Per soal (nilai tiap soal ditentukan)</option>
-                                <option value="equal">Bagi rata otomatis (100 / jumlah soal)</option>
-                                <option value="manual">Manual (guru tentukan nilai akhir)</option>
+                            <select name="points_mode" id="cModeSel" class="form-select" required>
+                                <option value="auto" selected>Otomatis — poin dibagi rata oleh sistem</option>
+                                <option value="manual">Manual — poin tiap soal ditentukan guru</option>
                             </select>
-                        </div>
-                        <div class="col-md-6 mb-5">
-                            <label class="form-label">Pengurang nilai bila salah (mode bagi rata)</label>
-                            <input type="number" step="0.01" name="wrong_penalty" class="form-control" value="0">
+                            <div class="form-text">
+                                Poin soal <b>tidak perlu diisi</b> pada kedua mode — sistem membagi rata:
+                                PG = 100 ÷ jumlah soal PG (13 soal → 7,69/soal), essay = 100 ÷ jumlah soal essay (7 soal → 14,29/soal).<br>
+                                <b>Otomatis</b>: saat memeriksa, guru cukup menandai <b>Benar / Salah</b> tiap essay (benar = poin penuh).<br>
+                                <b>Manual</b>: guru menentukan sendiri nilai tiap essay, dengan <b>total seluruh essay maksimal 100</b>.<br>
+                                Nilai akhir = <b>(Nilai PG + Nilai Essay) ÷ 2</b>; bila ujian hanya satu jenis soal, bagian itu jadi 100% nilai.
+                            </div>
                         </div>
                         <div class="col-md-6 mb-5">
                             <label class="form-label">KKM / Nilai Lulus</label>
                             <input type="number" step="0.01" name="pass_score" class="form-control" value="75">
                         </div>
                     </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="normalize" id="normChk" checked>
-                        <label class="form-check-label" for="normChk">Normalisasi nilai akhir ke skala 0–100</label>
+                    <div class="alert alert-light-primary d-flex align-items-center py-3 mb-0">
+                        <i class="ki-outline ki-information-5 fs-2 text-primary me-3"></i>
+                        <span class="fs-7">Nilai akhir otomatis berskala <b>0–100</b>: nilai PG dan nilai Essay masing-masing dihitung 0–100, lalu dirata-ratakan.</span>
                     </div>
                 </div>
                 <div class="modal-footer">

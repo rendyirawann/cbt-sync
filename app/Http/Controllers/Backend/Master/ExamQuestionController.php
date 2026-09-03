@@ -18,7 +18,7 @@ class ExamQuestionController extends Controller
             'exam_id' => 'required|uuid|exists:exams,id',
             'type' => 'required|in:mc,essay',
             'question_text' => 'required|string',
-            'points' => 'required|numeric|min:0',
+            'points' => 'nullable|numeric|min:0',   // tidak lagi diisi guru; bobot dihitung sistem
             'penalty' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
             'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
@@ -44,7 +44,7 @@ class ExamQuestionController extends Controller
                     'exam_id' => $exam->id,
                     'type' => $request->type,
                     'question_text' => $request->question_text,
-                    'points' => $request->points,
+                    'points' => $request->points ?: 1,
                     'penalty' => $request->penalty ?: 0,
                     'order' => ($exam->questions()->max('order') ?? 0) + 1,
                 ];
@@ -58,6 +58,9 @@ class ExamQuestionController extends Controller
                 if ($request->type === 'mc') {
                     $this->syncOptions($question, $request);
                 }
+
+                // Soal yang dibuat saat menyusun ujian ikut masuk Bank Soal Bersama.
+                \App\Support\BankSoal::cerminkan($question->fresh('options'), $exam);
             });
 
             return redirect()->back()->with('success', 'Soal berhasil ditambahkan.');
@@ -77,7 +80,7 @@ class ExamQuestionController extends Controller
 
         $request->validate([
             'question_text' => 'required|string',
-            'points' => 'required|numeric|min:0',
+            'points' => 'nullable|numeric|min:0',   // tidak lagi diisi guru; bobot dihitung sistem
             'penalty' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
             'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
@@ -94,7 +97,7 @@ class ExamQuestionController extends Controller
             DB::transaction(function () use ($request, $question) {
                 $data = [
                     'question_text' => $request->question_text,
-                    'points' => $request->points,
+                    'points' => $request->points ?: 1,
                     'penalty' => $request->penalty ?: 0,
                 ];
 
@@ -181,6 +184,11 @@ class ExamQuestionController extends Controller
                         ]);
                     }
                 }
+
+                // Salinan ikut masuk Bank Soal sebagai milik sekolah ujian ini,
+                // dengan jejak sekolah sumbernya (badge "sumber: ...").
+                \App\Support\BankSoal::cerminkan($q->fresh('options'), $exam, $bank);
+
                 $copied++;
             }
         });

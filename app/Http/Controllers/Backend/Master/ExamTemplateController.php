@@ -491,6 +491,9 @@ class ExamTemplateController extends Controller
                 $first->update(['is_correct' => true]);
             }
         }
+
+        // Soal hasil impor juga masuk Bank Soal Bersama.
+        \App\Support\BankSoal::cerminkan($question->fresh('options'), $exam);
     }
 
     private function storeImage(array $image): string

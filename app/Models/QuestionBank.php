@@ -22,6 +22,18 @@ class QuestionBank extends Model
         return $this->belongsTo(Subject::class);
     }
 
+    /** Sekolah asal soal ini (untuk filter "soal buatan sekolah X"). */
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
+
+    /** Sekolah asal soal bila entri ini hasil meminjam dari bank sekolah lain. */
+    public function sourceSchool()
+    {
+        return $this->belongsTo(School::class, 'source_school_id');
+    }
+
     public function options()
     {
         return $this->hasMany(QuestionBankOption::class)->orderBy('order');

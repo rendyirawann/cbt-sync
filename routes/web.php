@@ -162,7 +162,8 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::post('/admin/exams/{id}/publish', [\App\Http\Controllers\Backend\Master\ExamController::class, 'publish'])->name('exams.publish');
     // Bank Soal Bersama (lintas sekolah) + tarik ke ujian
     Route::get('/admin/question-banks', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'index'])->name('question-banks.index');
-    Route::post('/admin/question-banks', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'store'])->name('question-banks.store');
+    // Bank Soal tidak lagi punya form tambah sendiri: isinya tumbuh otomatis dari
+    // soal yang dibuat saat menyusun ujian (lihat App\Support\BankSoal).
     Route::put('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'update'])->name('question-banks.update');
     Route::delete('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'destroy'])->name('question-banks.destroy');
     Route::post('/admin/exams/{exam}/pull-bank', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'pullFromBank'])->name('exams.pull-bank');
