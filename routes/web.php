@@ -270,6 +270,9 @@ Route::middleware(['auth', 'role:Siswa'])->prefix('portal')->group(function () {
     // CBT / Ujian Online (Siswa)
     Route::get('/exams', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'index'])->name('student.exams.index');
     Route::post('/exams/{sessionId}/start', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'start'])->name('student.exams.start');
+    // Konfirmasi data + tanda tangan daftar hadir sebelum soal dibuka.
+    Route::get('/exams/{sessionId}/confirm', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'confirm'])->name('student.exams.confirm');
+    Route::post('/exams/{sessionId}/confirm', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'storeConfirm'])->name('student.exams.confirm.store');
     Route::get('/exams/{sessionId}/attempt', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'attempt'])->name('student.exams.attempt');
     Route::post('/exam-answers/save', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'saveAnswer'])->name('student.exam-answers.save');
     Route::post('/exam-answers/photo', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'uploadPhoto'])->name('student.exam-answers.photo');
@@ -279,6 +282,8 @@ Route::middleware(['auth', 'role:Siswa'])->prefix('portal')->group(function () {
     // Keluar sekejap dari layar ujian: dicatat saja (tidak mengunci) selama masih
     // dalam tenggang toleransi — lihat ExamPortalController@leaveWarning.
     Route::post('/exams/leave-warning', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'leaveWarning'])->name('student.exams.leave-warning');
+    // Waktu habis → halaman tanda tangan (tanpa soal) sebelum jawaban dikumpulkan.
+    Route::get('/exams/{sessionId}/sign', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'sign'])->name('student.exams.sign');
     Route::post('/exams/{sessionId}/submit', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'submit'])->name('student.exams.submit');
     Route::get('/exam-attempts/{attemptId}/result', [\App\Http\Controllers\Frontend\ExamPortalController::class, 'result'])->name('student.exams.result');
 

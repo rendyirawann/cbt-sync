@@ -239,8 +239,6 @@
     <p class="text-white opacity-50 fs-8 mt-8">Pelanggaran tercatat. Darurat keluar: Ctrl + Shift + C</p>
 </div>
 
-<form id="submitForm" action="{{ route('student.exams.submit', $session->id) }}" method="POST" class="d-none">@csrf</form>
-
 @push('scripts')
 <script>
     /* ===== Mode ujian: layar penuh + proteksi (KHUSUS halaman ini) ===== */
@@ -496,8 +494,28 @@
     });
 
     /* ---------- Submit ---------- */
-    function doSubmit(){ submitting = true; clearInterval(timerInt); fsExit(); document.getElementById('submitForm').submit(); }
-    function autoSubmit(){ if (submitting) return; Swal.fire({title:'Waktu Habis!', text:'Jawaban dikumpulkan otomatis.', icon:'info', allowOutsideClick:false, timer:2500, timerProgressBar:true}).then(doSubmit); }
+    // Semua jalur penyelesaian ujian (submit manual, waktu habis, dan tombol
+    // "Keluar & selesai" di layar terkunci) bermuara ke HALAMAN tanda tangan.
+    // Soal tidak lagi dirender di sana, jadi siswa tidak bisa membaca atau
+    // menjawab lagi setelah menyatakan selesai.
+    var menujuTtd = false;
+    function keTandaTangan(){
+        menujuTtd = true;
+        submitting = true;          // matikan peringatan "beforeunload"
+        clearInterval(timerInt);
+        fsExit();
+        window.location.href = SIGN_URL;
+    }
+    var SIGN_URL = "{{ route('student.exams.sign', $session->id) }}";
+    function autoSubmit(){
+        if (menujuTtd) return;
+        menujuTtd = true;
+        submitting = true;
+        clearInterval(timerInt);
+        Swal.fire({title:'Waktu Habis!', text:'Anda diarahkan ke halaman tanda tangan.',
+            icon:'info', allowOutsideClick:false, timer:2000, timerProgressBar:true})
+            .then(keTandaTangan);
+    }
     function confirmSubmit(){
         const unanswered = total - document.querySelectorAll('.qnav.answered').length;
         Swal.fire({
@@ -505,8 +523,9 @@
             html: unanswered > 0 ? `Masih ada <b>${unanswered} soal</b> belum dijawab. Tetap kumpulkan?` : 'Semua soal sudah dijawab. Kumpulkan sekarang?',
             icon: unanswered > 0 ? 'warning' : 'question',
             showCancelButton:true, confirmButtonText:'Ya, Kumpulkan', cancelButtonText:'Cek lagi', confirmButtonColor:'#4F46E5'
-        }).then(r => { if (r.isConfirmed) doSubmit(); });
+        }).then(r => { if (r.isConfirmed) keTandaTangan(); });
     }
+
     document.getElementById('btnSubmit').addEventListener('click', confirmSubmit);
 
     window.addEventListener('beforeunload', function(e){ if (!submitting && !examExiting){ e.preventDefault(); e.returnValue=''; } });
@@ -612,7 +631,7 @@
                 icon:'warning', showCancelButton:true,
                 confirmButtonText:'Ya, keluar & selesai', cancelButtonText:'Batal',
                 confirmButtonColor:'#dc2626', allowOutsideClick:false
-            }).then(function(res){ if (res.isConfirmed){ doSubmit(); } });
+            }).then(function(res){ if (res.isConfirmed){ keTandaTangan(); } });
         });
     }
     // Abaikan penyembunyian tab / keluar layar penuh akibat membuka kamera-galeri untuk foto jawaban.
@@ -707,7 +726,7 @@
         } catch(e){}
     }
     function mulaiTenggang(pesan){
-        if (submitting || examExiting || locked || !started || pickingFile) return;
+        if (submitting || examExiting || locked || !started || pickingFile || menujuTtd) return;
         if (sisaToleransi() <= 0){ doLock(); return; }      // toleransi habis → kunci langsung
         if (graceT) return;                                  // tenggang sudah berjalan
         showGrace(pesan);

@@ -44,48 +44,107 @@ class ExamPortalController extends Controller
     }
 
     /** Mulai mengerjakan: buat attempt bila valid. */
+    /**
+     * Tombol "Mulai" dari daftar ujian. Attempt TIDAK dibuat di sini: siswa harus
+     * mengonfirmasi datanya dan menandatangani daftar hadir lebih dulu, supaya
+     * yang belum menandatangani tidak terhitung hadir.
+     */
     public function start($sessionId)
     {
-        $student = auth()->user()->student;
-        $session = ExamSession::with('exam.questions.options')->findOrFail($sessionId);
+        return redirect()->route('student.exams.confirm', $sessionId);
+    }
 
-        if (!$this->isEligible($session, $student)) {
-            return redirect()->route('student.exams.index')->with('error', 'Anda tidak terdaftar pada ujian ini.');
+    /** Halaman konfirmasi data siswa + tanda tangan sebelum soal dibuka. */
+    public function confirm($sessionId)
+    {
+        [$student, $session, $gagal] = $this->siapkanMasuk($sessionId);
+        if ($gagal) {
+            return $gagal;
         }
 
-        $existing = ExamAttempt::where('exam_session_id', $session->id)->where('student_id', $student->id)->first();
-        if ($existing) {
+        $sudah = ExamAttempt::where('exam_session_id', $session->id)
+            ->where('student_id', $student->id)->first();
+        if ($sudah) {
             return redirect()->route('student.exams.attempt', $session->id);
         }
 
-        if (!$session->isWithinSchedule()) {
-            return redirect()->route('student.exams.index')->with('error', 'Ujian belum dibuka atau sudah ditutup.');
+        $kelasId = ClassStudent::where('student_id', $student->id)->value('class_room_id');
+        $kelas = $kelasId ? \App\Models\ClassRoom::find($kelasId) : null;
+
+        return view('frontend.exams.confirm', compact('session', 'student', 'kelas'));
+    }
+
+    /**
+     * Tandai siswa hadir lalu buat attempt sekaligus mengunci paket soalnya
+     * (urutan & isi tidak berubah lagi setelah ini). Tanda tangan TIDAK diambil
+     * di sini — siswa menandatanganinya saat mengumpulkan ujian.
+     */
+    public function storeConfirm(Request $request, $sessionId)
+    {
+        [$student, $session, $gagal] = $this->siapkanMasuk($sessionId);
+        if ($gagal) {
+            return $gagal;
         }
 
-        // Cek kuota.
-        if ($session->max_capacity) {
-            $count = ExamAttempt::where('exam_session_id', $session->id)->count();
-            if ($count >= $session->max_capacity) {
-                return redirect()->route('student.exams.index')->with('error', 'Kuota peserta sesi ini sudah penuh.');
-            }
+        $sudah = ExamAttempt::where('exam_session_id', $session->id)
+            ->where('student_id', $student->id)->first();
+        if ($sudah) {
+            return redirect()->route('student.exams.attempt', $session->id);
         }
+
+        $request->validate(['agree' => 'accepted'], [
+            'agree.accepted' => 'Centang pernyataan bahwa data Anda sudah benar.',
+        ]);
 
         $now = Carbon::now();
-        // Timer = durasi penuh sejak siswa MULAI. Jam sesi (starts_at–ends_at) hanya
-        // membatasi KAPAN siswa boleh masuk; durasi tidak dipotong walau telat masuk.
-        $ends = $now->copy()->addMinutes($session->duration_minutes);
 
         ExamAttempt::create([
             'exam_session_id' => $session->id,
             'student_id' => $student->id,
             'started_at' => $now,
-            'ends_at' => $ends,
+            // Timer = durasi penuh sejak siswa MULAI. Jam sesi hanya membatasi
+            // KAPAN siswa boleh masuk; durasi tidak dipotong walau telat masuk.
+            'ends_at' => $now->copy()->addMinutes($session->duration_minutes),
             'status' => 'in_progress',
-            // Urutan soal & opsi DIKUNCI saat mulai → tidak teracak ulang saat refresh/pindah soal.
+            // Paket & urutan soal DIKUNCI di sini → tidak teracak ulang saat refresh.
             'layout' => json_encode($this->buildLayout($session)),
+            // Kehadiran ditandai di sini (siswa mengonfirmasi datanya lalu masuk).
+            // Tanda tangannya diminta nanti, saat ia mengumpulkan ujian.
+            'confirmed_at' => $now,
         ]);
 
         return redirect()->route('student.exams.attempt', $session->id);
+    }
+
+    /**
+     * Pemeriksaan bersama sebelum siswa boleh masuk sesi: terdaftar, sesi sedang
+     * dibuka, dan kuota belum penuh. Mengembalikan [siswa, sesi, redirect-gagal].
+     */
+    private function siapkanMasuk($sessionId): array
+    {
+        $student = auth()->user()->student;
+        $session = ExamSession::with('exam.questions.options', 'exam.teachingAssignment.subject')->findOrFail($sessionId);
+        $keIndex = fn ($pesan) => redirect()->route('student.exams.index')->with('error', $pesan);
+
+        if (!$this->isEligible($session, $student)) {
+            return [$student, $session, $keIndex('Anda tidak terdaftar pada ujian ini.')];
+        }
+
+        $adaAttempt = ExamAttempt::where('exam_session_id', $session->id)
+            ->where('student_id', $student->id)->exists();
+
+        if (!$adaAttempt && !$session->isWithinSchedule()) {
+            return [$student, $session, $keIndex('Ujian belum dibuka atau sudah ditutup.')];
+        }
+
+        if (!$adaAttempt && $session->max_capacity) {
+            $count = ExamAttempt::where('exam_session_id', $session->id)->count();
+            if ($count >= $session->max_capacity) {
+                return [$student, $session, $keIndex('Kuota peserta sesi ini sudah penuh.')];
+            }
+        }
+
+        return [$student, $session, null];
     }
 
     /** Tentukan urutan soal & opsi (acak bila diaktifkan) — disimpan sekali per attempt. */
@@ -149,11 +208,26 @@ class ExamPortalController extends Controller
             return redirect()->route('student.exams.result', $attempt->id);
         }
 
-        // Waktu habis → auto submit (kecuali sedang terkunci: timer dijeda menunggu PIN guru).
+        // Waktu habis (kecuali sedang terkunci: timer dijeda menunggu PIN guru).
+        //
+        // Jawaban TIDAK dinilai otomatis begitu saja: tanda tangan wajib, jadi
+        // halaman tetap dibuka dengan gerbang tanda tangan yang dipaksa tampil dan
+        // tidak bisa dibatalkan. Ujian baru terkumpul & ternilai setelah siswa
+        // menandatangani. Bila tanda tangan sudah ada (mis. sempat tersimpan lalu
+        // halaman ditutup), finalisasi boleh langsung dijalankan.
         if (!$attempt->locked_at && Carbon::now()->gte($attempt->ends_at)) {
-            CbtScoringService::finalizeOnSubmit($attempt);
-            $this->afterFinalize($attempt);
-            return redirect()->route('student.exams.result', $attempt->id)->with('error', 'Waktu ujian telah habis, jawaban otomatis dikumpulkan.');
+            // Tanda tangan sudah ada (mis. tersimpan lalu halaman ditutup) → boleh langsung final.
+            if ($attempt->signature_path) {
+                CbtScoringService::finalizeOnSubmit($attempt);
+                $this->afterFinalize($attempt);
+
+                return redirect()->route('student.exams.result', $attempt->id)->with('error', 'Waktu ujian telah habis, jawaban otomatis dikumpulkan.');
+            }
+
+            // Belum ditandatangani → dialihkan ke halaman tanda tangan. Soal SENGAJA
+            // tidak dirender lagi supaya siswa tidak bisa melihat atau menjawab
+            // setelah waktunya berakhir.
+            return redirect()->route('student.exams.sign', $session->id);
         }
 
         $exam = $session->exam;
@@ -399,13 +473,128 @@ class ExamPortalController extends Controller
     }
 
     /** Kumpulkan ujian. */
-    public function submit($sessionId)
+    /**
+     * Simpan tanda tangan siswa (data URL PNG) ke storage publik.
+     *
+     * Kanvas kosong TIDAK bisa dibedakan dari ukuran berkas (PNG putih polos pun
+     * bisa besar), jadi yang diperiksa adalah pikselnya: harus ada coretan gelap
+     * yang cukup. Mengembalikan ['path' => ...] atau ['galat' => ...].
+     */
+    private function simpanTandaTangan(?string $dataUrl): array
+    {
+        $awalan = 'data:image/png;base64,';
+
+        if (!is_string($dataUrl) || !str_starts_with($dataUrl, $awalan)) {
+            return ['galat' => 'Tanda tangan belum digambar.'];
+        }
+
+        $mentah = base64_decode(substr($dataUrl, strlen($awalan)), true);
+        if ($mentah === false || strlen($mentah) > 512 * 1024) {
+            return ['galat' => 'Tanda tangan tidak terbaca atau terlalu besar.'];
+        }
+
+        $img = @imagecreatefromstring($mentah);
+        if (!$img) {
+            return ['galat' => 'Tanda tangan tidak terbaca, silakan gambar ulang.'];
+        }
+
+        $w = imagesx($img);
+        $h = imagesy($img);
+        if ($w > 4000 || $h > 4000) {
+            imagedestroy($img);
+
+            return ['galat' => 'Ukuran tanda tangan tidak wajar.'];
+        }
+
+        $gelap = 0;
+        for ($y = 0; $y < $h; $y += 3) {
+            for ($x = 0; $x < $w; $x += 3) {
+                $c = imagecolorat($img, $x, $y);
+                if ((($c >> 16) & 0xFF) < 200 || (($c >> 8) & 0xFF) < 200 || ($c & 0xFF) < 200) {
+                    $gelap++;
+                }
+            }
+        }
+        imagedestroy($img);
+
+        if ($gelap < 30) {
+            return ['galat' => 'Tanda tangan belum digambar.'];
+        }
+
+        $path = 'exam-signatures/' . \Illuminate\Support\Str::uuid() . '.png';
+        Storage::disk('public')->put($path, $mentah);
+
+        return ['path' => $path];
+    }
+
+    /**
+     * Halaman tanda tangan setelah waktu ujian berakhir.
+     *
+     * Halaman ini TIDAK memuat soal sama sekali — begitu waktu habis siswa
+     * dialihkan ke sini, sehingga ia tidak bisa membaca atau menjawab soal lagi.
+     * Jawaban baru dikumpulkan dan dinilai setelah ditandatangani dari sini.
+     */
+    public function sign($sessionId)
+    {
+        $student = auth()->user()->student;
+        $session = ExamSession::with('exam.teachingAssignment.subject')->findOrFail($sessionId);
+
+        if (!$this->isEligible($session, $student)) {
+            return redirect()->route('student.exams.index')->with('error', 'Anda tidak terdaftar pada ujian ini.');
+        }
+
+        $attempt = ExamAttempt::where('exam_session_id', $session->id)
+            ->where('student_id', $student->id)->first();
+
+        if (!$attempt) {
+            return redirect()->route('student.exams.index')->with('error', 'Anda belum memulai ujian ini.');
+        }
+        if ($attempt->status !== 'in_progress') {
+            return redirect()->route('student.exams.result', $attempt->id);
+        }
+
+        // Halaman ini dipakai baik saat siswa menyatakan selesai sendiri maupun
+        // saat waktunya berakhir. Bedanya hanya tampilan: kalau masih ada waktu,
+        // siswa masih boleh kembali ke soal; kalau sudah habis, tidak.
+        $waktuHabis = !$attempt->locked_at && Carbon::now()->gte($attempt->ends_at);
+
+        $terjawab = $attempt->answers()
+            ->where(fn ($q) => $q->whereNotNull('selected_option_id')->orWhereNotNull('answer_text'))
+            ->count();
+
+        return view('frontend.exams.sign', [
+            'session' => $session,
+            'attempt' => $attempt,
+            'student' => $student,
+            'terjawab' => $terjawab,
+            'jumlahSoal' => count(json_decode((string) $attempt->layout, true)['q'] ?? []),
+            'waktuHabis' => $waktuHabis,
+            'hideChrome' => true,
+        ]);
+    }
+
+    public function submit(Request $request, $sessionId)
     {
         $student = auth()->user()->student;
         $attempt = ExamAttempt::where('exam_session_id', $sessionId)
             ->where('student_id', $student->id)->firstOrFail();
 
         if ($attempt->status === 'in_progress') {
+            // Tanda tangan WAJIB — termasuk ketika waktu sudah habis. Bila belum
+            // ditandatangani, ujian tidak dikumpulkan dan tidak dinilai; siswa
+            // dikembalikan ke halaman ujian yang memaksa gerbang tanda tangan
+            // tampil (lihat attempt(): $wajibTtd), lalu submit diulang dari sana.
+            if (!$attempt->signature_path) {
+                $hasil = $this->simpanTandaTangan($request->input('signature'));
+
+                if (!isset($hasil['path'])) {
+                    return back()->with('error', $hasil['galat'] . ' Ujian belum dikumpulkan — tanda tangan wajib.');
+                }
+
+                $attempt->signature_path = $hasil['path'];
+                $attempt->save();
+            }
+
             CbtScoringService::finalizeOnSubmit($attempt);
             $this->afterFinalize($attempt);
         }
