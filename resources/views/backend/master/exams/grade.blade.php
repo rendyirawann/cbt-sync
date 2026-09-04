@@ -73,7 +73,7 @@
 
         <form action="{{ route('exam-attempts.grade.store', $attempt->id) }}" method="POST" class="custom-ajax" id="gradeForm">
             @csrf
-            @foreach($exam->questions as $i => $q)
+            @foreach($questions as $i => $q)
             @php $ans = $answers->get($q->id); @endphp
             <div class="card mb-4">
                 <div class="card-body">
@@ -130,7 +130,7 @@
                             $nilaiKini = $sudahDinilai ? (float) $ans->earned_score : null;
                             // Mode manual: angka yang diisi guru = BOBOT soal essay ini (total semua essay wajib 100).
                             // Prefill dari bobot yang pernah disimpan pada soal; bila belum pernah, bagi rata.
-                            $nEssay = $exam->questions->where('type', 'essay')->count();
+                            $nEssay = $questions->where('type', 'essay')->count();
                             $allocDefault = $nEssay > 0 ? round(100 / $nEssay, 2) : 0;
                             $alloc = ((float) $q->points > 1) ? (float) $q->points : $allocDefault;
                             $allocTxt = rtrim(rtrim(number_format($alloc, 2, '.', ''), '0'), '.');

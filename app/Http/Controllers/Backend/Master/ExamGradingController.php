@@ -48,16 +48,18 @@ class ExamGradingController extends Controller
         $this->authorizeExam($attempt->session->exam);
 
         $exam = $attempt->session->exam;
-        $count = $exam->questions->count();
         $answers = $attempt->answers->keyBy('question_id');
 
-        // Bobot (skor maks) tiap soal sesuai mode penilaian.
+        // Guru hanya melihat & menilai soal yang BENAR-BENAR diterima siswa ini
+        // (paket bisa berbeda tiap siswa bila guru memakai pemilihan otomatis),
+        // dan bobotnya pun dihitung di dalam paket itu.
+        $questions = CbtScoringService::paketSoal($attempt)->sortBy('order')->values();
         $weights = [];
-        foreach ($exam->questions as $q) {
-            $weights[$q->id] = CbtScoringService::questionWeight($exam, $q, $count);
+        foreach ($questions as $q) {
+            $weights[$q->id] = CbtScoringService::bobotDalamPaket($questions, $exam, $q);
         }
 
-        return view('backend.master.exams.grade', compact('attempt', 'exam', 'answers', 'weights'));
+        return view('backend.master.exams.grade', compact('attempt', 'exam', 'answers', 'weights', 'questions'));
     }
 
     /** Simpan nilai essay (+ nilai akhir manual), lalu akumulasi & notifikasi. */
@@ -72,12 +74,14 @@ class ExamGradingController extends Controller
         }
 
         $exam = $attempt->session->exam;
-        $count = $exam->questions->count();
         $scores = $request->input('scores', []);     // [question_id => nilai]
         $feedbacks = $request->input('feedback', []); // [question_id => catatan]
 
-        foreach ($exam->questions->where('type', 'essay') as $q) {
-            $weight = CbtScoringService::questionWeight($exam, $q, $count);
+        // Sama seperti halaman koreksi: hanya essay dalam paket siswa ini, dengan
+        // batas nilai maksimal yang dihitung di dalam paket tersebut.
+        $paket = CbtScoringService::paketSoal($attempt);
+        foreach ($paket->where('type', 'essay') as $q) {
+            $weight = CbtScoringService::bobotDalamPaket($paket, $exam, $q);
             $val = isset($scores[$q->id]) ? (float) $scores[$q->id] : 0;
             $val = max(0, min($val, $weight)); // clamp 0..maks
 

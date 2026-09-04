@@ -109,7 +109,80 @@ class ExamController extends Controller
                 ->latest()->limit(300)->get()
             : collect();
 
-        return view('backend.master.exams.show', compact('exam', 'examClass', 'students', 'assignments', 'bankQuestions'));
+        // Calon peserta SUSULAN: siswa yang sampai sekarang belum tercatat mengikuti
+        // ujian ini di sesi mana pun (tidak punya attempt sama sekali). Termasuk siswa
+        // yang dulu dilampirkan manual ke sesi lain tapi tetap tidak hadir.
+        $sudahUjian = $exam->sessions->flatMap->attempts->pluck('student_id')->unique();
+        $belumUjian = $students
+            ->concat($exam->sessions->flatMap->students)
+            ->unique('id')
+            ->reject(fn ($s) => $sudahUjian->contains($s->id))
+            ->sortBy(fn ($s) => $s->user->name ?? '')
+            ->values();
+
+        return view('backend.master.exams.show', compact('exam', 'examClass', 'students', 'assignments', 'bankQuestions', 'belumUjian'));
+    }
+
+    /**
+     * Pengaturan pemilihan soal untuk ujian ini.
+     *
+     *  all    — semua soal diberikan ke setiap siswa.
+     *  manual — hanya soal yang dicentang guru (questions.is_active).
+     *  auto   — tiap siswa menerima sejumlah soal ACAK dari kolam yang aktif,
+     *           jadi paket antar siswa berbeda. Penilaian mengikuti paket itu
+     *           lewat CbtScoringService::paketSoal().
+     *
+     * Soal tidak pernah dihapus di sini, hanya ditandai aktif/tidak.
+     */
+    public function updateQuestionSelection(Request $request, $id)
+    {
+        $exam = Exam::with('questions')->findOrFail($id);
+        $this->authorizeExam($exam);
+
+        if ($exam->hasStartedAttempts()) {
+            return back()->with('error', 'Pengaturan soal tidak bisa diubah karena sudah ada siswa yang memulai ujian.');
+        }
+
+        $data = $request->validate([
+            'question_selection' => 'required|in:all,manual,auto',
+            'active_question_count' => 'nullable|integer|min:1',
+            'active' => 'nullable|array',
+        ], [
+            'question_selection.required' => 'Cara pemilihan soal wajib dipilih',
+            'active_question_count.min' => 'Jumlah soal minimal 1',
+        ]);
+
+        $mode = $data['question_selection'];
+        $dicentang = collect($request->input('active', []))->map(fn ($v) => (string) $v)->all();
+
+        // Mode manual: yang dicentang jadi aktif, sisanya nonaktif. Mode lain:
+        // semua soal dikembalikan aktif agar kolamnya utuh.
+        if ($mode === 'manual') {
+            if (empty($dicentang)) {
+                return back()->with('error', 'Pilih minimal satu soal untuk diujikan.');
+            }
+            foreach ($exam->questions as $q) {
+                $q->update(['is_active' => in_array((string) $q->id, $dicentang, true)]);
+            }
+        } else {
+            $exam->questions()->update(['is_active' => true]);
+        }
+
+        $aktif = $mode === 'manual' ? count($dicentang) : $exam->questions->count();
+        $jumlah = $mode === 'auto' ? (int) ($data['active_question_count'] ?? 0) : null;
+
+        if ($mode === 'auto') {
+            if (!$jumlah) {
+                return back()->with('error', 'Isi jumlah soal yang diberikan ke tiap siswa.');
+            }
+            if ($jumlah > $aktif) {
+                return back()->with('error', "Jumlah soal ($jumlah) melebihi soal tersedia ($aktif).");
+            }
+        }
+
+        $exam->update(['question_selection' => $mode, 'active_question_count' => $jumlah]);
+
+        return back()->with('success', 'Pengaturan pemilihan soal disimpan.');
     }
 
     public function update(Request $request, $id)

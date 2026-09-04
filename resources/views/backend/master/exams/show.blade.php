@@ -90,6 +90,7 @@
                         @if($exam->hasEssay())
                         <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addEssayModal"><i class="ki-outline ki-plus fs-4"></i> Tambah Essay</button>
                         @endif
+                        <button class="btn btn-light-warning" data-bs-toggle="modal" data-bs-target="#selectionModal"><i class="ki-outline ki-filter-tick fs-5 me-1"></i>Atur Soal Aktif</button>
                         <button class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#bankModal"><i class="ki-outline ki-book-open fs-4"></i> Tarik dari Bank Soal</button>
                     @endif
                     @php $tpl = $exam->type === 'mixed' ? 'mixed' : ($exam->type === 'essay' ? 'essay' : 'pg'); @endphp
@@ -136,6 +137,86 @@
                         </form>
                     </div></div>
                 </div>
+                {{-- ===== Modal Atur Soal Aktif =====
+                     Guru/Admin memilih cara soal diberikan: semua, hanya yang
+                     dicentang, atau sejumlah soal ACAK per siswa. --}}
+                <div class="modal fade drawer-modal" id="selectionModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog"><div class="modal-content">
+                        <form action="{{ route('exams.question-selection', $exam->id) }}" method="POST">
+                            @csrf
+                            <div class="modal-header"><h3 class="modal-title">Atur Soal yang Diujikan</h3>
+                                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-1"></i></div>
+                            </div>
+                            <div class="modal-body px-8 py-6">
+                                @php $aktifCount = $exam->questions->where('is_active', true)->count(); @endphp
+                                <div class="alert alert-light-primary fs-8 py-2 mb-5">
+                                    Ujian ini punya <b>{{ $exam->questions->count() }}</b> soal
+                                    (<b>{{ $aktifCount }}</b> ditandai aktif).
+                                    Pengaturan hanya bisa diubah selama belum ada siswa yang memulai ujian.
+                                </div>
+
+                                <div class="mb-5">
+                                    <label class="form-label required">Cara pemilihan soal</label>
+                                    <div class="d-flex flex-column gap-3">
+                                        <label class="form-check">
+                                            <input class="form-check-input sel-mode" type="radio" name="question_selection" value="all"
+                                                @checked(($exam->question_selection ?? 'all') === 'all')>
+                                            <span class="form-check-label ms-2"><b>Semua soal</b> — setiap siswa mengerjakan seluruh soal.</span>
+                                        </label>
+                                        <label class="form-check">
+                                            <input class="form-check-input sel-mode" type="radio" name="question_selection" value="manual"
+                                                @checked($exam->question_selection === 'manual')>
+                                            <span class="form-check-label ms-2"><b>Pilih manual</b> — hanya soal yang dicentang di bawah.</span>
+                                        </label>
+                                        <label class="form-check">
+                                            <input class="form-check-input sel-mode" type="radio" name="question_selection" value="auto"
+                                                @checked($exam->question_selection === 'auto')>
+                                            <span class="form-check-label ms-2"><b>Otomatis (acak per siswa)</b> — tiap siswa menerima
+                                                sejumlah soal acak dari kolam yang aktif, jadi paketnya berbeda-beda.</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-5" id="selCount">
+                                    <label class="form-label">Jumlah soal per siswa</label>
+                                    <input type="number" min="1" name="active_question_count" class="form-control form-control-solid"
+                                        value="{{ $exam->active_question_count }}" placeholder="mis. 30 dari {{ $exam->questions->count() }} soal">
+                                    <div class="form-text">Dipakai hanya pada mode otomatis. Nilai akhir tetap berskala 0–100
+                                        karena bobot dihitung di dalam paket masing-masing siswa.</div>
+                                </div>
+
+                                <div id="selList">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0">Soal yang diujikan</label>
+                                        <label class="form-check form-check-sm">
+                                            <input class="form-check-input" type="checkbox" id="selAll">
+                                            <span class="form-check-label fs-8 ms-2">Pilih semua</span>
+                                        </label>
+                                    </div>
+                                    <div style="max-height:44vh;overflow:auto">
+                                        @foreach($exam->questions->sortBy('order') as $i => $qq)
+                                            <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2">
+                                                <input class="form-check-input mt-1 sel-item" type="checkbox" name="active[]"
+                                                    value="{{ $qq->id }}" @checked($qq->is_active)>
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex flex-wrap gap-2 mb-1">
+                                                        <span class="badge badge-light-{{ $qq->type==='mc'?'primary':'info' }}">{{ $qq->type==='mc'?'PG':'Essay' }}</span>
+                                                        <span class="badge badge-light">soal {{ $i + 1 }}</span>
+                                                    </div>
+                                                    <div class="fs-7 text-gray-800">{{ \Illuminate\Support\Str::limit($qq->question_text, 120) }}</div>
+                                                </div>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary" @disabled($exam->hasStartedAttempts())>Simpan Pengaturan</button>
+                            </div>
+                        </form>
+                    </div></div>
+                </div>
+
                 {{-- ===== Modal Tarik dari Bank Soal Bersama ===== --}}
                 <div class="modal fade drawer-modal" id="bankModal" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog"><div class="modal-content">
@@ -260,6 +341,7 @@
                         <div class="me-4"><span class="badge badge-circle badge-primary fs-6">{{ $i + 1 }}</span></div>
                         <div class="flex-grow-1">
                             <div class="d-flex justify-content-between">
+                                @unless($q->is_active)<span class="badge badge-light-danger mb-2 me-1">tidak diujikan</span>@endunless
                                 <span class="badge badge-light-{{ $q->type === 'mc' ? 'primary' : 'info' }} mb-2">{{ $q->type === 'mc' ? 'Pilihan Ganda' : 'Essay' }} • {{ rtrim(rtrim((string)$q->points,'0'),'.') }} poin{{ $q->type==='mc' && $q->penalty>0 ? ' / -'.rtrim(rtrim((string)$q->penalty,'0'),'.').' salah' : '' }}</span>
                                 @unless($locked)
                                 <div>
@@ -356,6 +438,13 @@
             <div class="tab-pane fade" id="tab_sesi">
                 <div class="d-flex mb-5">
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSessionModal" @if($exam->questions->count()===0) disabled title="Tambah soal dulu" @endif>
+                    @if($belumUjian->isNotEmpty())
+                    <button class="btn btn-light-warning" data-bs-toggle="modal" data-bs-target="#makeupSessionModal">
+                        <i class="ki-outline ki-calendar-add fs-5 me-1"></i>Jadwalkan Susulan ({{ $belumUjian->count() }})</button>
+                    @else
+                    <span class="btn btn-light disabled" title="Semua siswa sudah mengikuti ujian ini">
+                        <i class="ki-outline ki-check-circle fs-5 me-1"></i>Tidak ada siswa yang perlu susulan</span>
+                    @endif
                         <i class="ki-outline ki-plus fs-4"></i> Buat Sesi Ujian
                     </button>
                 </div>
@@ -462,6 +551,77 @@
                 </div>
             </div>
 
+            {{-- ===== Modal Jadwalkan Susulan =====
+                 Menambah SESI BARU pada ujian yang sama, khusus untuk siswa yang
+                 belum tercatat mengikuti ujian. Sesi susulan tidak memakai
+                 class_room_id, sehingga hanya siswa yang dicentang di sini yang
+                 berhak masuk (lihat ExamPortalController::isEligible). Dikirim ke
+                 jalur pembuatan sesi biasa dengan participant_mode=manual. --}}
+            <div class="modal fade drawer-modal" id="makeupSessionModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog"><div class="modal-content">
+                    <form action="{{ route('exam-sessions.store') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="exam_id" value="{{ $exam->id }}">
+                        <input type="hidden" name="participant_mode" value="manual">
+                        <div class="modal-header"><h3 class="modal-title">Jadwalkan Ujian Susulan</h3>
+                            <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-1"></i></div>
+                        </div>
+                        <div class="modal-body px-8 py-6">
+                            <div class="alert alert-light-warning fs-8 py-2 mb-5">
+                                Daftar di bawah hanya memuat siswa yang <b>belum pernah tercatat mengikuti ujian ini</b>
+                                di sesi mana pun. Siswa yang sudah mengerjakan tidak bisa dijadwalkan ulang.
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8 mb-4">
+                                    <label class="form-label required">Nama sesi susulan</label>
+                                    <input type="text" name="name" class="form-control form-control-solid"
+                                        value="Susulan — {{ now()->format('d M Y') }}" required>
+                                </div>
+                                <div class="col-md-4 mb-4">
+                                    <label class="form-label required">Durasi (menit)</label>
+                                    <input type="number" min="1" name="duration_minutes" class="form-control form-control-solid"
+                                        value="{{ $exam->sessions->first()->duration_minutes ?? 60 }}" required>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label required">Mulai</label>
+                                    <input type="datetime-local" name="starts_at" class="form-control form-control-solid" required>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label required">Selesai</label>
+                                    <input type="datetime-local" name="ends_at" class="form-control form-control-solid" required>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-4 mb-5">
+                                <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" name="shuffle_questions" checked><span class="form-check-label fs-8 ms-2">Acak soal</span></label>
+                                <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" name="shuffle_options" checked><span class="form-check-label fs-8 ms-2">Acak opsi</span></label>
+                                <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" name="show_result"><span class="form-check-label fs-8 ms-2">Tampilkan hasil ke siswa</span></label>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0 required">Peserta susulan</label>
+                                <label class="form-check form-check-sm">
+                                    <input class="form-check-input" type="checkbox" id="makeupAll" checked>
+                                    <span class="form-check-label fs-8 ms-2">Pilih semua</span>
+                                </label>
+                            </div>
+                            <div style="max-height:38vh;overflow:auto">
+                                @foreach($belumUjian as $s)
+                                    <label class="d-flex align-items-center gap-3 border rounded p-3 mb-2">
+                                        <input class="form-check-input makeup-item" type="checkbox" name="students[]" value="{{ $s->id }}" checked>
+                                        <div>
+                                            <div class="fw-semibold text-gray-900 fs-7">{{ $s->user->name ?? '-' }}</div>
+                                            <div class="text-muted fs-8">{{ $s->nisn ?? 'tanpa NISN' }} · {{ $s->user->email ?? '-' }}</div>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-warning">Buat Sesi Susulan</button>
+                        </div>
+                    </form>
+                </div></div>
+            </div>
+
             {{-- ================= TAB HASIL ================= --}}
             <div class="tab-pane fade" id="tab_hasil">
                 <div class="card"><div class="card-body">
@@ -492,6 +652,32 @@
 
 @push('scripts')
 <script>
+    // ---- Susulan: pilih semua peserta ----
+    (function(){
+        var semua = document.getElementById('makeupAll');
+        if (!semua) return;
+        semua.addEventListener('change', function(){
+            document.querySelectorAll('#makeupSessionModal .makeup-item').forEach(function(c){ c.checked = semua.checked; });
+        });
+    })();
+
+    // ---- Atur Soal Aktif: tampilkan bagian yang relevan sesuai mode ----
+    (function(){
+        var modal = document.getElementById('selectionModal');
+        if (!modal) return;
+        function segarkan(){
+            var mode = (modal.querySelector('.sel-mode:checked') || {}).value || 'all';
+            modal.querySelector('#selCount').style.display = mode === 'auto' ? '' : 'none';
+            modal.querySelector('#selList').style.display  = mode === 'manual' ? '' : 'none';
+        }
+        modal.querySelectorAll('.sel-mode').forEach(function(r){ r.addEventListener('change', segarkan); });
+        var semua = modal.querySelector('#selAll');
+        if (semua) semua.addEventListener('change', function(){
+            modal.querySelectorAll('.sel-item').forEach(function(c){ c.checked = semua.checked; });
+        });
+        segarkan();
+    })();
+
     // ---- Bank Soal: cari & pilih semua ----
     (function(){
         var search = document.getElementById('bankSearch');

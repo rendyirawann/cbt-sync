@@ -166,6 +166,8 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     // soal yang dibuat saat menyusun ujian (lihat App\Support\BankSoal).
     Route::put('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'update'])->name('question-banks.update');
     Route::delete('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'destroy'])->name('question-banks.destroy');
+    // Pengaturan pemilihan soal (semua / manual / acak sebagian per siswa).
+    Route::post('/admin/exams/{exam}/question-selection', [\App\Http\Controllers\Backend\Master\ExamController::class, 'updateQuestionSelection'])->name('exams.question-selection');
     Route::post('/admin/exams/{exam}/pull-bank', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'pullFromBank'])->name('exams.pull-bank');
 
     Route::post('/admin/exam-questions', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'store'])->name('exam-questions.store');

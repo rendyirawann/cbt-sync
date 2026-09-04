@@ -91,7 +91,26 @@ class ExamPortalController extends Controller
     /** Tentukan urutan soal & opsi (acak bila diaktifkan) — disimpan sekali per attempt. */
     private function buildLayout(ExamSession $session): array
     {
-        $questions = $session->exam->questions;
+        $exam = $session->exam;
+
+        // Kolam soal: mode 'manual' hanya memakai soal yang dicentang guru.
+        // Jaring aman — bila guru lupa mengaktifkan apa pun, pakai semua soal
+        // daripada menyajikan ujian kosong.
+        $questions = $exam->question_selection === 'all'
+            ? $exam->questions
+            : $exam->questions->where('is_active', true)->values();
+        if ($questions->isEmpty()) {
+            $questions = $exam->questions;
+        }
+
+        // Mode 'auto': tiap siswa menerima sejumlah soal ACAK dari kolam, jadi
+        // paket antar siswa berbeda. Penilaian mengikuti paket ini lewat
+        // CbtScoringService::paketSoal().
+        $jumlahAktif = (int) $exam->active_question_count;
+        if ($exam->question_selection === 'auto' && $jumlahAktif > 0 && $questions->count() > $jumlahAktif) {
+            $questions = $questions->shuffle()->take($jumlahAktif)->values();
+        }
+
         $qOrder = $session->shuffle_questions
             ? $questions->shuffle()->pluck('id')->all()
             : $questions->pluck('id')->all();

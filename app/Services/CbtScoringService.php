@@ -45,12 +45,65 @@ class CbtScoringService
         return $exam->points_mode === 'auto' ? 0.0 : (float) $question->penalty;
     }
 
+    /**
+     * Soal yang BENAR-BENAR diberikan kepada siswa ini.
+     *
+     * Bila guru memakai pemilihan otomatis, tiap siswa menerima paket acak yang
+     * berbeda (mis. 30 dari 100). Penilaian karena itu TIDAK BOLEH memakai
+     * seluruh soal ujian sebagai pembagi — kalau tidak, soal yang tidak pernah
+     * ditampilkan ikut terhitung kosong dan bobot tiap soal melenceng.
+     *
+     * Paket dibaca dari kolom layout yang dikunci saat siswa mulai. Attempt lama
+     * yang belum punya layout jatuh kembali ke seluruh soal ujian.
+     */
+    public static function paketSoal(ExamAttempt $attempt)
+    {
+        $semua = $attempt->session->exam->questions;
+        $layout = json_decode((string) $attempt->layout, true);
+        $ids = $layout['q'] ?? [];
+
+        return empty($ids) ? $semua->values() : $semua->whereIn('id', $ids)->values();
+    }
+
+    /** Bobot satu soal DI DALAM paket siswa (questionWeight() memakai skala se-ujian). */
+    public static function bobotDalamPaket($paket, Exam $exam, Question $question): float
+    {
+        $n = $paket->where('type', $question->type)->count();
+
+        if ($question->type === 'essay' && $exam->points_mode !== 'auto') {
+            $set = (float) $question->points;
+
+            return $set > 1 ? $set : ($n > 0 ? 100 / $n : 0.0);
+        }
+
+        return $n > 0 ? 100 / $n : 0.0;
+    }
+
+    /** Bobot bagian (PG : Essay) menurut jenis soal yang ADA di paket siswa. */
+    public static function bobotBagian($paket): array
+    {
+        $pg = $paket->where('type', 'mc')->isNotEmpty();
+        $es = $paket->where('type', 'essay')->isNotEmpty();
+
+        if ($pg && $es) {
+            return ['mc' => 50, 'essay' => 50];
+        }
+        if ($pg) {
+            return ['mc' => 100, 'essay' => 0];
+        }
+        if ($es) {
+            return ['mc' => 0, 'essay' => 100];
+        }
+
+        return ['mc' => 0, 'essay' => 0];
+    }
+
     /** Koreksi otomatis seluruh jawaban Pilihan Ganda. */
     public static function gradeMc(ExamAttempt $attempt): void
     {
         $exam = $attempt->session->exam->load('questions.options');
-        $questions = $exam->questions;
-        $count = $questions->count();
+        // Hanya soal dalam paket siswa ini yang dikoreksi dan dijadikan pembagi.
+        $questions = self::paketSoal($attempt);
         $answers = $attempt->answers()->get()->keyBy('question_id');
 
         $correct = 0; $wrong = 0; $blank = 0; $mcScore = 0;
@@ -59,7 +112,7 @@ class CbtScoringService
             if ($q->type !== 'mc') {
                 continue;
             }
-            $weight = self::questionWeight($exam, $q, $count);
+            $weight = self::bobotDalamPaket($questions, $exam, $q);
             $ans = $answers->get($q->id);
 
             if (!$ans || !$ans->selected_option_id) {
@@ -104,8 +157,9 @@ class CbtScoringService
     {
         self::gradeMc($attempt);
 
-        $exam = $attempt->session->exam;
-        $hasEssay = $exam->questions->where('type', 'essay')->count() > 0;
+        // Essay dicek dari paket siswa: paket acak bisa saja tidak memuat essay,
+        // dan bila begitu nilainya boleh langsung final tanpa menunggu guru.
+        $hasEssay = self::paketSoal($attempt)->where('type', 'essay')->isNotEmpty();
 
         if ($hasEssay) {
             // Masih menunggu guru menilai essay.
@@ -143,11 +197,13 @@ class CbtScoringService
             $total = 0;
         }
 
-        $mcMax = $exam->mcMaxPoints();
-        $esMax = $exam->essayMaxPoints();
+        // Skala tiap bagian ditentukan paket siswa, bukan seluruh soal ujian.
+        $paket = self::paketSoal($attempt);
+        $mcMax = $paket->where('type', 'mc')->isNotEmpty() ? 100.0 : 0.0;
+        $esMax = $paket->where('type', 'essay')->isNotEmpty() ? 100.0 : 0.0;
         $mcPct = $mcMax > 0 ? max(0, (float) $attempt->mc_score) / $mcMax * 100 : 0;
         $esPct = $esMax > 0 ? max(0, $essayScore) / $esMax * 100 : 0;
-        $w = $exam->sectionWeights();
+        $w = self::bobotBagian($paket);
         $final = round($mcPct * $w['mc'] / 100 + $esPct * $w['essay'] / 100, 2);
 
         $attempt->essay_score = round($essayScore, 2);
