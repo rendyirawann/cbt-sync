@@ -108,7 +108,7 @@
 								<!--end:Menu item-->
 @endif
 
-                                @if(auth()->user()->hasRole('Developer') || auth()->user()->hasRole('Superadmin') || auth()->user()->hasRole('Guru') || auth()->user()->hasRole('Kepala Sekolah'))
+                                @if(auth()->user()->hasRole('Developer') || auth()->user()->hasRole('Superadmin') || auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Guru') || auth()->user()->hasRole('Kepala Sekolah'))
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('exams.*') || request()->routeIs('exam-sessions.*') || request()->routeIs('exam-attempts.*') ? 'active' : '' }}" href="{{ route('exams.index') }}">
@@ -116,6 +116,14 @@
 											<i class="ki-outline ki-questionnaire-tablet fs-2"></i>
 										</span>
 										<span class="menu-title">Ujian / CBT</span>
+									</a>
+								</div>
+								<!--end:Menu item-->
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<a class="menu-link {{ request()->routeIs('exam-monitor.*') ? 'active' : '' }}" href="{{ route('exam-monitor.index') }}">
+										<span class="menu-icon"><i class="ki-outline ki-screen fs-2"></i></span>
+										<span class="menu-title">Monitoring Ujian</span>
 									</a>
 								</div>
 								<!--end:Menu item-->

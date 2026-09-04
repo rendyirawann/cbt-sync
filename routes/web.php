@@ -178,6 +178,10 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::delete('/admin/exam-sessions/{id}', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'destroy'])->name('exam-sessions.destroy');
     Route::post('/admin/exam-sessions/{id}/toggle-active', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'toggleActive'])->name('exam-sessions.toggle-active');
     Route::post('/admin/exam-sessions/{id}/pin', [\App\Http\Controllers\Backend\Master\ExamSessionController::class, 'regeneratePin'])->name('exam-sessions.pin');
+    // Pemantauan ujian berjalan: Guru hanya sesinya sendiri, Admin seluruh sekolahnya.
+    Route::get('/admin/exam-monitor', [\App\Http\Controllers\Backend\Master\ExamMonitorController::class, 'index'])->name('exam-monitor.index');
+    Route::get('/admin/exam-monitor/{id}', [\App\Http\Controllers\Backend\Master\ExamMonitorController::class, 'show'])->name('exam-monitor.show');
+    Route::get('/admin/exam-monitor/{id}/data', [\App\Http\Controllers\Backend\Master\ExamMonitorController::class, 'data'])->name('exam-monitor.data');
     Route::get('/admin/exam-sessions/{id}/attempts', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'attempts'])->name('exam-sessions.attempts');
     Route::get('/admin/exam-sessions/{id}/export', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'exportResults'])->name('exam-sessions.export');
     Route::get('/admin/exam-attempts/{id}/grade', [\App\Http\Controllers\Backend\Master\ExamGradingController::class, 'grade'])->name('exam-attempts.grade');
