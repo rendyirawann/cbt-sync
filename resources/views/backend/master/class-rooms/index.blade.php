@@ -29,6 +29,9 @@
                                 <td>{{ $item->name }}</td>
                                 <td>{{ $item->school->name ?? '-' }}</td>
                                 <td class="text-end">
+                                    <a href="{{ route('class-rooms.students', $item->id) }}"
+                                        class="btn btn-sm btn-light-info btn-active-info me-1">
+                                        <i class="ki-outline ki-people fs-5 me-1"></i>Lihat Siswa</a>
                                     <button class="btn btn-sm btn-light-primary btn-active-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</button>
                                     <form action="{{ route('class-rooms.destroy', $item->id) }}" method="POST" class="d-inline">
                                         @csrf @method('DELETE')

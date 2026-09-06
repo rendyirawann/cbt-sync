@@ -10,64 +10,89 @@
                     <h3 class="fw-bold mb-1">Plotting Siswa (Rombel)</h3>
                     <div class="fs-6 text-gray-500">Manajemen penempatan siswa ke dalam kelas</div>
                 </div>
-                <div class="card-toolbar">
+                <div class="card-toolbar gap-2">
+                    <form method="GET" class="d-flex align-items-center gap-2 me-2">
+                        <span class="text-muted fs-8">Tahun ajaran</span>
+                        <select name="academic_year_id" class="form-select form-select-sm w-200px" onchange="this.form.submit()">
+                            @foreach($academicYears as $ay)
+                                <option value="{{ $ay->id }}" @selected($tahunId === $ay->id)>
+                                    {{ $ay->name }}{{ $ay->is_active ? ' (aktif)' : '' }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                    <a href="{{ route('enrollments.promote.form') }}" class="btn btn-sm btn-light-warning">
+                        <i class="ki-outline ki-arrow-up fs-5 me-1"></i>Naik Kelas
+                    </a>
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Plotting Siswa Baru</button>
                 </div>
             </div>
             <div class="card-body pt-0">
-                <div class="table-responsive">
-                    <table class="table table-row-bordered table-row-dashed gy-4 align-middle fw-bold">
-                        <thead class="fs-7 text-gray-400 text-uppercase">
-                            <tr>
-                                <th>Siswa</th>
-                                <th>Sekolah Asal</th>
-                                <th>Kelas (Rombel)</th>
-                                <th>Tahun Ajaran</th>
-                                <th class="text-end">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="fs-6">
-                            @forelse($enrollments as $item)
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="symbol symbol-45px me-5">
-                                            <div class="symbol-label fs-2 fw-semibold bg-light-primary text-primary">{{ substr($item->student->user->name ?? 'S', 0, 1) }}</div>
-                                        </div>
-                                        <div class="d-flex justify-content-start flex-column">
-                                            <span class="text-gray-800 fw-bold fs-6">{{ $item->student->user->name ?? '-' }}</span>
-                                            <span class="text-muted fw-semibold d-block fs-7">NISN: {{ $item->student->nisn ?? '-' }}</span>
-                                        </div>
+                {{-- Dikelompokkan per KELAS: satu kartu = satu rombel pada tahun ajaran
+                     terpilih. Daftar siswanya dibuka lewat tombol, supaya halaman ini
+                     tidak lagi berupa daftar siswa memanjang. --}}
+                @forelse($enrollments as $classRoomId => $anggota)
+                    @php $kelas = $anggota->first()->classRoom; @endphp
+                    <div class="card border mb-3" id="grupRombel{{ $loop->index }}wrap">
+                        <div class="card-body py-4">
+                            <div class="d-flex flex-stack flex-wrap gap-3">
+                                <div>
+                                    <div class="fw-bold fs-5 text-gray-900">{{ $kelas->name ?? 'Kelas terhapus' }}</div>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <span class="badge badge-light-dark">{{ $kelas->school->name ?? '-' }}</span>
+                                        <span class="badge badge-light-primary">{{ $anggota->count() }} siswa</span>
+                                        <span class="badge badge-light-warning">{{ $anggota->first()->academicYear->name ?? '-' }}</span>
                                     </div>
-                                </td>
-                                <td>{{ $item->classRoom->school->name ?? '-' }}</td>
-                                <td>
-                                    <span class="badge badge-light-primary fs-7">{{ $item->classRoom->name ?? '-' }}</span>
-                                </td>
-                                <td>{{ $item->academicYear->name ?? '-' }} (Sem {{ $item->academicYear->semester ?? '-' }})</td>
-                                <td class="text-end">
-                                    <form action="{{ route('enrollments.destroy', $item->id) }}" method="POST" class="d-inline">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="btn btn-icon btn-sm btn-light-danger btn-active-danger confirm-delete"  title="Hapus dari Rombel">
-                                            <i class="ki-outline ki-trash fs-2"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="5">
-                                    <div class="text-center px-4 py-15">
-                                        <img src="{{ asset('assets/media/illustrations/sigma-1/5.png') }}" alt="" class="mw-100 mh-200px mb-7">
-                                        <h3 class="fw-bold text-gray-900 mb-2">Belum ada rombongan belajar</h3>
-                                        <p class="text-gray-400 fs-6 fw-semibold">Data penempatan siswa ke dalam kelas (Rombel) belum tersedia. Silakan lakukan plotting siswa.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    @if($kelas)
+                                        <a href="{{ route('class-rooms.students', $kelas->id) }}?academic_year_id={{ $tahunId }}"
+                                            class="btn btn-sm btn-light">Halaman kelas</a>
+                                    @endif
+                                    <button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#grupRombel{{ $loop->index }}">
+                                        <i class="ki-outline ki-eye fs-5 me-1"></i>Lihat {{ $anggota->count() }} siswa
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse mt-4" id="grupRombel{{ $loop->index }}">
+                                <div class="table-responsive">
+                                    <table class="table table-row-dashed align-middle gy-2">
+                                        <thead>
+                                            <tr class="fw-bold text-muted fs-8 text-uppercase">
+                                                <th style="width:46px">#</th><th>Siswa</th><th>NISN</th>
+                                                <th>Sekolah Asal</th><th class="text-end">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($anggota as $n => $item)
+                                                <tr>
+                                                    <td class="text-muted">{{ $n + 1 }}</td>
+                                                    <td class="fw-semibold text-gray-900">{{ $item->student->user->name ?? '-' }}</td>
+                                                    <td>{{ $item->student->nisn ?: '-' }}</td>
+                                                    <td class="text-muted fs-7">{{ $item->classRoom->school->name ?? '-' }}</td>
+                                                    <td class="text-end">
+                                                        <form action="{{ route('enrollments.destroy', $item->id) }}" method="POST" class="d-inline">
+                                                            @csrf @method('DELETE')
+                                                            <button type="submit" class="btn btn-icon btn-sm btn-light-danger confirm-delete"
+                                                                title="Keluarkan dari rombel ini">
+                                                                <i class="ki-outline ki-trash fs-3"></i>
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center px-4 py-15">
+                        <h3 class="fw-bold text-gray-900 mb-2">Belum ada rombongan belajar</h3>
+                        <p class="text-gray-400 fs-6 fw-semibold">Belum ada siswa yang diplot pada tahun ajaran ini.</p>
+                    </div>
+                @endforelse
             </div>
         </div>
     </div>

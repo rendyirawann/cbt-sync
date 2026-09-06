@@ -24,6 +24,42 @@ class ClassRoomController extends Controller
         return view('backend.master.class-rooms.index', compact('classRooms', 'schools'));
     }
 
+    /**
+     * Daftar siswa satu kelas PADA SATU TAHUN AJARAN.
+     *
+     * Keanggotaan rombel disimpan per tahun (class_students.academic_year_id),
+     * jadi halaman ini selalu meminta tahun — bawaannya tahun yang aktif. Dengan
+     * begitu riwayat tahun sebelumnya tetap bisa dibuka, bukan tertimpa.
+     */
+    public function students(Request $request, $id)
+    {
+        $sid = \App\Support\SchoolScope::id();
+        $classRoom = ClassRoom::with('school')
+            ->when($sid, fn ($q) => $q->where('school_id', $sid))
+            ->findOrFail($id);
+
+        $academicYears = \App\Models\AcademicYear::orderByDesc('name')->get();
+        $aktif = $academicYears->firstWhere('is_active', true);
+        $tahunId = $request->input('academic_year_id') ?: $aktif?->id;
+
+        $anggota = \App\Models\ClassStudent::with(['student.user', 'academicYear'])
+            ->where('class_room_id', $classRoom->id)
+            ->when($tahunId, fn ($q) => $q->where('academic_year_id', $tahunId))
+            ->get()
+            ->sortBy(fn ($cs) => $cs->student->user->name ?? '')
+            ->values();
+
+        // Jumlah anggota per tahun, untuk melihat sekilas riwayat kelas ini.
+        $riwayat = \App\Models\ClassStudent::selectRaw('academic_year_id, count(*) as jumlah')
+            ->where('class_room_id', $classRoom->id)
+            ->groupBy('academic_year_id')
+            ->pluck('jumlah', 'academic_year_id');
+
+        return view('backend.master.class-rooms.students', compact(
+            'classRoom', 'anggota', 'academicYears', 'tahunId', 'riwayat'
+        ));
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate($this->rules(), $this->idMessages(), $this->labels());

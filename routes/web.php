@@ -143,10 +143,17 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::resource('/admin/schools', \App\Http\Controllers\Backend\Master\SchoolController::class)->middleware('role:Developer');
     Route::resource('/admin/academic-years', \App\Http\Controllers\Backend\Master\AcademicYearController::class);
     Route::resource('/admin/subjects', \App\Http\Controllers\Backend\Master\SubjectController::class);
+    // Daftar siswa satu kelas (per tahun ajaran) — didaftarkan SEBELUM resource
+    // agar tidak tertangkap route show yang berpola /class-rooms/{id}.
+    Route::get('/admin/class-rooms/{id}/students', [\App\Http\Controllers\Backend\Master\ClassRoomController::class, 'students'])->name('class-rooms.students');
     Route::resource('/admin/class-rooms', \App\Http\Controllers\Backend\Master\ClassRoomController::class);
     Route::resource('/admin/teaching-assignments', \App\Http\Controllers\Backend\Master\TeachingAssignmentController::class);
     Route::resource('/admin/learning-modules', \App\Http\Controllers\Backend\Master\LearningModuleController::class);
     Route::get('/admin/learning-modules/{id}/download', [\App\Http\Controllers\Backend\Master\LearningModuleController::class, 'download'])->name('learning-modules.download');
+    // Naik kelas: didaftarkan SEBELUM resource agar /enrollments/promote tidak
+    // tertangkap route show yang berpola /enrollments/{enrollment}.
+    Route::get('/admin/enrollments/promote', [\App\Http\Controllers\Backend\Master\ClassStudentController::class, 'promoteForm'])->name('enrollments.promote.form');
+    Route::post('/admin/enrollments/promote', [\App\Http\Controllers\Backend\Master\ClassStudentController::class, 'promote'])->name('enrollments.promote');
     Route::resource('/admin/enrollments', \App\Http\Controllers\Backend\Master\ClassStudentController::class);
     Route::resource('/admin/assignments', \App\Http\Controllers\Backend\Master\AssignmentController::class);
     Route::post('/admin/assignments/submission/{submissionId}/score', [\App\Http\Controllers\Backend\Master\AssignmentController::class, 'score'])->name('assignments.score');
