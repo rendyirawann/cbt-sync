@@ -47,12 +47,23 @@ class ExamSession extends Model
      * Daftar siswa yang berhak ikut sesi ini:
      * gabungan siswa kelas (jika class_room_id diisi) + daftar manual.
      */
+    /** Tahun ajaran ujian ini, diambil dari penugasan guru pemiliknya. */
+    public function academicYearId(): ?string
+    {
+        return $this->exam?->teachingAssignment?->academic_year_id;
+    }
+
     public function eligibleStudents()
     {
         $manual = $this->students()->with('user')->get();
 
         if ($this->class_room_id) {
+            // Keanggotaan kelas berlaku PER TAHUN AJARAN. Tanpa saringan ini, siswa
+            // yang sudah naik kelas tetap terhitung anggota kelas lamanya dan ikut
+            // muncul sebagai peserta ujian tahun berikutnya.
+            $tahun = $this->academicYearId();
             $classStudentIds = ClassStudent::where('class_room_id', $this->class_room_id)
+                ->when($tahun, fn ($q) => $q->where('academic_year_id', $tahun))
                 ->pluck('student_id');
             $classStudents = Student::with('user')->whereIn('id', $classStudentIds)->get();
             return $classStudents->concat($manual)->unique('id')->values();

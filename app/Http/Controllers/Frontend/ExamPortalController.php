@@ -24,14 +24,25 @@ class ExamPortalController extends Controller
             return redirect()->route('student.dashboard')->with('error', 'Profil siswa tidak ditemukan.');
         }
 
-        $classIds = ClassStudent::where('student_id', $student->id)->pluck('class_room_id');
+        // Pasangan (kelas, tahun ajaran) milik siswa. Sesi hanya ditawarkan bila
+        // kelasnya cocok DAN tahun ajaran ujiannya sama dengan saat ia terdaftar
+        // di kelas itu — supaya ujian kelas lama tidak muncul setelah naik kelas.
+        $keanggotaan = ClassStudent::where('student_id', $student->id)
+            ->get(['class_room_id', 'academic_year_id']);
 
         $sessions = ExamSession::with(['exam.teachingAssignment.subject', 'classRoom'])
             ->whereHas('exam', fn ($q) => $q->where('status', 'published'))
             ->where('is_active', true)
-            ->where(function ($q) use ($classIds, $student) {
-                $q->whereIn('class_room_id', $classIds)
-                  ->orWhereHas('students', fn ($s) => $s->where('students.id', $student->id));
+            ->where(function ($q) use ($keanggotaan, $student) {
+                $q->where(function ($k) use ($keanggotaan) {
+                    $k->whereRaw('1 = 0');   // tanpa keanggotaan → tidak ada yang cocok
+                    foreach ($keanggotaan as $anggota) {
+                        $k->orWhere(function ($x) use ($anggota) {
+                            $x->where('class_room_id', $anggota->class_room_id)
+                              ->whereHas('exam.teachingAssignment', fn ($t) => $t->where('academic_year_id', $anggota->academic_year_id));
+                        });
+                    }
+                })->orWhereHas('students', fn ($s) => $s->where('students.id', $student->id));
             })
             ->orderBy('starts_at', 'desc')
             ->get();
@@ -641,8 +652,12 @@ class ExamPortalController extends Controller
             return false;
         }
         if ($session->class_room_id) {
+            // Sama seperti eligibleStudents(): keanggotaan kelas dibatasi tahun ajaran.
+            $tahun = $session->academicYearId();
             $inClass = ClassStudent::where('student_id', $student->id)
-                ->where('class_room_id', $session->class_room_id)->exists();
+                ->where('class_room_id', $session->class_room_id)
+                ->when($tahun, fn ($q) => $q->where('academic_year_id', $tahun))
+                ->exists();
             if ($inClass) {
                 return true;
             }

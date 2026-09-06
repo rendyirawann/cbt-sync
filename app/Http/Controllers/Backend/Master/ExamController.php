@@ -81,8 +81,12 @@ class ExamController extends Controller
         // Sesi ujian mengikuti kelas ujian (dari penugasan). Peserta = siswa kelas tsb;
         // "Pilih Siswa" hanya untuk memilih SEBAGIAN siswa kelas yang sama.
         $examClass = $exam->teachingAssignment?->classRoom;
+        // Peserta = siswa kelas itu PADA TAHUN AJARAN ujian ini.
+        $tahunUjian = $exam->teachingAssignment?->academic_year_id;
         $classStudentIds = $examClass
-            ? \App\Models\ClassStudent::where('class_room_id', $examClass->id)->pluck('student_id')
+            ? \App\Models\ClassStudent::where('class_room_id', $examClass->id)
+                ->when($tahunUjian, fn ($q) => $q->where('academic_year_id', $tahunUjian))
+                ->pluck('student_id')
             : collect();
         $students = \App\Models\Student::with('user')->whereIn('id', $classStudentIds)->get();
 
@@ -269,7 +273,10 @@ class ExamController extends Controller
         if ($oldClass === $newClass || !$newClass) {
             return;
         }
-        $validStudentIds = \App\Models\ClassStudent::where('class_room_id', $newClass)->pluck('student_id')->all();
+        $tahunUjian = $exam->teachingAssignment?->academic_year_id;
+        $validStudentIds = \App\Models\ClassStudent::where('class_room_id', $newClass)
+            ->when($tahunUjian, fn ($q) => $q->where('academic_year_id', $tahunUjian))
+            ->pluck('student_id')->all();
         foreach ($exam->sessions as $sess) {
             if ($sess->class_room_id) {
                 // Sesi mode "Satu Kelas" → pindah ke kelas baru.
