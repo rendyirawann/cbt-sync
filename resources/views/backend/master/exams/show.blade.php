@@ -436,17 +436,19 @@
 
             {{-- ================= TAB SESI ================= --}}
             <div class="tab-pane fade" id="tab_sesi">
-                <div class="d-flex mb-5">
+                <div class="d-flex flex-wrap gap-2 mb-5">
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSessionModal" @if($exam->questions->count()===0) disabled title="Tambah soal dulu" @endif>
-                    @if($belumUjian->isNotEmpty())
-                    <button class="btn btn-light-warning" data-bs-toggle="modal" data-bs-target="#makeupSessionModal">
-                        <i class="ki-outline ki-calendar-add fs-5 me-1"></i>Jadwalkan Susulan ({{ $belumUjian->count() }})</button>
-                    @else
-                    <span class="btn btn-light disabled" title="Semua siswa sudah mengikuti ujian ini">
-                        <i class="ki-outline ki-check-circle fs-5 me-1"></i>Tidak ada siswa yang perlu susulan</span>
-                    @endif
                         <i class="ki-outline ki-plus fs-4"></i> Buat Sesi Ujian
                     </button>
+                    @if($belumUjian->isNotEmpty())
+                        <button class="btn btn-light-warning" data-bs-toggle="modal" data-bs-target="#makeupSessionModal">
+                            <i class="ki-outline ki-calendar-add fs-5 me-1"></i>Jadwalkan Susulan ({{ $belumUjian->count() }})
+                        </button>
+                    @else
+                        <span class="btn btn-light disabled" title="Semua siswa sudah mengikuti ujian ini">
+                            <i class="ki-outline ki-check-circle fs-5 me-1"></i>Tidak ada siswa yang perlu susulan
+                        </span>
+                    @endif
                 </div>
                 <div class="row g-4">
                     @forelse($exam->sessions as $s)

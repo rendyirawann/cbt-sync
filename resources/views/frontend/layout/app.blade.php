@@ -30,7 +30,11 @@
 					@unless($hideChrome ?? false) @include('frontend.layout.navbar') @endunless
 
 					<!-- Content -->
-					<div id="kt_content_container" class="d-flex flex-column-fluid align-items-start container-xxl">
+					{{-- Mode ujian (hideChrome) memakai lebar PENUH: pembungkus layout ini yang
+					     sebelumnya membatasi ±1320px, sehingga container-fluid di halaman soal
+					     tidak berpengaruh apa pun. Halaman portal lain tetap container-xxl. --}}
+					<div id="kt_content_container"
+						class="d-flex flex-column-fluid align-items-start {{ ($hideChrome ?? false) ? 'container-fluid px-3 px-lg-5' : 'container-xxl' }}">
 						<div class="content flex-row-fluid" id="kt_content">
 							@yield('content')
 						</div>

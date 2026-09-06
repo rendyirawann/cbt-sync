@@ -316,7 +316,14 @@ class ExamPortalController extends Controller
 
         $request->validate([
             'question_id' => 'required|uuid|exists:questions,id',
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:1024',   // 1 MB — foto sudah dikecilkan di HP sebelum dikirim
+            // Batas 6 MB, bukan 1 MB. Peramban SUDAH mengecilkan foto sebelum
+            // mengirim, tetapi itu tidak bisa dijamin: pada peramban lama, berkas
+            // HEIC, atau bila kanvas gagal, foto asli dari kamera (3–12 MB) yang
+            // terkirim. Dengan batas 1 MB siswa hanya dapat pesan galat; sekarang
+            // fotonya diterima lalu dikecilkan server (kompresFoto: 1600px, mutu 78),
+            // sehingga yang tersimpan tetap ratusan KB. nginx mengizinkan 32M dan
+            // PHP-FPM 64M pada jalur ini, jadi 6 MB aman.
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:6144',
         ]);
 
         $ans = ExamAnswer::firstOrNew(['exam_attempt_id' => $attempt->id, 'question_id' => $request->question_id]);

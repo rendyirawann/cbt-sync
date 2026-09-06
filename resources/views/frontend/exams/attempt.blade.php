@@ -14,6 +14,12 @@
     .opt-label{cursor:pointer;transition:.15s}
     .exam-panel{position:sticky;top:16px}
     /* Soal panjang / bergambar tetap bisa di-scroll layar (alur normal halaman) */
+    /* Ukuran huruf mode ujian: teks soal, opsi, dan jawaban essay dibesarkan
+       agar nyaman dibaca lama, tetap mengecil di layar kecil (lihat @media). */
+    .exam-q{font-size:1.075rem;line-height:1.75}
+    .exam-q .fs-4{font-size:1.35rem !important;line-height:1.6}
+    .opt-label{font-size:1.05rem}
+    .ans-essay{font-size:1.05rem;line-height:1.7}
     .exam-q img{max-width:100%;height:auto;border-radius:10px}
     .exam-q{overflow-wrap:anywhere}
     .rdev-thumb img{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid #e4e6ef;display:block}
@@ -38,21 +44,23 @@
     }
     @media (max-width:575.98px){
         .qnav-grid{grid-template-columns:repeat(6,1fr)}
-        .opt-label{padding:.75rem !important}
-        .exam-q .fs-4{font-size:1.05rem !important}
+        .opt-label{padding:.75rem !important;font-size:1rem}
+        .exam-q{font-size:1rem}
+        .exam-q .fs-4{font-size:1.12rem !important}
+        .ans-essay{font-size:1rem}
     }
 </style>
 @endpush
 
 @section('content')
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl py-6">
+    <div class="app-container container-fluid px-4 px-lg-6 py-6">
         @include('partials.katex')
         @include('partials.math-editor')   {{-- ƒx Rumus (WYSIWYG) untuk jawaban essay siswa (.math-input) --}}
 
         <div class="row g-5">
             {{-- ====== Panel Navigasi (kiri di desktop) ====== --}}
-            <div class="col-lg-4 order-lg-2">
+            <div class="col-lg-4 col-xxl-3 order-lg-2">
                 <div class="card shadow-sm exam-panel">
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
@@ -79,7 +87,7 @@
             </div>
 
             {{-- ====== Area Soal (kanan/utama) ====== --}}
-            <div class="col-lg-8 order-lg-1">
+            <div class="col-lg-8 col-xxl-9 order-lg-1">
                 @php
                     $subjectName = $exam->teachingAssignment->subject->name ?? 'Ujian';
                     $kelasName = $session->class_room_id
@@ -410,22 +418,34 @@
                 var img = new Image();
                 img.onload = function(){
                     try {
-                        var maks = 1600;
-                        var s = Math.min(1, maks / Math.max(img.width, img.height));
-                        var w = Math.max(1, Math.round(img.width * s));
-                        var h = Math.max(1, Math.round(img.height * s));
-                        var c = document.createElement('canvas'); c.width = w; c.height = h;
-                        var ctx = c.getContext('2d');
-                        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);   // PNG transparan → putih
-                        ctx.drawImage(img, 0, 0, w, h);
-                        URL.revokeObjectURL(url);
-                        var mutu = [0.75, 0.6, 0.45, 0.35], i = 0;
+                        // Dicoba bertingkat: turunkan mutu dulu; kalau masih besar,
+                        // kecilkan dimensinya. Tanpa langkah kedua, foto yang sangat
+                        // detail bisa tetap di atas target pada mutu terendah.
+                        var ukuran = [1600, 1200, 900], mutu = [0.75, 0.6, 0.45, 0.35];
+                        var iu = 0, im = 0;
+                        var gambarUlang = function(){
+                            var maks = ukuran[iu];
+                            var s = Math.min(1, maks / Math.max(img.width, img.height));
+                            var w = Math.max(1, Math.round(img.width * s));
+                            var h = Math.max(1, Math.round(img.height * s));
+                            var c = document.createElement('canvas'); c.width = w; c.height = h;
+                            var ctx = c.getContext('2d');
+                            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);   // PNG transparan → putih
+                            ctx.drawImage(img, 0, 0, w, h);
+                            return c;
+                        };
+                        var kanvas = gambarUlang();
                         var coba = function(){
-                            c.toBlob(function(blob){
-                                if (!blob) return resolve(file);                       // gagal → kirim aslinya
-                                if (blob.size <= TARGET_BYTES || i >= mutu.length - 1) return resolve(blob);
-                                i++; coba();
-                            }, 'image/jpeg', mutu[i]);
+                            kanvas.toBlob(function(blob){
+                                if (!blob) return resolve(file);                   // gagal → kirim aslinya
+                                if (blob.size <= TARGET_BYTES) { URL.revokeObjectURL(url); return resolve(blob); }
+                                if (im < mutu.length - 1) { im++; return coba(); }  // turunkan mutu
+                                if (iu < ukuran.length - 1) {                       // lalu kecilkan dimensi
+                                    iu++; im = 0; kanvas = gambarUlang(); return coba();
+                                }
+                                URL.revokeObjectURL(url);
+                                return resolve(blob);   // sudah minimum; server masih menerima s/d 6 MB
+                            }, 'image/jpeg', mutu[im]);
                         };
                         coba();
                     } catch(e){ resolve(file); }
