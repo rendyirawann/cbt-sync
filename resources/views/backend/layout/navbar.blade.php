@@ -19,7 +19,10 @@
 										$dashboardRoute = auth()->user()->hasRole('Siswa') ? 'student.dashboard' : 'dashboard';
 									@endphp
 									<a href="{{ route($dashboardRoute) }}">
-										<img alt="Logo" src="{{ asset('assets/media/logos/cbt-logo.svg') }}" class="h-30px h-lg-40px" />
+										{{-- Dua varian: header berubah gelap pada tema gelap, dan logo biasa
+										     memakai #1e293b untuk kata "CBT" sehingga tidak terbaca di sana. --}}
+										<img alt="Logo" src="{{ asset('assets/media/logos/cbt-logo.svg') }}" class="h-30px h-lg-40px theme-light-show" />
+										<img alt="Logo" src="{{ asset('assets/media/logos/cbt-logo-light.svg') }}" class="h-30px h-lg-40px theme-dark-show" />
 									</a>
 									<!--end::Header Logo-->
 								</div>

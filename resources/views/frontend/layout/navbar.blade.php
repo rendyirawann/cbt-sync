@@ -5,7 +5,10 @@
 		<div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-lg-15">
 			<button type="button" id="portalBurger" class="btn btn-icon p-0 me-3" aria-label="Buka menu"><span style="font-size:26px;line-height:1;color:#fff">&#9776;</span></button>
 			<a href="{{ route('student.dashboard') }}">
-				<img alt="Logo" src="{{ asset('assets/media/logos/cbt-logo.svg') }}" class="h-30px h-lg-40px" />
+				{{-- Navbar portal berlatar gelap pada tema terang MAUPUN gelap, jadi logo
+			     yang dipakai selalu varian terang. Logo biasa memakai warna #1e293b
+			     untuk kata "CBT" sehingga hilang di latar ini. --}}
+			<img alt="Logo" src="{{ asset('assets/media/logos/cbt-logo-light.svg') }}" class="h-30px h-lg-40px" />
 			</a>
 		</div>
 
