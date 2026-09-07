@@ -88,7 +88,8 @@ class ExamController extends Controller
                 ->when($tahunUjian, fn ($q) => $q->where('academic_year_id', $tahunUjian))
                 ->pluck('student_id')
             : collect();
-        $students = \App\Models\Student::with('user')->whereIn('id', $classStudentIds)->get();
+        $students = \App\Models\Student::with('user')->whereIn('id', $classStudentIds)->get()
+            ->sortBy(fn ($s) => $s->user->name ?? '')->values();
 
         // Penugasan untuk mengganti kelas/mapel ujian (Guru: hanya miliknya).
         $user = auth()->user();

@@ -33,13 +33,19 @@ class StudentController extends Controller
 
     public function store(Request $request)
     {
+        // Username kosong = pakai NISN (perilaku lama), tapi kini boleh ditentukan sendiri.
+        $request->merge(['username' => $this->rapikanUsername($request->username, $request->nisn)]);
+
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users,email',
+            'username' => 'required|string|max:50|regex:/^[A-Za-z0-9._-]+$/|unique:users,username',
             'password' => 'required|min:6',
             'nisn' => 'required|unique:students,nisn',
+            'birth_place' => 'nullable|string|max:100',
+            'birth_date' => 'nullable|date|before:today',
             'school_id' => 'required'
-        ]);
+        ], $this->pesanUsername(), $this->labelSiswa());
 
         // Admin sekolah dipaksa ke sekolahnya sendiri (tidak bisa buat data sekolah lain).
         $schoolId = \App\Support\SchoolScope::id() ?: $request->school_id;
@@ -51,7 +57,7 @@ class StudentController extends Controller
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
-                'username' => $request->nisn,
+                'username' => $request->username,
                 'no_wa' => $request->phone,
                 'phone' => $request->phone,
                 'school_id' => $schoolId,
@@ -71,6 +77,8 @@ class StudentController extends Controller
                 'nisn' => $request->nisn,
                 'phone' => $request->phone,
                 'gender' => $request->gender,
+                'birth_place' => $request->birth_place,
+                'birth_date' => $request->birth_date,
                 'address' => $request->address,
                 'parent_name' => $request->parent_name,
                 'parent_email' => $request->parent_email,
@@ -90,12 +98,17 @@ class StudentController extends Controller
     {
         $student = Student::findOrFail($id);
         
+        $request->merge(['username' => $this->rapikanUsername($request->username, $request->nisn)]);
+
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users,email,' . $student->user_id,
+            'username' => 'required|string|max:50|regex:/^[A-Za-z0-9._-]+$/|unique:users,username,' . $student->user_id,
             'nisn' => 'required|unique:students,nisn,' . $student->id,
+            'birth_place' => 'nullable|string|max:100',
+            'birth_date' => 'nullable|date|before:today',
             'school_id' => 'required'
-        ]);
+        ], $this->pesanUsername(), $this->labelSiswa());
 
         try {
             \DB::beginTransaction();
@@ -103,6 +116,7 @@ class StudentController extends Controller
             $user = $student->user;
             $user->name = $request->name;
             $user->email = $request->email;
+            $user->username = $request->username;
             if ($request->filled('password')) {
                 $user->password = \Hash::make($request->password);
             }
@@ -113,6 +127,8 @@ class StudentController extends Controller
                 'nisn' => $request->nisn,
                 'phone' => $request->phone,
                 'gender' => $request->gender,
+                'birth_place' => $request->birth_place,
+                'birth_date' => $request->birth_date,
                 'address' => $request->address,
                 'parent_name' => $request->parent_name,
                 'parent_email' => $request->parent_email,
@@ -125,6 +141,35 @@ class StudentController extends Controller
             \DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Username kosong => pakai NISN (perilaku lama sebelum kolom ini bisa diisi).
+     * Spasi dibuang dan huruf dikecilkan supaya tidak ada dua username yang
+     * hanya berbeda kapitalisasi.
+     */
+    private function rapikanUsername($username, $nisn): string
+    {
+        $u = trim((string) $username);
+        return strtolower($u !== '' ? $u : trim((string) $nisn));
+    }
+
+    private function pesanUsername(): array
+    {
+        return $this->idMessages() + [
+            'username.regex' => 'Username hanya boleh berisi huruf, angka, titik, garis bawah, dan tanda hubung (tanpa spasi).',
+            'username.unique' => 'Username ini sudah dipakai akun lain.',
+            'birth_date.before' => 'Tanggal lahir harus tanggal yang sudah lewat.',
+        ];
+    }
+
+    private function labelSiswa(): array
+    {
+        return [
+            'name' => 'Nama Lengkap', 'email' => 'Email', 'username' => 'Username',
+            'password' => 'Password', 'nisn' => 'NISN', 'school_id' => 'Sekolah',
+            'birth_place' => 'Tempat Lahir', 'birth_date' => 'Tanggal Lahir',
+        ];
     }
 
     public function template()
@@ -156,12 +201,15 @@ class StudentController extends Controller
             if (!$school) { $errors[] = "Baris $line: Sekolah \"{$row['school']}\" tidak ditemukan."; continue; }
             $nisn = $row['nisn'] ?? '';
             if ($nisn !== '' && Student::where('nisn', $nisn)->exists()) { $errors[] = "Baris $line: NISN \"$nisn\" sudah dipakai."; continue; }
+            $unameCek = $this->rapikanUsername($row['username'] ?? '', $nisn !== '' ? $nisn : $row['email']);
+            if (User::where('username', $unameCek)->exists()) { $errors[] = "Baris $line: Username \"$unameCek\" sudah dipakai akun lain."; continue; }
             try {
                 DB::transaction(function () use ($row, $school, $nisn, $activeYear) {
+                    $username = $this->rapikanUsername($row['username'] ?? '', $nisn !== '' ? $nisn : $row['email']);
                     $user = User::create([
                         'name' => $row['name'],
                         'email' => $row['email'],
-                        'username' => $nisn !== '' ? $nisn : $row['email'],
+                        'username' => $username,
                         'no_wa' => $row['phone'] ?? null,
                         'phone' => $row['phone'] ?? null,
                         'school_id' => $school->id,
@@ -176,6 +224,8 @@ class StudentController extends Controller
                         'nisn' => $nisn !== '' ? $nisn : null,
                         'phone' => $row['phone'] ?? null,
                         'gender' => in_array($row['gender'] ?? '', ['L', 'P']) ? $row['gender'] : null,
+                        'birth_place' => $row['birth_place'] ?? null,
+                        'birth_date' => $this->tanggalExcel($row['birth_date'] ?? null),
                         'address' => $row['address'] ?? null,
                         'parent_name' => $row['parent_name'] ?? null,
                         'parent_email' => $row['parent_email'] ?? null,
@@ -199,6 +249,26 @@ class StudentController extends Controller
         return $this->importSummary($imported, $skipped, $errors);
     }
 
+    /**
+     * Tanggal dari Excel bisa datang sebagai teks (31/12/2010, 2010-12-31) atau
+     * angka serial Excel. Nilai yang tidak bisa dibaca dianggap kosong daripada
+     * menggagalkan seluruh baris.
+     */
+    private function tanggalExcel($nilai)
+    {
+        $v = trim((string) $nilai);
+        if ($v === '') return null;
+        if (is_numeric($v)) {
+            try { return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $v)->format('Y-m-d'); }
+            catch (\Throwable $e) { return null; }
+        }
+        foreach (['d/m/Y', 'd-m-Y', 'Y-m-d', 'd/m/y'] as $format) {
+            $d = \DateTime::createFromFormat($format, $v);
+            if ($d && $d->format($format) === $v) return $d->format('Y-m-d');
+        }
+        try { return \Carbon\Carbon::parse($v)->format('Y-m-d'); } catch (\Throwable $e) { return null; }
+    }
+
     private function spec(): array
     {
         return [
@@ -209,15 +279,20 @@ class StudentController extends Controller
                 'Password kosong = default "siswa12345".',
                 'Nama Sekolah harus sudah terdaftar. Kolom Kelas opsional (isi nama kelas untuk langsung memasukkan siswa ke rombel tahun ajaran aktif).',
                 'Gender diisi L atau P.',
+                'Username kosong = otomatis memakai NISN (atau email bila NISN kosong). Username harus unik.',
+                'Tanggal Lahir format dd/mm/yyyy, mis. 17/08/2010.',
             ],
             'columns' => [
                 ['key' => 'name', 'label' => 'Nama', 'required' => true, 'width' => 28],
                 ['key' => 'email', 'label' => 'Email', 'required' => true, 'width' => 26, 'hint' => 'untuk login'],
                 ['key' => 'password', 'label' => 'Password', 'width' => 16, 'hint' => 'kosong = siswa12345'],
+                ['key' => 'username', 'label' => 'Username', 'width' => 18, 'hint' => 'kosong = NISN'],
                 ['key' => 'nisn', 'label' => 'NISN', 'width' => 18],
                 ['key' => 'school', 'label' => 'Nama Sekolah', 'required' => true, 'width' => 30, 'hint' => 'harus sudah ada'],
                 ['key' => 'class', 'label' => 'Kelas', 'width' => 16, 'hint' => 'opsional (nama kelas)'],
                 ['key' => 'gender', 'label' => 'Gender', 'width' => 10, 'options' => ['L', 'P']],
+                ['key' => 'birth_place', 'label' => 'Tempat Lahir', 'width' => 20],
+                ['key' => 'birth_date', 'label' => 'Tanggal Lahir', 'width' => 16, 'hint' => 'dd/mm/yyyy'],
                 ['key' => 'phone', 'label' => 'No. HP/WA', 'width' => 16],
                 ['key' => 'address', 'label' => 'Alamat', 'width' => 26],
                 ['key' => 'parent_name', 'label' => 'Nama Ortu', 'width' => 24],
@@ -225,7 +300,7 @@ class StudentController extends Controller
                 ['key' => 'parent_phone', 'label' => 'No. HP Ortu', 'width' => 18],
             ],
             'examples' => [
-                ['name' => 'Andi Pratama', 'email' => 'andi@siswa.id', 'password' => '', 'nisn' => '0012345678', 'school' => 'SMA Negeri 1 Medan', 'class' => 'X-IPA 1', 'gender' => 'L', 'phone' => '081200001111', 'address' => 'Jl. Kenanga 3', 'parent_name' => 'Bpk. Pratama', 'parent_email' => 'ortu.andi@mail.com', 'parent_phone' => '081211112222'],
+                ['name' => 'Andi Pratama', 'email' => 'andi@siswa.id', 'password' => '', 'username' => 'andi.pratama', 'nisn' => '0012345678', 'school' => 'SMA Negeri 1 Medan', 'class' => 'X-IPA 1', 'gender' => 'L', 'birth_place' => 'Medan', 'birth_date' => '17/08/2010', 'phone' => '081200001111', 'address' => 'Jl. Kenanga 3', 'parent_name' => 'Bpk. Pratama', 'parent_email' => 'ortu.andi@mail.com', 'parent_phone' => '081211112222'],
             ],
         ];
     }

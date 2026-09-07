@@ -26,6 +26,8 @@
                             <tr>
                                 <th>NISN</th>
                                 <th>Nama Lengkap</th>
+                                <th>Username</th>
+                                <th>Tempat &amp; Tgl. Lahir</th>
                                 <th>Asal Sekolah</th>
                                 <th>Email (Akun Login)</th>
                                 <th>Gender</th>
@@ -37,6 +39,11 @@
                             <tr>
                                 <td>{{ $item->nisn }}</td>
                                 <td>{{ $item->user->name ?? '-' }}</td>
+                                <td>{{ $item->user->username ?? '-' }}</td>
+                                <td>
+                                    {{ $item->birth_place ?: '-' }}
+                                    <div class="text-muted fs-8 fw-semibold">{{ $item->birth_date ? $item->birth_date->translatedFormat('d F Y') : 'tanggal lahir belum diisi' }}</div>
+                                </td>
                                 <td>{{ $item->school->name ?? '-' }}</td>
                                 <td>{{ $item->user->email ?? '-' }}</td>
                                 <td>{{ $item->gender == 'L' ? 'Laki-laki' : 'Perempuan' }}</td>
@@ -50,7 +57,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="6">
+                                <td colspan="8">
                                     <div class="text-center px-4 py-15">
                                         <img src="{{ asset('assets/media/illustrations/sigma-1/5.png') }}" alt="" class="mw-100 mh-200px mb-7">
                                         <h3 class="fw-bold text-gray-900 mb-2">Belum ada data siswa</h3>
@@ -82,6 +89,11 @@
                     <h5 class="mb-4 text-primary">Informasi Akun (Login)</h5>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Nama Lengkap</label><input type="text" name="name" class="form-control form-control-solid" required></div>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Email</label><input type="email" name="email" class="form-control form-control-solid" required></div>
+                    <div class="fv-row mb-5">
+                        <label class="fs-6 fw-semibold mb-2">Username</label>
+                        <input type="text" name="username" class="form-control form-control-solid" placeholder="kosongkan = otomatis memakai NISN">
+                        <div class="text-muted fs-7 mt-2">Huruf, angka, titik, garis bawah, dan tanda hubung. Harus unik antar seluruh akun.</div>
+                    </div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Password</label><input type="password" name="password" class="form-control form-control-solid" required></div>
                     
                     <h5 class="mb-4 text-primary border-top pt-4">Profil Siswa</h5>
@@ -97,7 +109,7 @@
                     <div class="fv-row mb-5">
                         <label class="required fs-6 fw-semibold mb-2">NISN</label>
                         <input type="text" name="nisn" class="form-control form-control-solid" required>
-                        <div class="text-muted fs-7 mt-2">NISN ini otomatis digunakan sebagai <b>Username</b> untuk login akun Siswa.</div>
+                        <div class="text-muted fs-7 mt-2">Bila kolom <b>Username</b> di atas dikosongkan, NISN ini yang dipakai sebagai username. Login siswa sendiri memakai <b>email</b>.</div>
                     </div>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Telepon</label><input type="text" name="phone" class="form-control form-control-solid"></div>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Jenis Kelamin</label>
@@ -105,6 +117,16 @@
                             <option value="L">Laki-laki</option>
                             <option value="P">Perempuan</option>
                         </select>
+                    </div>
+                    <div class="row mb-5">
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">Tempat Lahir</label>
+                            <input type="text" name="birth_place" class="form-control form-control-solid" placeholder="cth: Medan">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">Tanggal Lahir</label>
+                            <input type="date" name="birth_date" class="form-control form-control-solid" max="{{ now()->subDay()->format('Y-m-d') }}">
+                        </div>
                     </div>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Alamat</label><textarea name="address" class="form-control form-control-solid"></textarea></div>
 
@@ -148,6 +170,11 @@
                     <h5 class="mb-4 text-primary">Informasi Akun (Login)</h5>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Nama Lengkap</label><input type="text" name="name" class="form-control form-control-solid" value="{{ $item->user->name ?? '' }}" required></div>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Email</label><input type="email" name="email" class="form-control form-control-solid" value="{{ $item->user->email ?? '' }}" required></div>
+                    <div class="fv-row mb-5">
+                        <label class="fs-6 fw-semibold mb-2">Username</label>
+                        <input type="text" name="username" class="form-control form-control-solid" value="{{ $item->user->username ?? '' }}" placeholder="kosongkan = otomatis memakai NISN">
+                        <div class="text-muted fs-7 mt-2">Huruf, angka, titik, garis bawah, dan tanda hubung. Harus unik antar seluruh akun.</div>
+                    </div>
                     <div class="fv-row mb-7"><label class="fs-6 fw-semibold mb-2">Password (Kosongkan jika tidak diubah)</label><input type="password" name="password" class="form-control form-control-solid"></div>
                     
                     <h5 class="mb-4 text-primary border-top pt-4">Profil Siswa</h5>
@@ -168,6 +195,16 @@
                             <option value="L" {{ $item->gender == 'L' ? 'selected' : '' }}>Laki-laki</option>
                             <option value="P" {{ $item->gender == 'P' ? 'selected' : '' }}>Perempuan</option>
                         </select>
+                    </div>
+                    <div class="row mb-5">
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">Tempat Lahir</label>
+                            <input type="text" name="birth_place" class="form-control form-control-solid" value="{{ $item->birth_place }}" placeholder="cth: Medan">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">Tanggal Lahir</label>
+                            <input type="date" name="birth_date" class="form-control form-control-solid" value="{{ $item->birth_date?->format('Y-m-d') }}" max="{{ now()->subDay()->format('Y-m-d') }}">
+                        </div>
                     </div>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Alamat</label><textarea name="address" class="form-control form-control-solid">{{ $item->address }}</textarea></div>
 

@@ -140,10 +140,9 @@
                     <div class="alert alert-light-primary py-2 mb-0 fs-8">Semua siswa kelas <b>{{ $examClass->name ?? '-' }}</b> ({{ $students->count() }} siswa) otomatis menjadi peserta.</div>
                 </div>
                 <div class="by-student-wrap mb-4" style="display:none">
-                    <select name="students[]" class="form-select" multiple size="6">
-                        @foreach($students as $st)<option value="{{ $st->id }}">{{ $st->user->name ?? 'Siswa' }}</option>@endforeach
-                    </select>
-                    <span class="text-muted fs-8">Pilih sebagian siswa kelas {{ $examClass->name ?? '' }} (mis. bagi sesi pagi/siang atau remedial). Tahan Ctrl/Cmd untuk memilih beberapa.</span>
+                    @include('backend.master.exams._pilih-siswa', ['uid' => 'psBuat'])
+                    <span class="text-muted fs-8 d-block mt-2">Centang siswa kelas {{ $examClass->name ?? '' }} yang ikut sesi ini (mis. bagi sesi pagi/siang atau remedial).
+                        <b>Pilih semua</b>/<b>Kosongkan</b> berlaku pada daftar yang sedang tampil, dan klik sambil menahan <b>Shift</b> mencentang satu rentang sekaligus.</span>
                 </div>
 
                 <div class="row">

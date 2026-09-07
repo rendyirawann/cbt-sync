@@ -523,10 +523,9 @@
                                         <div class="alert alert-light-primary py-2 mb-0 fs-8">Semua siswa kelas <b>{{ $examClass->name ?? '-' }}</b> ({{ $students->count() }} siswa) menjadi peserta.</div>
                                     </div>
                                     <div class="by-student-wrap mb-4" style="{{ $sMode==='manual' ? '' : 'display:none' }}">
-                                        <select name="students[]" class="form-select" multiple size="6">
-                                            @foreach($students as $st)<option value="{{ $st->id }}" @selected(in_array($st->id,$sStudentIds))>{{ $st->user->name ?? 'Siswa' }}</option>@endforeach
-                                        </select>
-                                        <span class="text-muted fs-8">Pilih sebagian siswa kelas {{ $examClass->name ?? '' }}. Tahan Ctrl/Cmd untuk memilih beberapa.</span>
+                                        @include('backend.master.exams._pilih-siswa', ['terpilih' => $sStudentIds, 'uid' => 'psEdit'.$s->id])
+                                        <span class="text-muted fs-8 d-block mt-2">Centang siswa kelas {{ $examClass->name ?? '' }} yang ikut sesi ini.
+                                            <b>Pilih semua</b>/<b>Kosongkan</b> berlaku pada daftar yang sedang tampil, dan klik sambil menahan <b>Shift</b> mencentang satu rentang sekaligus.</span>
                                     </div>
 
                                     <div class="row">
@@ -598,24 +597,12 @@
                                 <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" name="shuffle_options" checked><span class="form-check-label fs-8 ms-2">Acak opsi</span></label>
                                 <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" name="show_result"><span class="form-check-label fs-8 ms-2">Tampilkan hasil ke siswa</span></label>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="form-label mb-0 required">Peserta susulan</label>
-                                <label class="form-check form-check-sm">
-                                    <input class="form-check-input" type="checkbox" id="makeupAll" checked>
-                                    <span class="form-check-label fs-8 ms-2">Pilih semua</span>
-                                </label>
-                            </div>
-                            <div style="max-height:38vh;overflow:auto">
-                                @foreach($belumUjian as $s)
-                                    <label class="d-flex align-items-center gap-3 border rounded p-3 mb-2">
-                                        <input class="form-check-input makeup-item" type="checkbox" name="students[]" value="{{ $s->id }}" checked>
-                                        <div>
-                                            <div class="fw-semibold text-gray-900 fs-7">{{ $s->user->name ?? '-' }}</div>
-                                            <div class="text-muted fs-8">{{ $s->nisn ?? 'tanpa NISN' }} · {{ $s->user->email ?? '-' }}</div>
-                                        </div>
-                                    </label>
-                                @endforeach
-                            </div>
+                            <label class="form-label required">Peserta susulan</label>
+                            @include('backend.master.exams._pilih-siswa', [
+                                'students' => $belumUjian,
+                                'terpilih' => $belumUjian->pluck('id')->all(),
+                                'uid' => 'psSusulan',
+                            ])
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn btn-warning">Buat Sesi Susulan</button>
@@ -654,14 +641,60 @@
 
 @push('scripts')
 <script>
-    // ---- Susulan: pilih semua peserta ----
-    (function(){
-        var semua = document.getElementById('makeupAll');
-        if (!semua) return;
-        semua.addEventListener('change', function(){
-            document.querySelectorAll('#makeupSessionModal .makeup-item').forEach(function(c){ c.checked = semua.checked; });
+    // ---- Pemilih peserta massal (Buat Sesi, Edit Sesi, Susulan) ----
+    // Satu handler untuk semua blok .js-pilih-siswa; "Pilih semua"/"Kosongkan"
+    // hanya menyentuh baris yang sedang tampil supaya bisa dipakai bersama
+    // pencarian (mis. cari "MM-X" lalu pilih semua hasilnya).
+    document.querySelectorAll('.js-pilih-siswa').forEach(function (blok) {
+        var cari    = blok.querySelector('.js-cari');
+        var jumlah  = blok.querySelector('.js-jumlah');
+        var hampa   = blok.querySelector('.js-kosong-hasil');
+        var baris   = Array.prototype.slice.call(blok.querySelectorAll('.js-baris'));
+        var terakhir = null;   // untuk pilih rentang dengan Shift
+
+        function tampil() { return baris.filter(function (b) { return b.style.display !== 'none'; }); }
+        function kotak(b) { return b.querySelector('.js-item'); }
+
+        function hitung() {
+            var n = blok.querySelectorAll('.js-item:checked').length;
+            jumlah.textContent = n + ' dipilih';
+            jumlah.className = 'badge js-jumlah ' + (n ? 'badge-light-primary' : 'badge-light');
+        }
+
+        if (cari) cari.addEventListener('input', function () {
+            var kunci = this.value.trim().toLowerCase();
+            baris.forEach(function (b) {
+                b.style.display = (!kunci || b.dataset.cari.indexOf(kunci) !== -1) ? '' : 'none';
+            });
+            if (hampa) hampa.style.display = (baris.length && tampil().length === 0) ? '' : 'none';
         });
-    })();
+
+        blok.querySelector('.js-semua').addEventListener('click', function () {
+            tampil().forEach(function (b) { kotak(b).checked = true; });
+            hitung();
+        });
+        blok.querySelector('.js-kosong').addEventListener('click', function () {
+            tampil().forEach(function (b) { kotak(b).checked = false; });
+            hitung();
+        });
+
+        blok.addEventListener('click', function (e) {
+            var item = e.target.closest('.js-item');
+            if (!item) return;
+            var b = item.closest('.js-baris');
+            if (e.shiftKey && terakhir && terakhir !== b) {
+                var t = tampil(), a = t.indexOf(terakhir), z = t.indexOf(b);
+                if (a > -1 && z > -1) {
+                    t.slice(Math.min(a, z), Math.max(a, z) + 1)
+                     .forEach(function (r) { kotak(r).checked = item.checked; });
+                }
+            }
+            terakhir = b;
+            hitung();
+        });
+
+        hitung();
+    });
 
     // ---- Atur Soal Aktif: tampilkan bagian yang relevan sesuai mode ----
     (function(){

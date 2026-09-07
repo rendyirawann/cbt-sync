@@ -52,6 +52,10 @@
                                 <div class="fw-bold fs-6">{{ $student->nisn ?: '-' }}</div>
                             </div>
                             <div class="col-md-6 mb-3">
+                                <div class="text-muted fs-8">Tempat &amp; Tanggal Lahir</div>
+                                <div class="fw-bold fs-6">{{ $student->birth_place ?: '-' }}{{ $student->birth_date ? ', ' . $student->birth_date->translatedFormat('d F Y') : '' }}</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
                                 <div class="text-muted fs-8">Kelas</div>
                                 <div class="fw-bold fs-6">{{ $kelas->name ?? '-' }}</div>
                             </div>

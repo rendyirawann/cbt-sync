@@ -9,6 +9,9 @@ use App\Traits\LogsAllActivity;
 class Student extends Model
 {
     protected $guarded = [];
+
+    // birth_date harus jadi objek tanggal agar bisa diformat di view.
+    protected $casts = ['birth_date' => 'date'];
     use HasUuids, LogsAllActivity;
     public function school()
     {
