@@ -35,7 +35,20 @@ class AppServiceProvider extends ServiceProvider
 
         // Rate limiter login: wajar (5x/menit per email+IP), melengkapi progressive-lockout di LoginRequest.
         RateLimiter::for('login', function ($request) {
-            return Limit::perMinute(5)->by(Str::lower((string) $request->input('email')) . '|' . $request->ip());
+            // Ember dibedakan per IDENTITAS + IP, bukan per IP saja.
+            //
+            // Ini penting sekali di hari ujian: satu sekolah keluar lewat SATU
+            // IP publik (NAT), jadi kalau kuncinya hanya IP, siswa ke-6 dan
+            // seterusnya kena 429 padahal passwordnya benar.
+            //
+            // Portal siswa mengirim field `login` (email/username/NISN),
+            // sedangkan login admin mengirim `email`. Keduanya harus dibaca —
+            // sebelumnya hanya `email`, sehingga sejak portal siswa memakai
+            // `login` identitasnya selalu kosong dan seluruh siswa satu sekolah
+            // berbagi satu ember 5/menit.
+            $identitas = Str::lower((string) ($request->input('login') ?? $request->input('email')));
+
+            return Limit::perMinute(5)->by($identitas . '|' . $request->ip());
         });
 
         // Share settings globally to all views
