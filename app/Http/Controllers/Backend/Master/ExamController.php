@@ -122,8 +122,13 @@ class ExamController extends Controller
         // ini — lintas sekolah tetap boleh (sekolah A boleh memakai soal sekolah B),
         // dan soal yang ditarik disalin menjadi milik ujian ini.
         $bankLevel = \App\Support\BankSoal::tingkat($exam);
+        // Soal ujian yang masih berjalan di sekolah lain TIDAK ditawarkan di sini
+        // (lihat QuestionBank::scopeTerlihatOleh). Sekolah pembanding adalah
+        // sekolah ujian ini, bukan sekolah akun yang membuka halaman.
+        $sekolahUjian = $exam->teachingAssignment?->classRoom?->school_id;
         $bankQuestions = $subjectId
             ? \App\Models\QuestionBank::with(['options', 'subject', 'school', 'sourceSchool'])
+                ->terlihatOleh($sekolahUjian)
                 ->where('subject_id', $subjectId)
                 ->when($bankLevel, fn ($q) => $q->where('level', $bankLevel))
                 ->when(!$exam->hasMc(), fn ($q) => $q->where('type', 'essay'))

@@ -19,6 +19,18 @@
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
+        @if($adaGerbang)
+        {{-- Tanpa keterangan ini, daftar yang lebih pendek dari perkiraan akan
+             terasa seperti data hilang. --}}
+        <div class="alert bg-light-primary border border-primary border-dashed d-flex align-items-center mb-5 p-4">
+            <i class="ki-outline ki-shield-tick fs-2x text-primary me-3"></i>
+            <div class="fs-8 text-gray-700">
+                Soal sekolah lain hanya muncul di sini setelah <b>ujian asalnya selesai</b>.
+                Selama ujian sekolah lain masih berjalan, soalnya disembunyikan supaya tidak bocor.
+                <b>Soal sekolah Anda sendiri tetap tampil seluruhnya</b>, apa pun status ujiannya.
+            </div>
+        </div>
+        @endif
         {{-- Filter --}}
         <div class="card mb-5"><div class="card-body py-4">
             <form method="GET" class="row g-3 align-items-end">

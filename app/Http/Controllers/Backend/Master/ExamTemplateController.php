@@ -501,7 +501,11 @@ class ExamTemplateController extends Controller
         $ext = in_array($image['ext'], ['jpg', 'jpeg', 'png', 'gif']) ? $image['ext'] : 'png';
         $path = 'exam-questions/' . Str::uuid() . '.' . $ext;
         Storage::disk('public')->put($path, $image['bytes']);
-        return $path;
+
+        // Ini jalur gambar TERBESAR: dokumen Word sering memuat foto beresolusi
+        // penuh dari kamera/ponsel apa adanya. PNG tetap lossless, JPEG
+        // dikecilkan (lihat App\Support\GambarSoal).
+        return \App\Support\GambarSoal::kecilkan($path);
     }
 
     private function findHeaderRow(array $grid): ?int

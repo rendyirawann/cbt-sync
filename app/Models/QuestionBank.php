@@ -45,6 +45,46 @@ class QuestionBank extends Model
         return $this->hasMany(QuestionBankOption::class)->orderBy('order');
     }
 
+    /**
+     * Gerbang kebocoran soal antar sekolah.
+     *
+     * Bank Soal memang lintas sekolah, TAPI soal ujian yang masih berjalan tidak
+     * boleh terbaca sekolah lain: bila dua sekolah mengikuti asesmen yang sama,
+     * guru sekolah B bisa melihat soal sekolah A sebelum ujiannya dilaksanakan.
+     *
+     * Aturannya:
+     *   • soal sekolah SENDIRI  → selalu terlihat (bank internal tetap utuh);
+     *   • soal sekolah LAIN     → hanya bila ujian asalnya sudah Selesai
+     *                             (finished) atau diarsipkan (history);
+     *   • source_exam_id NULL   → dianggap boleh, karena ujian asalnya sudah
+     *                             tidak ada di sistem sehingga mustahil sedang
+     *                             berlangsung (judulnya tetap terpotret di
+     *                             source_exam_title);
+     *   • Superadmin & Developer melihat semuanya, sejalan dengan hak mereka
+     *     pada ujian berstatus Selesai.
+     *
+     * Dipakai bersama oleh halaman Bank Soal dan modal "Tarik dari Bank Soal"
+     * supaya aturannya tidak bisa berbeda di dua tempat.
+     */
+    public function scopeTerlihatOleh($query, ?string $schoolId)
+    {
+        if (\App\Support\SiklusUjian::pengawas()) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($schoolId) {
+            if ($schoolId) {
+                $q->where('school_id', $schoolId);
+            }
+
+            $q->orWhereNull('source_exam_id')
+              ->orWhereHas('sourceExam', fn ($e) => $e->whereIn('status', [
+                  \App\Support\SiklusUjian::SELESAI,
+                  \App\Support\SiklusUjian::RIWAYAT,
+              ]));
+        });
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

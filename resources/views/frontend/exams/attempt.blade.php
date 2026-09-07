@@ -132,7 +132,11 @@
                             <span class="badge badge-circle badge-primary fs-5 me-3">{{ $no }}</span>
                             <div class="fw-semibold text-gray-900 fs-4">{!! nl2br(e($q->question_text)) !!}</div>
                         </div>
-                        @if($q->image_path)<img src="{{ asset('storage/'.$q->image_path) }}" class="mb-4 d-block" alt="Gambar soal">@endif
+                        {{-- loading="lazy": semua soal ada di DOM (berpindah soal hanya
+                             mengubah display), dan tanpa ini browser mengunduh SELURUH
+                             gambar soal saat halaman dibuka. mw-100 mencegah gambar
+                             lebar meluber keluar kartu di layar ponsel. --}}
+                        @if($q->image_path)<img src="{{ asset('storage/'.$q->image_path) }}" class="mb-4 d-block mw-100 h-auto soal-img" loading="lazy" decoding="async" alt="Gambar soal">@endif
 
                         @if($q->type === 'mc')
                             <div class="d-flex flex-column gap-2">
@@ -146,7 +150,7 @@
                                     <span class="badge badge-light-primary me-3">{{ chr(65 + $loop->index) }}</span>
                                     <span class="d-flex flex-column">
                                         @if($opt->option_text)<span class="text-gray-800 fs-5">{{ $opt->option_text }}</span>@endif
-                                        @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded mt-1 mh-150px" alt="Gambar opsi {{ chr(65 + $loop->index) }}">@endif
+                                        @if($opt->image_path)<img src="{{ asset('storage/'.$opt->image_path) }}" class="rounded mt-1 mh-150px mw-100 soal-img" loading="lazy" decoding="async" alt="Gambar opsi {{ chr(65 + $loop->index) }}">@endif
                                     </span>
                                 </label>
                                 @endforeach
@@ -289,6 +293,15 @@
 
     function render(){
         cards.forEach((c, i) => c.style.display = (i === current ? 'block' : 'none'));
+        // Gambar soal berikutnya dihangatkan lebih dulu supaya siswa tidak
+        // menunggu unduhan saat menekan "Berikutnya". Yang jauh tetap ditunda.
+        [current + 1, current + 2].forEach(function (i) {
+            var c = cards[i];
+            if (!c) return;
+            c.querySelectorAll('img.soal-img[loading="lazy"]').forEach(function (im) {
+                im.loading = 'eager';
+            });
+        });
         navBtns.forEach((b, i) => b.classList.toggle('current', i === current));
         document.getElementById('prevBtn').disabled = (current === 0);
         const nb = document.getElementById('nextBtn');

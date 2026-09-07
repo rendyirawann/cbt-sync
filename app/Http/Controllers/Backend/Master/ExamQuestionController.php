@@ -50,7 +50,8 @@ class ExamQuestionController extends Controller
                 ];
 
                 if ($request->hasFile('image')) {
-                    $data['image_path'] = $request->file('image')->store('exam-questions', 'public');
+                    $data['image_path'] = \App\Support\GambarSoal::kecilkan(
+                        $request->file('image')->store('exam-questions', 'public'));
                 }
 
                 $question = Question::create($data);
@@ -105,7 +106,8 @@ class ExamQuestionController extends Controller
                     if ($question->image_path) {
                         Storage::disk('public')->delete($question->image_path);
                     }
-                    $data['image_path'] = $request->file('image')->store('exam-questions', 'public');
+                    $data['image_path'] = \App\Support\GambarSoal::kecilkan(
+                        $request->file('image')->store('exam-questions', 'public'));
                 }
 
                 $question->update($data);
@@ -238,7 +240,8 @@ class ExamQuestionController extends Controller
             $question->options()->create([
                 'label' => chr(65 + $i),
                 'option_text' => $text,
-                'image_path' => $hasFile ? $request->file("option_images.$idx")->store('exam-options', 'public') : null,
+                'image_path' => $hasFile ? \App\Support\GambarSoal::kecilkan(
+                    $request->file("option_images.$idx")->store('exam-options', 'public')) : null,
                 'is_correct' => ($idx === $correct),
                 'order' => $i,
             ]);
@@ -284,7 +287,8 @@ class ExamQuestionController extends Controller
                 if ($imgPath) {
                     Storage::disk('public')->delete($imgPath);
                 }
-                $imgPath = $request->file("option_images.$idx")->store('exam-options', 'public');
+                $imgPath = \App\Support\GambarSoal::kecilkan(
+                    $request->file("option_images.$idx")->store('exam-options', 'public'));
             }
 
             $payload = [

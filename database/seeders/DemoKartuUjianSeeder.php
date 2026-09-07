@@ -249,6 +249,11 @@ class DemoKartuUjianSeeder extends Seeder
                         'order' => $k + 1,
                     ]);
                 }
+
+                // Soal yang dibuat guru lewat aplikasi otomatis tercermin ke Bank
+                // Soal; di seeder kita membuat baris langsung, jadi pencerminannya
+                // dipanggil manual agar contoh Bank Soal ikut terisi.
+                \App\Support\BankSoal::cerminkan($q->fresh('options'), $e);
             }
         }
 

@@ -22,19 +22,6 @@
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
-        {{-- Penjelasan siklus, supaya hilangnya ujian yang sudah selesai tidak
-             terasa seperti data terhapus. --}}
-        <div class="alert bg-light-primary border border-primary border-dashed d-flex align-items-center mb-5 p-4">
-            <i class="ki-outline ki-information-5 fs-2x text-primary me-3"></i>
-            <div class="fs-8 text-gray-700">
-                <b>Available</b> = ujian berjalan, tampil di Admin, Guru, dan Siswa.
-                <b>Selesai</b> = semua peserta sudah mengerjakan dan tenggat jadwalnya terlewat; ujian
-                otomatis hilang dari Admin/Guru/Siswa dan hanya bisa dibuka Superadmin &amp; Developer.
-                <b>History</b> = diarsipkan Superadmin/Developer; tampil kembali di Admin &amp; Guru tanpa
-                tab Hasil dan Jadwal. Data ujian, jawaban, nilai, dan soal di Bank Soal
-                <b>tidak pernah dihapus</b>.
-            </div>
-        </div>
         <div class="card">
             <div class="card-body py-4">
                 <div class="table-responsive">

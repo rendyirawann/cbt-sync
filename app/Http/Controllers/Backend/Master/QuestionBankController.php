@@ -18,8 +18,14 @@ class QuestionBankController extends Controller
 {
     public function index(Request $request)
     {
+        // Sekolah akun yang sedang melihat; null untuk Developer (tak discope).
+        $sekolahSaya = \App\Support\SchoolScope::id();
+
         // Filter yang sama dipakai dua kali: untuk daftar kelompok dan untuk isinya.
+        // Gerbang kebocoran soal ikut di dalamnya supaya tidak mungkin terlewat
+        // di salah satu kueri (lihat QuestionBank::scopeTerlihatOleh).
         $filter = fn ($q) => $q
+            ->terlihatOleh($sekolahSaya)
             ->when($request->filled('school_id'), fn ($x) => $x->where('school_id', $request->school_id))
             ->when($request->filled('subject_id'), fn ($x) => $x->where('subject_id', $request->subject_id))
             ->when($request->filled('level'), fn ($x) => $x->where('level', $request->level))
@@ -56,7 +62,12 @@ class QuestionBankController extends Controller
         $levels = QuestionBank::whereNotNull('level')->distinct()->orderBy('level')->pluck('level');
         $schools = \App\Models\School::orderBy('name')->get();
 
-        return view('backend.master.question-banks.index', compact('groups', 'items', 'subjects', 'levels', 'schools'));
+        // Untuk keterangan di layar: apakah tampilan sedang dibatasi gerbang status?
+        $adaGerbang = ! \App\Support\SiklusUjian::pengawas();
+
+        return view('backend.master.question-banks.index', compact(
+            'groups', 'items', 'subjects', 'levels', 'schools', 'adaGerbang'
+        ));
     }
 
     public function store(Request $request)
