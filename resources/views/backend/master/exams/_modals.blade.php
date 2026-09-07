@@ -126,9 +126,9 @@
         <form action="{{ route('exam-sessions.store') }}" method="POST">
             @csrf
             <input type="hidden" name="exam_id" value="{{ $exam->id }}">
-            <div class="modal-header"><h3 class="modal-title">Buat Sesi Ujian</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
+            <div class="modal-header"><h3 class="modal-title">Buat Jadwal Ujian</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
             <div class="modal-body px-8 py-6">
-                <div class="mb-4"><label class="form-label required">Nama Sesi</label><input type="text" name="name" class="form-control" placeholder="cth: Sesi 1 — Pagi" required></div>
+                <div class="mb-4"><label class="form-label required">Nama Jadwal</label><input type="text" name="name" class="form-control" placeholder="cth: Asesmen Nasional 2026" value="{{ $exam->title }}" required></div>
 
                 <label class="form-label required d-block">Peserta <span class="text-muted fs-8">— ujian ini untuk kelas <b>{{ $examClass->name ?? '-' }}</b></span></label>
                 <input type="hidden" name="class_room_id" value="{{ $examClass->id ?? '' }}">
@@ -140,15 +140,25 @@
                     <div class="alert alert-light-primary py-2 mb-0 fs-8">Semua siswa kelas <b>{{ $examClass->name ?? '-' }}</b> ({{ $students->count() }} siswa) otomatis menjadi peserta.</div>
                 </div>
                 <div class="by-student-wrap mb-4" style="display:none">
-                    @include('backend.master.exams._pilih-siswa', ['uid' => 'psBuat'])
-                    <span class="text-muted fs-8 d-block mt-2">Centang siswa kelas {{ $examClass->name ?? '' }} yang ikut sesi ini (mis. bagi sesi pagi/siang atau remedial).
+                    @include('backend.master._pilih-siswa', ['uid' => 'psBuat'])
+                    <span class="text-muted fs-8 d-block mt-2">Centang siswa kelas {{ $examClass->name ?? '' }} yang ikut jadwal ini.
                         <b>Pilih semua</b>/<b>Kosongkan</b> berlaku pada daftar yang sedang tampil, dan klik sambil menahan <b>Shift</b> mencentang satu rentang sekaligus.</span>
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6 mb-4"><label class="form-label required">Mulai</label><input type="datetime-local" name="starts_at" class="form-control" required></div>
-                    <div class="col-md-6 mb-4"><label class="form-label required">Selesai</label><input type="datetime-local" name="ends_at" class="form-control" required></div>
-                    <div class="col-md-6 mb-4"><label class="form-label required">Durasi (menit)</label><input type="number" name="duration_minutes" class="form-control" value="60" required></div>
+                    <div class="col-md-6 mb-4"><label class="form-label required">Tanggal Mulai</label><input type="date" name="starts_at" class="form-control" required></div>
+                    <div class="col-md-6 mb-4"><label class="form-label required">Tanggal Selesai</label><input type="date" name="ends_at" class="form-control" required></div>
+                    <div class="col-12 mb-4">
+                        <div class="alert alert-light-primary py-2 mb-0 fs-8">
+                            Jadwal hanya berupa <b>rentang tanggal</b> — tidak ada jam mulai/selesai. Siswa boleh masuk
+                            kapan saja selama rentang itu, dan guru penanggung jawab yang mengatur pelaksanaannya.
+                            Jam pelaksanaan per gelombang diatur di <b>Data Master &rarr; Master Gelombang</b> dan
+                            dipakai untuk kolom PUKUL pada lembar Daftar Hadir.
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4"><label class="form-label required">Durasi pengerjaan (menit)</label><input type="number" name="duration_minutes" class="form-control" value="120" min="1" required>
+                        <div class="form-text">Lama waktu tiap siswa mengerjakan, dihitung sejak ia menekan Mulai Ujian.</div>
+                    </div>
                     <div class="col-md-6 mb-4"><label class="form-label">Kuota maks (kosong = ∞)</label><input type="number" name="max_capacity" class="form-control" placeholder="cth: 40"></div>
                 </div>
                 <div class="d-flex flex-column gap-2">

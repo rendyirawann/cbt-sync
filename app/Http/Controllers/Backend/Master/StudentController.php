@@ -24,11 +24,14 @@ class StudentController extends Controller
     public function index()
     {
         $sid = \App\Support\SchoolScope::id();
-        $students = Student::with(['user', 'school'])
+        $students = Student::with(['user', 'school', 'wave'])
             ->when($sid, fn ($q) => $q->where('school_id', $sid))
             ->get();
         $schools = $sid ? School::where('id', $sid)->get() : School::all();
-        return view('backend.master.students.index', compact('students', 'schools'));
+        // Hanya gelombang aktif yang ditawarkan; gelombang lama yang sudah
+        // dinonaktifkan tetap terbaca pada data siswa yang memakainya.
+        $waves = \App\Models\Wave::where('is_active', true)->terurut()->get();
+        return view('backend.master.students.index', compact('students', 'schools', 'waves'));
     }
 
     public function store(Request $request)
@@ -40,15 +43,23 @@ class StudentController extends Controller
             'name' => 'required',
             'email' => 'required|email|unique:users,email',
             'username' => 'required|string|max:50|regex:/^[A-Za-z0-9._-]+$/|unique:users,username',
-            'password' => 'required|min:6',
+            'password' => 'nullable|min:6',
             'nisn' => 'required|unique:students,nisn',
             'birth_place' => 'nullable|string|max:100',
             'birth_date' => 'nullable|date|before:today',
+            'proctor_id' => 'nullable|string|max:50',
+            'room' => 'nullable|string|max:100',
+            'wave_id' => 'nullable|uuid|exists:waves,id',
             'school_id' => 'required'
         ], $this->pesanUsername(), $this->labelSiswa());
 
         // Admin sekolah dipaksa ke sekolahnya sendiri (tidak bisa buat data sekolah lain).
         $schoolId = \App\Support\SchoolScope::id() ?: $request->school_id;
+
+        // Password dibuat ACAK bergaya ANBK (mis. 892777*) bila tidak diisi, dan
+        // disimpan sebagai password kartu supaya kartu login peserta memuat
+        // password yang benar-benar bisa dipakai siswa untuk masuk.
+        $sandi = $request->filled('password') ? $request->password : \App\Support\KartuUjian::sandiBaru();
 
         try {
             DB::beginTransaction();
@@ -63,7 +74,7 @@ class StudentController extends Controller
                 'school_id' => $schoolId,
                 'email_verified_at' => now(),
                 'is_active' => 1,
-                'password' => Hash::make($request->password),
+                'password' => Hash::make($sandi),
             ]);
 
             // Set Role
@@ -71,7 +82,7 @@ class StudentController extends Controller
             $user->assignRole($role);
 
             // Buat Profil Siswa
-            Student::create([
+            $student = Student::create([
                 'user_id' => $user->id,
                 'school_id' => $schoolId,
                 'nisn' => $request->nisn,
@@ -79,14 +90,21 @@ class StudentController extends Controller
                 'gender' => $request->gender,
                 'birth_place' => $request->birth_place,
                 'birth_date' => $request->birth_date,
+                'proctor_id' => $request->proctor_id,
+                'room' => $request->room,
+                'wave_id' => $request->wave_id ?: null,
                 'address' => $request->address,
                 'parent_name' => $request->parent_name,
                 'parent_email' => $request->parent_email,
                 'parent_phone' => $request->parent_phone,
             ]);
-            
+
+            \App\Support\KartuUjian::terbitkan($student, $sandi);
+
             DB::commit();
-            return redirect()->back()->with('success', 'Siswa berhasil ditambahkan');
+            return redirect()->back()->with('success',
+                'Siswa berhasil ditambahkan. Password kartu: ' . $sandi
+                . ' — password ini juga yang dipakai siswa untuk login, dan tercetak di Kartu Ujian.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -107,6 +125,9 @@ class StudentController extends Controller
             'nisn' => 'required|unique:students,nisn,' . $student->id,
             'birth_place' => 'nullable|string|max:100',
             'birth_date' => 'nullable|date|before:today',
+            'proctor_id' => 'nullable|string|max:50',
+            'room' => 'nullable|string|max:100',
+            'wave_id' => 'nullable|uuid|exists:waves,id',
             'school_id' => 'required'
         ], $this->pesanUsername(), $this->labelSiswa());
 
@@ -117,10 +138,13 @@ class StudentController extends Controller
             $user->name = $request->name;
             $user->email = $request->email;
             $user->username = $request->username;
-            if ($request->filled('password')) {
-                $user->password = \Hash::make($request->password);
-            }
             $user->save();
+
+            // Ganti password lewat helper kartu supaya password di Kartu Ujian
+            // ikut berubah — kalau tidak, kartu akan mencetak password lama.
+            if ($request->filled('password')) {
+                \App\Support\KartuUjian::terbitkan($student, $request->password);
+            }
 
             $student->update([
                 'school_id' => $request->school_id,
@@ -129,6 +153,9 @@ class StudentController extends Controller
                 'gender' => $request->gender,
                 'birth_place' => $request->birth_place,
                 'birth_date' => $request->birth_date,
+                'proctor_id' => $request->proctor_id,
+                'room' => $request->room,
+                'wave_id' => $request->wave_id ?: null,
                 'address' => $request->address,
                 'parent_name' => $request->parent_name,
                 'parent_email' => $request->parent_email,
@@ -169,6 +196,7 @@ class StudentController extends Controller
             'name' => 'Nama Lengkap', 'email' => 'Email', 'username' => 'Username',
             'password' => 'Password', 'nisn' => 'NISN', 'school_id' => 'Sekolah',
             'birth_place' => 'Tempat Lahir', 'birth_date' => 'Tanggal Lahir',
+            'proctor_id' => 'ID Proktor', 'room' => 'Ruang', 'wave_id' => 'Gelombang',
         ];
     }
 
@@ -191,6 +219,9 @@ class StudentController extends Controller
         $rules = ['name' => 'required|string|max:255', 'email' => 'required|email', 'school' => ($sid ? 'nullable' : 'required') . '|string', 'gender' => 'nullable|in:L,P'];
         $labels = ['name' => 'Nama', 'email' => 'Email', 'school' => 'Nama Sekolah', 'gender' => 'Gender'];
         $activeYear = AcademicYear::where('is_active', 1)->first() ?? AcademicYear::first();
+        // Kolom Gelombang di Excel diisi NAMA gelombang; dipetakan ke id di sini.
+        $gelombang = \App\Models\Wave::pluck('id', 'name')
+            ->mapWithKeys(fn ($id, $nama) => [strtolower(trim($nama)) => $id])->all();
         $imported = 0; $skipped = 0; $errors = [];
         foreach ($rows as $row) {
             $line = $row['_row']; unset($row['_row']);
@@ -204,7 +235,10 @@ class StudentController extends Controller
             $unameCek = $this->rapikanUsername($row['username'] ?? '', $nisn !== '' ? $nisn : $row['email']);
             if (User::where('username', $unameCek)->exists()) { $errors[] = "Baris $line: Username \"$unameCek\" sudah dipakai akun lain."; continue; }
             try {
-                DB::transaction(function () use ($row, $school, $nisn, $activeYear) {
+                // Password kosong = acak bergaya ANBK (bukan lagi default seragam
+                // "siswa12345"), lalu disimpan sebagai password kartu.
+                $sandiBaris = $row['password'] !== '' ? $row['password'] : \App\Support\KartuUjian::sandiBaru();
+                DB::transaction(function () use ($row, $school, $nisn, $activeYear, $sandiBaris) {
                     $username = $this->rapikanUsername($row['username'] ?? '', $nisn !== '' ? $nisn : $row['email']);
                     $user = User::create([
                         'name' => $row['name'],
@@ -215,7 +249,7 @@ class StudentController extends Controller
                         'school_id' => $school->id,
                         'email_verified_at' => now(),
                         'is_active' => 1,
-                        'password' => Hash::make($row['password'] !== '' ? $row['password'] : 'siswa12345'),
+                        'password' => Hash::make($sandiBaris),
                     ]);
                     $user->assignRole(Role::firstOrCreate(['name' => 'Siswa', 'guard_name' => 'web']));
                     $student = Student::create([
@@ -226,11 +260,16 @@ class StudentController extends Controller
                         'gender' => in_array($row['gender'] ?? '', ['L', 'P']) ? $row['gender'] : null,
                         'birth_place' => $row['birth_place'] ?? null,
                         'birth_date' => $this->tanggalExcel($row['birth_date'] ?? null),
+                        'proctor_id' => $row['proctor_id'] ?? null,
+                        'room' => $row['room'] ?? null,
+                        'wave_id' => $gelombang[strtolower(trim($row['wave'] ?? ''))] ?? null,
                         'address' => $row['address'] ?? null,
                         'parent_name' => $row['parent_name'] ?? null,
                         'parent_email' => $row['parent_email'] ?? null,
                         'parent_phone' => $row['parent_phone'] ?? null,
                     ]);
+                    \App\Support\KartuUjian::terbitkan($student, $sandiBaris);
+
                     // Enroll ke kelas bila kolom Kelas diisi & kelas ditemukan.
                     if (!empty($row['class']) && $activeYear) {
                         $class = ClassRoom::where('name', $row['class'])->first();
@@ -276,11 +315,12 @@ class StudentController extends Controller
             'file' => 'Template_Data_Siswa.xlsx',
             'guide' => [
                 'Email harus unik (jadi akun login siswa). Email yang sudah ada dilewati.',
-                'Password kosong = default "siswa12345".',
+                'Password kosong = dibuatkan ACAK bergaya ANBK (mis. 892777*) dan tercetak di Kartu Ujian.',
                 'Nama Sekolah harus sudah terdaftar. Kolom Kelas opsional (isi nama kelas untuk langsung memasukkan siswa ke rombel tahun ajaran aktif).',
                 'Gender diisi L atau P.',
                 'Username kosong = otomatis memakai NISN (atau email bila NISN kosong). Username harus unik.',
                 'Tanggal Lahir format dd/mm/yyyy, mis. 17/08/2010.',
+                'Gelombang diisi NAMA gelombang yang sudah ada di Master Gelombang, mis. "Gelombang 1". Nama yang tidak dikenali diabaikan.',
             ],
             'columns' => [
                 ['key' => 'name', 'label' => 'Nama', 'required' => true, 'width' => 28],
@@ -293,6 +333,9 @@ class StudentController extends Controller
                 ['key' => 'gender', 'label' => 'Gender', 'width' => 10, 'options' => ['L', 'P']],
                 ['key' => 'birth_place', 'label' => 'Tempat Lahir', 'width' => 20],
                 ['key' => 'birth_date', 'label' => 'Tanggal Lahir', 'width' => 16, 'hint' => 'dd/mm/yyyy'],
+                ['key' => 'proctor_id', 'label' => 'ID Proktor', 'width' => 18],
+                ['key' => 'room', 'label' => 'Ruang', 'width' => 18],
+                ['key' => 'wave', 'label' => 'Gelombang', 'width' => 16, 'hint' => 'nama gelombang'],
                 ['key' => 'phone', 'label' => 'No. HP/WA', 'width' => 16],
                 ['key' => 'address', 'label' => 'Alamat', 'width' => 26],
                 ['key' => 'parent_name', 'label' => 'Nama Ortu', 'width' => 24],
@@ -300,7 +343,8 @@ class StudentController extends Controller
                 ['key' => 'parent_phone', 'label' => 'No. HP Ortu', 'width' => 18],
             ],
             'examples' => [
-                ['name' => 'Andi Pratama', 'email' => 'andi@siswa.id', 'password' => '', 'username' => 'andi.pratama', 'nisn' => '0012345678', 'school' => 'SMA Negeri 1 Medan', 'class' => 'X-IPA 1', 'gender' => 'L', 'birth_place' => 'Medan', 'birth_date' => '17/08/2010', 'phone' => '081200001111', 'address' => 'Jl. Kenanga 3', 'parent_name' => 'Bpk. Pratama', 'parent_email' => 'ortu.andi@mail.com', 'parent_phone' => '081211112222'],
+                ['name' => 'Andi Pratama', 'email' => 'andi@siswa.id', 'password' => '', 'username' => 'andi.pratama', 'nisn' => '0012345678', 'school' => 'SMA Negeri 1 Medan', 'class' => 'X-IPA 1', 'gender' => 'L', 'birth_place' => 'Medan', 'birth_date' => '17/08/2010',
+                 'proctor_id' => 'U07030017-AY8U', 'room' => 'ANBK-SMA-1', 'wave' => 'Gelombang 1', 'phone' => '081200001111', 'address' => 'Jl. Kenanga 3', 'parent_name' => 'Bpk. Pratama', 'parent_email' => 'ortu.andi@mail.com', 'parent_phone' => '081211112222'],
             ],
         ];
     }

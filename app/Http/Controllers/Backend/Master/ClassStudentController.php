@@ -44,7 +44,11 @@ class ClassStudentController extends Controller
         $request->validate([
             'class_room_id' => 'required',
             'academic_year_id' => 'required',
-            'student_ids' => 'required|array',
+            'student_ids' => 'required|array|min:1',
+        ], [
+            'student_ids.required' => 'Centang minimal satu siswa untuk diplot.',
+            'class_room_id.required' => 'Pilih kelas tujuan.',
+            'academic_year_id.required' => 'Pilih tahun ajaran.',
         ]);
 
         try {

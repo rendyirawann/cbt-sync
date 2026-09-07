@@ -7,6 +7,10 @@
     $modeLabel = ['manual'=>'Manual (poin diisi guru)','auto'=>'Otomatis (poin dibagi rata)'][$exam->points_mode] ?? $exam->points_mode;
     // Ujian terkunci begitu ada minimal 1 siswa yang memulai (attempt). Soal & publish dikunci.
     $locked = $exam->hasStartedAttempts();
+    // Siklus status: tab Hasil & Jadwal disembunyikan dari Admin/Guru pada ujian
+    // berstatus History (lihat App\Support\SiklusUjian).
+    $pengawasUjian = \App\Support\SiklusUjian::pengawas();
+    $bolehHasil = \App\Support\SiklusUjian::bolehLihatHasil($exam);
 @endphp
 
 @include('partials.katex')
@@ -26,6 +30,7 @@
             </ul>
             <span class="text-muted fs-7 pt-1">
                 {{ $exam->teachingAssignment->subject->name ?? '-' }} • {{ $exam->teachingAssignment->classRoom->name ?? '-' }}
+                • <span class="badge badge-light-{{ \App\Support\SiklusUjian::warnaStatus($exam->status) }}">{{ \App\Support\SiklusUjian::labelStatus($exam->status) }}</span>
                 • <span class="badge badge-light-info">{{ $typeLabel }}</span>
                 • Penilaian: {{ $modeLabel }}
             </span>
@@ -33,7 +38,32 @@
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('exams.index') }}" class="btn btn-sm btn-light"><i class="ki-outline ki-arrow-left fs-4"></i> Kembali</a>
             <button class="btn btn-sm btn-light-primary" data-bs-toggle="modal" data-bs-target="#editExamModal" @disabled($locked)><i class="ki-outline ki-setting-2 fs-5"></i> Pengaturan</button>
-            @if($locked)
+            @if($pengawasUjian && $exam->isTersedia() && $exam->sessions->isNotEmpty())
+                {{-- Penutupan manual: jalan keluar bila ada peserta yang tidak akan
+                     pernah mengerjakan, sehingga penutupan otomatis tak pernah tercapai. --}}
+                <form action="{{ route('exams.archive', $exam->id) }}" method="POST" class="d-inline" id="formTandaiSelesai">
+                    @csrf<input type="hidden" name="ke" value="finished">
+                    <button type="button" class="btn btn-sm btn-light-dark" id="btnTandaiSelesai">
+                        <i class="ki-outline ki-check-circle fs-5"></i> Tandai Selesai
+                    </button>
+                </form>
+            @endif
+            @if($pengawasUjian && ($exam->isSelesai() || $exam->isRiwayat()))
+                {{-- Perpindahan arsip hanya untuk Superadmin & Developer. --}}
+                @if($exam->isSelesai())
+                    <form action="{{ route('exams.archive', $exam->id) }}" method="POST" class="d-inline">
+                        @csrf<input type="hidden" name="ke" value="history">
+                        <button class="btn btn-sm btn-info"><i class="ki-outline ki-archive fs-5"></i> Jadikan History</button>
+                    </form>
+                @endif
+                <form action="{{ route('exams.archive', $exam->id) }}" method="POST" class="d-inline">
+                    @csrf<input type="hidden" name="ke" value="available">
+                    <button class="btn btn-sm btn-light-success"><i class="ki-outline ki-arrows-circle fs-5"></i> Buka Lagi (Available)</button>
+                </form>
+            @endif
+            @if($exam->isSelesai() || $exam->isRiwayat())
+                {{-- Tidak ada terbit/tarik-draft pada ujian yang sudah lewat siklusnya. --}}
+            @elseif($locked)
                 <span class="btn btn-sm btn-light-success disabled"><i class="ki-outline ki-lock-2 fs-5"></i> Terbit & Terkunci</span>
             @else
                 <form action="{{ route('exams.publish', $exam->id) }}" method="POST" class="custom-ajax-confirm d-inline">
@@ -55,11 +85,23 @@
             <i class="ki-outline ki-information-5 fs-2x text-warning me-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
             <div class="flex-grow-1 me-3">
                 <h4 class="fw-bold text-gray-900 mb-1">Ujian masih DRAFT — siswa belum bisa melihatnya</h4>
-                <span class="text-gray-700">Begitu soal & sesi siap, klik <b>Terbitkan</b> supaya ujian muncul di portal siswa.</span>
+                <span class="text-gray-700">Begitu soal & jadwal siap, klik <b>Terbitkan</b> supaya ujian muncul di portal siswa.</span>
             </div>
             <form action="{{ route('exams.publish', $exam->id) }}" method="POST">@csrf
                 <button type="submit" class="btn btn-success"><i class="ki-outline ki-send fs-5"></i> Terbitkan Sekarang</button>
             </form>
+        </div>
+        @endif
+        @if($exam->isSelesai())
+        <div class="alert bg-light-dark border border-dark border-dashed d-flex flex-wrap align-items-center mb-6 p-5">
+            <i class="ki-outline ki-check-circle fs-2x text-dark me-4"></i>
+            <div class="flex-grow-1 me-3">
+                <h4 class="fw-bold text-gray-900 mb-1">Ujian Selesai — tersembunyi dari Admin, Guru, dan Siswa</h4>
+                <span class="text-gray-700">Semua peserta sudah mengerjakan dan tenggat jadwalnya terlewat
+                    ({{ $exam->finished_at?->translatedFormat('d M Y H:i') ?? '-' }}). Hanya Superadmin &amp;
+                    Developer yang masih bisa membuka ujian ini. Jadikan <b>History</b> supaya Admin &amp; Guru
+                    melihatnya lagi tanpa tab Hasil dan Jadwal.</span>
+            </div>
         </div>
         @endif
         @if($locked)
@@ -67,15 +109,25 @@
             <i class="ki-outline ki-lock-2 fs-2x text-primary me-4"><span class="path1"></span><span class="path2"></span></i>
             <div>
                 <h4 class="fw-bold text-gray-900 mb-1">Ujian Terkunci</h4>
-                <span class="text-gray-700">Sudah ada siswa yang memulai ujian, jadi <b>soal tidak bisa diubah</b>, ujian <b>tidak bisa ditarik ke draft</b>, dan sesi yang sudah dimulai tidak bisa dihapus/diubah. Anda tetap bisa memeriksa & menilai jawaban.</span>
+                <span class="text-gray-700">Sudah ada siswa yang memulai ujian, jadi <b>soal tidak bisa diubah</b>, ujian <b>tidak bisa ditarik ke draft</b>, dan jadwal yang sudah dimulai tidak bisa dihapus/diubah. Anda tetap bisa memeriksa & menilai jawaban.</span>
             </div>
         </div>
         @endif
         <ul class="nav nav-tabs nav-line-tabs fs-5 fw-bold mb-6">
             <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab_soal">📝 Soal ({{ $exam->questions->count() }})</a></li>
-            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab_sesi">🗓️ Sesi & Jadwal ({{ $exam->sessions->count() }})</a></li>
-            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab_hasil">📊 Hasil & Nilai</a></li>
+            @if($bolehHasil)
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab_sesi">🗓️ Jadwal Ujian ({{ $exam->sessions->count() }})</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab_hasil">📊 Hasil & Nilai</a></li>
+            @endif
         </ul>
+        @unless($bolehHasil)
+            <div class="alert bg-light-info border border-info border-dashed d-flex align-items-center mb-6 p-4">
+                <i class="ki-outline ki-archive fs-2x text-info me-3"></i>
+                <div class="fs-8 text-gray-700">Ujian ini berstatus <b>History</b> (diarsipkan
+                    {{ $exam->archived_at?->translatedFormat('d M Y') ?? '-' }}). Soalnya masih bisa dilihat,
+                    tetapi <b>tab Jadwal dan Hasil &amp; Nilai</b> hanya dapat dibuka Superadmin dan Developer.</div>
+            </div>
+        @endunless
 
         <div class="tab-content">
             {{-- ================= TAB SOAL ================= --}}
@@ -434,12 +486,26 @@
                 @endforelse
             </div>
 
-            {{-- ================= TAB SESI ================= --}}
+            {{-- ================= TAB JADWAL =================
+                 Seluruh isi tab Jadwal & Hasil dibungkus $bolehHasil: pada ujian
+                 History, Admin & Guru tidak boleh melihatnya sama sekali. --}}
+            @if($bolehHasil)
             <div class="tab-pane fade" id="tab_sesi">
+                @php
+                    // Satu ujian = satu jadwal (rentang tanggal untuk semua gelombang).
+                    // Sesi susulan tidak dihitung karena memang tambahan.
+                    $sudahAdaJadwal = $exam->sessions->where('is_makeup', false)->isNotEmpty();
+                @endphp
                 <div class="d-flex flex-wrap gap-2 mb-5">
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSessionModal" @if($exam->questions->count()===0) disabled title="Tambah soal dulu" @endif>
-                        <i class="ki-outline ki-plus fs-4"></i> Buat Sesi Ujian
-                    </button>
+                    @if($sudahAdaJadwal)
+                        <span class="btn btn-light disabled" title="Satu ujian hanya punya satu jadwal — ubah tanggalnya lewat tombol Edit pada kartu jadwal">
+                            <i class="ki-outline ki-check-circle fs-4"></i> Jadwal sudah dibuat
+                        </span>
+                    @else
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSessionModal" @if($exam->questions->count()===0) disabled title="Tambah soal dulu" @endif>
+                            <i class="ki-outline ki-plus fs-4"></i> Buat Jadwal Ujian
+                        </button>
+                    @endif
                     @if($belumUjian->isNotEmpty())
                         <button class="btn btn-light-warning" data-bs-toggle="modal" data-bs-target="#makeupSessionModal">
                             <i class="ki-outline ki-calendar-add fs-5 me-1"></i>Jadwalkan Susulan ({{ $belumUjian->count() }})
@@ -464,14 +530,15 @@
                                 <div class="d-flex justify-content-between mb-2">
                                     <h4 class="fw-bold text-gray-900 mb-0">{{ $s->name }}</h4>
                                     <div class="d-flex gap-1">
+                                        @if($s->is_makeup)<span class="badge badge-light-warning">Susulan</span>@endif
                                         @unless($s->is_active)<span class="badge badge-light-secondary">Nonaktif</span>@endunless
                                         <span class="badge badge-light-{{ $s->isFinished() ? 'secondary' : ($s->isWithinSchedule() ? 'success' : 'warning') }}">
                                             {{ $s->isFinished() ? 'Selesai' : ($s->isWithinSchedule() ? 'Berlangsung' : 'Terjadwal') }}
                                         </span>
                                     </div>
                                 </div>
-                                <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-calendar fs-6 me-1"></i> {{ \Carbon\Carbon::parse($s->starts_at)->format('d M Y H:i') }} – {{ \Carbon\Carbon::parse($s->ends_at)->format('H:i') }}</div>
-                                <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-timer fs-6 me-1"></i> {{ $s->duration_minutes }} menit • Kuota: {{ $s->max_capacity ?? '∞' }}</div>
+                                <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-calendar fs-6 me-1"></i> {{ \Carbon\Carbon::parse($s->starts_at)->translatedFormat('d M Y') }} – {{ \Carbon\Carbon::parse($s->ends_at)->translatedFormat('d M Y') }}</div>
+                                <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-timer fs-6 me-1"></i> Durasi {{ $s->duration_minutes }} menit • Kuota: {{ $s->max_capacity ?? '∞' }}</div>
                                 <div class="text-gray-600 fs-7 mb-3"><i class="ki-outline ki-people fs-6 me-1"></i> {{ $s->class_room_id ? ($s->classRoom->name ?? 'Kelas') : 'Daftar manual' }} • {{ $s->attempts->count() }} mengerjakan</div>
                                 <div class="d-flex align-items-center gap-2 mb-3">
                                     <span class="badge badge-light-info d-inline-flex align-items-center py-2" title="Berikan PIN ini ke siswa untuk membuka kunci bila ia keluar layar saat ujian">
@@ -487,10 +554,10 @@
                                         <span class="btn btn-sm btn-icon btn-light disabled" title="Terkunci — ada peserta yang memulai"><i class="ki-outline ki-lock-2 fs-5"></i></span>
                                     @else
                                         @if($sCanEdit)
-                                        <button class="btn btn-sm btn-icon btn-light-primary" data-bs-toggle="modal" data-bs-target="#editSession{{ $s->id }}" title="Edit sesi"><i class="ki-outline ki-pencil fs-5"></i></button>
+                                        <button class="btn btn-sm btn-icon btn-light-primary" data-bs-toggle="modal" data-bs-target="#editSession{{ $s->id }}" title="Edit jadwal"><i class="ki-outline ki-pencil fs-5"></i></button>
                                         @endif
                                         <form action="{{ route('exam-sessions.toggle-active', $s->id) }}" method="POST">@csrf
-                                            <button class="btn btn-sm btn-icon btn-light-{{ $s->is_active ? 'warning' : 'success' }}" title="{{ $s->is_active ? 'Nonaktifkan sesi' : 'Aktifkan sesi' }}">
+                                            <button class="btn btn-sm btn-icon btn-light-{{ $s->is_active ? 'warning' : 'success' }}" title="{{ $s->is_active ? 'Nonaktifkan jadwal' : 'Aktifkan jadwal' }}">
                                                 <i class="ki-outline ki-{{ $s->is_active ? 'eye-slash' : 'eye' }} fs-5"></i>
                                             </button>
                                         </form>
@@ -507,10 +574,11 @@
                         <div class="modal-dialog"><div class="modal-content">
                             <form action="{{ route('exam-sessions.update', $s->id) }}" method="POST">
                                 @csrf @method('PUT')
-                                <div class="modal-header"><h3 class="modal-title">Edit Sesi</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
+                                <div class="modal-header"><h3 class="modal-title">Edit Jadwal</h3><div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div></div>
                                 <div class="modal-body px-8 py-6">
                                     <div class="alert alert-light-success fs-8 py-2">Peserta masih bisa diubah selama <b>belum ada yang memulai</b>. Untuk pindah kelas, ganti di <b>Pengaturan Ujian</b>.</div>
-                                    <div class="mb-4"><label class="form-label required">Nama Sesi</label><input type="text" name="name" class="form-control" value="{{ $s->name }}" required></div>
+                                    <input type="hidden" name="susulan" value="{{ $s->is_makeup ? 1 : 0 }}">
+                                    <div class="mb-4"><label class="form-label required">Nama Jadwal</label><input type="text" name="name" class="form-control" value="{{ $s->name }}" required></div>
 
                                     @php $sMode = $s->class_room_id ? 'class' : 'manual'; $sStudentIds = $s->students->pluck('id')->all(); @endphp
                                     <label class="form-label required d-block">Peserta <span class="text-muted fs-8">— kelas <b>{{ $examClass->name ?? '-' }}</b></span></label>
@@ -523,16 +591,19 @@
                                         <div class="alert alert-light-primary py-2 mb-0 fs-8">Semua siswa kelas <b>{{ $examClass->name ?? '-' }}</b> ({{ $students->count() }} siswa) menjadi peserta.</div>
                                     </div>
                                     <div class="by-student-wrap mb-4" style="{{ $sMode==='manual' ? '' : 'display:none' }}">
-                                        @include('backend.master.exams._pilih-siswa', ['terpilih' => $sStudentIds, 'uid' => 'psEdit'.$s->id])
+                                        @include('backend.master._pilih-siswa', ['terpilih' => $sStudentIds, 'uid' => 'psEdit'.$s->id])
                                         <span class="text-muted fs-8 d-block mt-2">Centang siswa kelas {{ $examClass->name ?? '' }} yang ikut sesi ini.
                                             <b>Pilih semua</b>/<b>Kosongkan</b> berlaku pada daftar yang sedang tampil, dan klik sambil menahan <b>Shift</b> mencentang satu rentang sekaligus.</span>
                                     </div>
 
                                     <div class="row">
-                                        {{-- flatpickr: pemilih tanggal + jam (picker bawaan browser tak punya jam) --}}
-                                        <div class="col-md-6 mb-4"><label class="form-label required">Mulai</label><input type="text" name="starts_at" class="form-control js-datetime" value="{{ \Carbon\Carbon::parse($s->starts_at)->format('Y-m-d H:i') }}" placeholder="Pilih tanggal &amp; jam" autocomplete="off" required></div>
-                                        <div class="col-md-6 mb-4"><label class="form-label required">Selesai</label><input type="text" name="ends_at" class="form-control js-datetime" value="{{ \Carbon\Carbon::parse($s->ends_at)->format('Y-m-d H:i') }}" placeholder="Pilih tanggal &amp; jam" autocomplete="off" required></div>
-                                        <div class="col-md-6 mb-4"><label class="form-label required">Durasi (menit)</label><input type="number" name="duration_minutes" class="form-control" value="{{ $s->duration_minutes }}" required></div>
+                                        <div class="col-md-6 mb-4"><label class="form-label required">Tanggal Mulai</label><input type="date" name="starts_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->starts_at)->format('Y-m-d') }}" required></div>
+                                        <div class="col-md-6 mb-4"><label class="form-label required">Tanggal Selesai</label><input type="date" name="ends_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->ends_at)->format('Y-m-d') }}" required></div>
+                                        <div class="col-12 mb-4">
+                                            <div class="alert alert-light-primary py-2 mb-0 fs-8">Tanpa jam: siswa boleh masuk kapan saja di dalam rentang tanggal ini.
+                                                Jam per gelombang diatur di <b>Master Gelombang</b>.</div>
+                                        </div>
+                                        <div class="col-md-6 mb-4"><label class="form-label required">Durasi pengerjaan (menit)</label><input type="number" name="duration_minutes" class="form-control" value="{{ $s->duration_minutes }}" min="1" required></div>
                                         <div class="col-md-6 mb-4"><label class="form-label">Kuota maks (kosong = ∞)</label><input type="number" name="max_capacity" class="form-control" value="{{ $s->max_capacity }}"></div>
                                     </div>
                                     <div class="d-flex flex-column gap-2">
@@ -547,7 +618,7 @@
                     </div>
                     @endif
                     @empty
-                    <div class="col-12"><div class="card"><div class="card-body text-center py-10 text-muted">Belum ada sesi. Buat sesi untuk menjadwalkan ujian.</div></div></div>
+                    <div class="col-12"><div class="card"><div class="card-body text-center py-10 text-muted">Belum ada jadwal. Buat jadwal untuk menentukan rentang tanggal ujian.</div></div></div>
                     @endforelse
                 </div>
             </div>
@@ -564,6 +635,7 @@
                         @csrf
                         <input type="hidden" name="exam_id" value="{{ $exam->id }}">
                         <input type="hidden" name="participant_mode" value="manual">
+                        <input type="hidden" name="susulan" value="1">
                         <div class="modal-header"><h3 class="modal-title">Jadwalkan Ujian Susulan</h3>
                             <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-1"></i></div>
                         </div>
@@ -584,12 +656,12 @@
                                         value="{{ $exam->sessions->first()->duration_minutes ?? 60 }}" required>
                                 </div>
                                 <div class="col-md-6 mb-4">
-                                    <label class="form-label required">Mulai</label>
-                                    <input type="datetime-local" name="starts_at" class="form-control form-control-solid" required>
+                                    <label class="form-label required">Tanggal Mulai</label>
+                                    <input type="date" name="starts_at" class="form-control form-control-solid" required>
                                 </div>
                                 <div class="col-md-6 mb-4">
-                                    <label class="form-label required">Selesai</label>
-                                    <input type="datetime-local" name="ends_at" class="form-control form-control-solid" required>
+                                    <label class="form-label required">Tanggal Selesai</label>
+                                    <input type="date" name="ends_at" class="form-control form-control-solid" required>
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap gap-4 mb-5">
@@ -598,10 +670,11 @@
                                 <label class="form-check form-check-sm"><input class="form-check-input" type="checkbox" name="show_result"><span class="form-check-label fs-8 ms-2">Tampilkan hasil ke siswa</span></label>
                             </div>
                             <label class="form-label required">Peserta susulan</label>
-                            @include('backend.master.exams._pilih-siswa', [
+                            @include('backend.master._pilih-siswa', [
                                 'students' => $belumUjian,
                                 'terpilih' => $belumUjian->pluck('id')->all(),
                                 'uid' => 'psSusulan',
+                                'kosong' => 'Semua siswa kelas ini sudah tercatat mengikuti ujian — tidak ada calon susulan.',
                             ])
                         </div>
                         <div class="modal-footer">
@@ -613,9 +686,36 @@
 
             {{-- ================= TAB HASIL ================= --}}
             <div class="tab-pane fade" id="tab_hasil">
+                {{-- Daftar Hadir dicetak PER GELOMBANG: kolom PUKUL-nya diambil dari
+                     jam gelombang, karena jadwal ujian hanya rentang tanggal. --}}
+                <div class="card mb-5"><div class="card-body py-4">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div class="me-3">
+                            <div class="fw-bold text-gray-900">Daftar Hadir Peserta</div>
+                            <div class="text-muted fs-8">Lembar tanda tangan peserta, satu lembar per gelombang.</div>
+                        </div>
+                        @forelse($gelombangUjian as $w)
+                            <a href="{{ route('exams.attendance', ['id' => $exam->id, 'wave_id' => $w->id]) }}"
+                                class="btn btn-sm btn-light-danger">
+                                <i class="ki-outline ki-file-down fs-5 me-1"></i>{{ $w->name }}
+                                <span class="badge badge-light ms-2">{{ $w->jumlah_peserta }} peserta</span>
+                                @if($w->rentang_jam)<span class="text-muted fs-8 ms-2">{{ $w->rentang_jam }}</span>@endif
+                            </a>
+                        @empty
+                            <span class="text-muted fs-8">Belum ada peserta yang punya gelombang. Isi kolom
+                                <b>Gelombang</b> pada Data Siswa dulu.</span>
+                        @endforelse
+                    </div>
+                    @if($pesertaTanpaGelombang > 0)
+                        <div class="alert alert-light-warning fs-8 py-2 mt-3 mb-0">
+                            {{ $pesertaTanpaGelombang }} peserta belum punya gelombang, jadi tidak masuk lembar mana pun.
+                            Tentukan gelombangnya di <b>Data Master &rarr; Data Siswa</b>.
+                        </div>
+                    @endif
+                </div></div>
                 <div class="card"><div class="card-body">
                     <table class="table align-middle table-row-dashed fs-6 gy-4">
-                        <thead><tr class="text-gray-400 fw-bold fs-7 text-uppercase"><th>Sesi</th><th class="text-center">Mengerjakan</th><th class="text-center">Sudah Dinilai</th><th class="text-center">Perlu Periksa Essay</th><th class="text-end">Aksi</th></tr></thead>
+                        <thead><tr class="text-gray-400 fw-bold fs-7 text-uppercase"><th>Jadwal</th><th class="text-center">Mengerjakan</th><th class="text-center">Sudah Dinilai</th><th class="text-center">Perlu Periksa Essay</th><th class="text-end">Aksi</th></tr></thead>
                         <tbody>
                             @forelse($exam->sessions as $s)
                             @php $att=$s->attempts; $graded=$att->where('status','graded')->count(); $pending=$att->where('status','submitted')->count(); @endphp
@@ -627,12 +727,13 @@
                                 <td class="text-end"><a href="{{ route('exam-sessions.attempts', $s->id) }}" class="btn btn-sm btn-light-primary">Buka</a></td>
                             </tr>
                             @empty
-                            <tr><td colspan="5" class="text-center py-8 text-muted">Belum ada sesi.</td></tr>
+                            <tr><td colspan="5" class="text-center py-8 text-muted">Belum ada jadwal.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div></div>
             </div>
+            @endif  {{-- $bolehHasil: tutup bungkus tab Jadwal + Hasil --}}
         </div>
     </div>
 </div>
@@ -641,60 +742,30 @@
 
 @push('scripts')
 <script>
-    // ---- Pemilih peserta massal (Buat Sesi, Edit Sesi, Susulan) ----
-    // Satu handler untuk semua blok .js-pilih-siswa; "Pilih semua"/"Kosongkan"
-    // hanya menyentuh baris yang sedang tampil supaya bisa dipakai bersama
-    // pencarian (mis. cari "MM-X" lalu pilih semua hasilnya).
-    document.querySelectorAll('.js-pilih-siswa').forEach(function (blok) {
-        var cari    = blok.querySelector('.js-cari');
-        var jumlah  = blok.querySelector('.js-jumlah');
-        var hampa   = blok.querySelector('.js-kosong-hasil');
-        var baris   = Array.prototype.slice.call(blok.querySelectorAll('.js-baris'));
-        var terakhir = null;   // untuk pilih rentang dengan Shift
-
-        function tampil() { return baris.filter(function (b) { return b.style.display !== 'none'; }); }
-        function kotak(b) { return b.querySelector('.js-item'); }
-
-        function hitung() {
-            var n = blok.querySelectorAll('.js-item:checked').length;
-            jumlah.textContent = n + ' dipilih';
-            jumlah.className = 'badge js-jumlah ' + (n ? 'badge-light-primary' : 'badge-light');
-        }
-
-        if (cari) cari.addEventListener('input', function () {
-            var kunci = this.value.trim().toLowerCase();
-            baris.forEach(function (b) {
-                b.style.display = (!kunci || b.dataset.cari.indexOf(kunci) !== -1) ? '' : 'none';
+    @if($pengawasUjian)
+    // ---- Tandai Selesai: sampaikan akibatnya sebelum ujian disembunyikan ----
+    // Hanya dicetak untuk Superadmin/Developer; peran lain tidak punya tombolnya.
+    (function () {
+        var btn = document.getElementById('btnTandaiSelesai');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            Swal.fire({
+                title: 'Tandai ujian ini Selesai?',
+                html: 'Ujian akan <b>hilang dari Admin, Guru, dan Siswa</b>. Hanya Superadmin &amp; '
+                    + 'Developer yang masih bisa membukanya, dan dari sana bisa dijadikan '
+                    + '<b>History</b> atau dibuka lagi.<br><br>'
+                    + 'Biasanya ini tidak perlu — ujian menutup sendiri setelah semua peserta '
+                    + 'mengerjakan dan tenggatnya lewat. Pakai ini kalau ada peserta yang '
+                    + '<b>tidak akan pernah</b> mengerjakan.',
+                icon: 'warning', showCancelButton: true,
+                confirmButtonText: 'Ya, tandai Selesai', cancelButtonText: 'Batal',
+                confirmButtonColor: '#181C32'
+            }).then(function (r) {
+                if (r.isConfirmed) document.getElementById('formTandaiSelesai').submit();
             });
-            if (hampa) hampa.style.display = (baris.length && tampil().length === 0) ? '' : 'none';
         });
-
-        blok.querySelector('.js-semua').addEventListener('click', function () {
-            tampil().forEach(function (b) { kotak(b).checked = true; });
-            hitung();
-        });
-        blok.querySelector('.js-kosong').addEventListener('click', function () {
-            tampil().forEach(function (b) { kotak(b).checked = false; });
-            hitung();
-        });
-
-        blok.addEventListener('click', function (e) {
-            var item = e.target.closest('.js-item');
-            if (!item) return;
-            var b = item.closest('.js-baris');
-            if (e.shiftKey && terakhir && terakhir !== b) {
-                var t = tampil(), a = t.indexOf(terakhir), z = t.indexOf(b);
-                if (a > -1 && z > -1) {
-                    t.slice(Math.min(a, z), Math.max(a, z) + 1)
-                     .forEach(function (r) { kotak(r).checked = item.checked; });
-                }
-            }
-            terakhir = b;
-            hitung();
-        });
-
-        hitung();
-    });
+    })();
+    @endif
 
     // ---- Atur Soal Aktif: tampilkan bagian yang relevan sesuai mode ----
     (function(){
@@ -792,7 +863,9 @@
         });
     });
 
-    // ---- Pemilih tanggal + JAM untuk jadwal sesi (flatpickr, sudah ada di plugins.bundle) ----
+    // ---- (dulu ada flatpickr tanggal+jam di sini; jadwal kini hanya tanggal,
+    //      jadi input type=date bawaan browser sudah cukup) ----
+    /* ---- flatpickr tidak dipakai lagi ----
     // Nilai yang dikirim tetap "Y-m-d H:i" (diterima validasi `date` di server).
     (function(){
         var els = document.querySelectorAll('.js-datetime');
@@ -843,7 +916,9 @@
         });
     }
 
-    // ---- Sesi: toggle mode peserta (kelas vs manual) — berlaku per modal (buat & edit) ----
+    ---- */
+
+    // ---- Jadwal: toggle mode peserta (kelas vs manual) — berlaku per modal (buat & edit) ----
     document.querySelectorAll('.participant-toggle input[name=participant_mode]').forEach(r => {
         r.addEventListener('change', function(){
             const scope = this.closest('.modal-body') || document;

@@ -190,6 +190,7 @@
 								<!--end:Menu item-->
 @endif
 
+								@if(false) {{-- CBT-SYNC: menu Raport Hasil Ujian disembunyikan atas permintaan --}}
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('admin.rapor.*') ? 'active' : '' }}" href="{{ route('admin.rapor.index') }}">
@@ -200,6 +201,7 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+								@endif
 
 								@if(false) {{-- CBT-SYNC: non-CBT --}}
 <!--begin:Menu item-->
@@ -273,6 +275,7 @@
 								</div>
 								<!--end:Menu item-->
 
+								@if(false) {{-- CBT-SYNC: menu Raport Hasil Ujian disembunyikan atas permintaan --}}
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('student.rapor.*') ? 'active' : '' }}" href="{{ route('student.rapor.index') }}">
@@ -283,6 +286,7 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+								@endif
                                 @endif
 
                                 @can('view_data_master')
@@ -339,6 +343,7 @@
 										@endif
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('academic-years.*') ? 'active' : '' }}" href="{{ route('academic-years.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Tahun Ajaran</span></a></div>
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('subjects.*') ? 'active' : '' }}" href="{{ route('subjects.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Mata Pelajaran</span></a></div>
+										<div class="menu-item"><a class="menu-link {{ request()->routeIs('waves.*') ? 'active' : '' }}" href="{{ route('waves.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Master Gelombang</span></a></div>
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('class-rooms.*') ? 'active' : '' }}" href="{{ route('class-rooms.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Ruang Kelas</span></a></div>
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('teachers.*') ? 'active' : '' }}" href="{{ route('teachers.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Data Guru</span></a></div>
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('students.*') ? 'active' : '' }}" href="{{ route('students.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Data Siswa</span></a></div>

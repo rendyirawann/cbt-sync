@@ -20,6 +20,7 @@ class ExamSession extends Model
         'shuffle_options' => 'boolean',
         'show_result' => 'boolean',
         'is_active' => 'boolean',
+        'is_makeup' => 'boolean',
     ];
 
     public function exam()

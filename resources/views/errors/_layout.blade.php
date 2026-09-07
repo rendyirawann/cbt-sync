@@ -1,30 +1,65 @@
+{{--
+    Kerangka halaman galat CBT-SYNC.
+
+    Dipakai semua berkas errors/*.blade.php supaya tampilannya satu rupa.
+
+    Catatan penting soal tema: kelas Metronic `theme-light-show`/`theme-dark-show`
+    hanya MENYEMBUNYIKAN (`[data-bs-theme=light] .theme-dark-show{display:none}`).
+    Kalau atribut `data-bs-theme` tidak ada di <html>, kedua varian gambar ikut
+    tampil — itu yang dulu membuat halaman pemeliharaan memuat dua ilustrasi dan
+    jadi memanjang. Karena itu skrip di bawah SELALU menyetel atribut tersebut,
+    termasuk saat localStorage tidak bisa dibaca.
+
+    Parameter:
+      $code          kode HTTP yang ditampilkan besar (boleh dikosongkan)
+      $title         judul
+      $message       kalimat penjelas (boleh berisi HTML)
+      $illustration  ['light' => path, 'dark' => path] relatif ke public/
+      $showLogin     tampilkan tombol Masuk
+      $showHome      tampilkan tombol Ke Beranda (bawaan: ya)
+      $showBack      tampilkan tombol Halaman Sebelumnya (bawaan: ya)
+      $showReload    tampilkan tombol Coba Lagi
+      $showLogout    tampilkan tombol Keluar bila akun sedang masuk
+--}}
 @php
     $siteName = $appSettings['site_name'] ?? config('seo.title', config('app.name', 'CBT Sync'));
-    $logo     = 'assets/media/logos/' . ($appSettings['site_logo'] ?? 'base-logo.png');
+    $logo     = 'assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg');
+    // Kirim `false` (BUKAN null) untuk menyembunyikan angka kode — null
+    // dianggap "tidak diisi" oleh ?? sehingga berubah menjadi 500.
     $code     = $code ?? 500;
     $title    = $title ?? 'Terjadi Kesalahan';
     $message  = $message ?? 'Maaf, terjadi kesalahan yang tidak terduga.';
-    $illustration = $illustration ?? null;   // path relatif di public/, opsional
-    $showLogin = $showLogin ?? false;
+    $illustration = $illustration ?? null;
+    $showLogin  = $showLogin ?? false;
+    $showHome   = $showHome ?? true;
+    $showBack   = $showBack ?? true;
+    $showReload = $showReload ?? false;
+    $showLogout = $showLogout ?? false;
 @endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <title>{{ $code }} — {{ $title }} | {{ $siteName }}</title>
+    <title>{{ $code ? $code . ' — ' : '' }}{{ $title }} | {{ $siteName }}</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}" />
     <script>
-        // Selaraskan tema dengan pilihan pengguna di aplikasi (Metronic).
+        // data-bs-theme WAJIB terpasang (lihat catatan di atas). Kalau pilihan
+        // pengguna tidak bisa dibaca, jatuh ke preferensi sistem, lalu ke light.
         (function () {
+            var m = 'light';
             try {
-                var m = localStorage.getItem('kt_theme_mode_value') || 'system';
-                if (m === 'system') {
+                m = localStorage.getItem('kt_theme_mode_value') || 'system';
+            } catch (e) {
+                m = 'system';
+            }
+            if (m === 'system') {
+                try {
                     m = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                }
-                document.documentElement.setAttribute('data-bs-theme', m);
-            } catch (e) {}
+                } catch (e) { m = 'light'; }
+            }
+            document.documentElement.setAttribute('data-bs-theme', m);
         })();
     </script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700,800" />
@@ -32,18 +67,46 @@
     <link href="{{ asset('assets/css/style.bundle.css') }}?v={{ filemtime(public_path('assets/css/style.bundle.css')) }}" rel="stylesheet" type="text/css" />
     <link href="{{ asset('assets/css/keenicons-fix.css') }}?v={{ filemtime(public_path('assets/css/keenicons-fix.css')) }}" rel="stylesheet" type="text/css" />
     <style>
+        /* Satu layar penuh tanpa gulir: tinggi diukur dengan dvh supaya bilah
+           alamat browser ponsel tidak membuat halaman melebihi layar. */
+        html, body { height: 100%; }
         body {
+            margin: 0;
             background-image: url('{{ asset('assets/media/auth/bg9.jpg') }}');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
         }
         [data-bs-theme="dark"] body {
             background-image: url('{{ asset('assets/media/auth/bg9-dark.jpg') }}');
         }
+
+        .err-root {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: clamp(12px, 3vh, 32px) 16px;
+            box-sizing: border-box;
+        }
+        .err-card {
+            width: 100%;
+            max-width: 620px;
+            /* Kartu tidak boleh lebih tinggi dari layar; kalau isinya benar-benar
+               tidak muat (layar sangat pendek), yang bergulir hanya kartunya. */
+            max-height: calc(100dvh - 2 * clamp(12px, 3vh, 32px) - 34px);
+            overflow-y: auto;
+        }
+        .err-card .card-body { padding: clamp(20px, 4.5vh, 44px) clamp(18px, 4vw, 44px); }
+
+        .err-logo { height: clamp(30px, 5.5vh, 46px); width: auto; }
+
         .err-code {
             font-weight: 800;
-            font-size: clamp(88px, 17vw, 170px);
+            font-size: clamp(52px, 11vh, 132px);
             line-height: 1;
             letter-spacing: -.03em;
             background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 55%, #DB2777 100%);
@@ -51,59 +114,78 @@
             background-clip: text;
             -webkit-text-fill-color: transparent;
             color: transparent;
-            margin: 0;
+            margin: 0 0 .25rem;
         }
+        .err-title { font-size: clamp(19px, 3vh, 30px); }
+        .err-msg   { font-size: clamp(13px, 1.9vh, 16px); max-width: 460px; margin-inline: auto; }
+
+        /* Ilustrasi ikut mengecil bersama tinggi layar, dan disingkirkan sama
+           sekali pada layar pendek supaya tidak memaksa gulir. */
+        .err-illus img { max-width: 100%; height: auto; max-height: min(24vh, 190px); }
+        @media (max-height: 620px) { .err-illus { display: none !important; } }
+
+        .err-foot { font-size: 12px; margin-top: 10px; }
     </style>
 </head>
-<body id="kt_body" class="app-blank bgi-size-cover bgi-position-center bgi-no-repeat">
-    <div class="d-flex flex-column flex-root" id="kt_app_root">
-        <div class="d-flex flex-column flex-center flex-column-fluid p-6">
-            <div class="card card-flush w-lg-650px py-5 shadow-sm">
-                <div class="card-body py-12 py-lg-16 text-center">
+<body id="kt_body" class="app-blank">
+    <div class="err-root">
+        <div class="card card-flush shadow-sm err-card">
+            <div class="card-body text-center">
 
-                    {{-- Logo --}}
-                    <div class="mb-8">
-                        <a href="{{ url('/') }}">
-                            <img alt="{{ $siteName }}" src="{{ asset($logo) }}" class="h-45px" />
-                        </a>
-                    </div>
-
-                    {{-- Kode error --}}
-                    <h1 class="err-code mb-2">{{ $code }}</h1>
-
-                    {{-- Judul & pesan --}}
-                    <h2 class="fw-bold text-gray-900 mb-3 fs-1">{{ $title }}</h2>
-                    <div class="fw-semibold fs-5 text-gray-600 mb-8 mx-auto" style="max-width:460px">
-                        {!! $message !!}
-                    </div>
-
-                    {{-- Ilustrasi opsional --}}
-                    @if($illustration)
-                    <div class="mb-10">
-                        <img src="{{ asset($illustration['light']) }}" class="mw-100 mh-220px theme-light-show" alt="" />
-                        <img src="{{ asset($illustration['dark']) }}" class="mw-100 mh-220px theme-dark-show" alt="" />
-                    </div>
-                    @endif
-
-                    {{-- Aksi --}}
-                    <div class="d-flex flex-wrap justify-content-center gap-3">
-                        <a href="{{ url('/') }}" class="btn btn-primary">
-                            <i class="ki-outline ki-home-2 fs-4"></i> Ke Beranda
-                        </a>
-                        <a href="javascript:history.back()" class="btn btn-light">
-                            <i class="ki-outline ki-arrow-left fs-4"></i> Halaman Sebelumnya
-                        </a>
-                        @if($showLogin && Route::has('login'))
-                        <a href="{{ route('login') }}" class="btn btn-light-primary">
-                            <i class="ki-outline ki-entrance-right fs-4"></i> Masuk
-                        </a>
-                        @endif
-                    </div>
-
+                <div class="mb-5">
+                    <a href="{{ url('/') }}"><img alt="{{ $siteName }}" src="{{ asset($logo) }}" class="err-logo" /></a>
                 </div>
+
+                @if($code)
+                    <h1 class="err-code">{{ $code }}</h1>
+                @endif
+
+                <h2 class="fw-bold text-gray-900 mb-3 err-title">{{ $title }}</h2>
+                <div class="fw-semibold text-gray-600 mb-6 err-msg">{!! $message !!}</div>
+
+                @if($illustration)
+                    <div class="err-illus mb-6">
+                        <img src="{{ asset($illustration['light']) }}" class="theme-light-show" alt="" />
+                        <img src="{{ asset($illustration['dark']) }}" class="theme-dark-show" alt="" />
+                    </div>
+                @endif
+
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    @if($showReload)
+                        <a href="{{ url()->current() }}" class="btn btn-sm btn-primary">
+                            <i class="ki-outline ki-arrows-circle fs-5"></i> Coba Lagi
+                        </a>
+                    @endif
+                    @if($showHome)
+                        <a href="{{ url('/') }}" class="btn btn-sm btn-{{ $showReload ? 'light' : 'primary' }}">
+                            <i class="ki-outline ki-home-2 fs-5"></i> Ke Beranda
+                        </a>
+                    @endif
+                    @if($showBack)
+                        <a href="javascript:history.back()" class="btn btn-sm btn-light">
+                            <i class="ki-outline ki-arrow-left fs-5"></i> Halaman Sebelumnya
+                        </a>
+                    @endif
+                    {{-- Saat pemeliharaan, akun yang sudah masuk tidak bisa berbuat apa pun:
+                         yang berguna baginya adalah KELUAR, bukan masuk lagi. Tombol Masuk
+                         hanya ditawarkan kepada pengunjung yang belum masuk. --}}
+                    @if($showLogout && auth()->check() && Route::has('logout'))
+                        <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-light-danger">
+                                <i class="ki-outline ki-exit-right fs-5"></i> Keluar
+                            </button>
+                        </form>
+                    @elseif($showLogin && Route::has('login') && ! auth()->check())
+                        <a href="{{ route('login') }}" class="btn btn-sm btn-light-primary">
+                            <i class="ki-outline ki-entrance-right fs-5"></i> Masuk
+                        </a>
+                    @endif
+                </div>
+
             </div>
-            <div class="text-gray-500 fs-7 mt-6">{{ date('Y') }} © {{ $siteName }}</div>
         </div>
+        <div class="text-gray-500 err-foot">{{ date('Y') }} © {{ $siteName }}</div>
     </div>
 </body>
 </html>

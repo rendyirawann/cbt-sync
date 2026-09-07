@@ -13,6 +13,11 @@ class Student extends Model
     // birth_date harus jadi objek tanggal agar bisa diformat di view.
     protected $casts = ['birth_date' => 'date'];
     use HasUuids, LogsAllActivity;
+    public function wave()
+    {
+        return $this->belongsTo(Wave::class);
+    }
+
     public function school()
     {
         return $this->belongsTo(School::class);

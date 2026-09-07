@@ -73,6 +73,21 @@
                 <div class="modal-body">
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Nama</label><input type="text" name="name" class="form-control form-control-solid" required></div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Alamat</label><input type="text" name="address" class="form-control form-control-solid" required></div>
+                    <div class="row mb-7">
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">Kota/Kabupaten</label>
+                            <input type="text" name="city" class="form-control form-control-solid" placeholder="cth: Kota Binjai">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fs-6 fw-semibold mb-2">Kode Kota</label>
+                            <input type="text" name="city_code" class="form-control form-control-solid" placeholder="cth: 03" maxlength="20"CODE>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fs-6 fw-semibold mb-2">Kode Sekolah</label>
+                            <input type="text" name="school_code" class="form-control form-control-solid" placeholder="cth: 0017" maxlength="20">
+                        </div>
+                        <div class="col-12 text-muted fs-7 mt-2">Ketiganya mengisi kop lembar <b>Daftar Hadir Peserta</b>. Boleh dikosongkan — nanti ditulis tangan.</div>
+                    </div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Telepon</label><input type="text" name="phone" class="form-control form-control-solid" required></div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Email</label><input type="text" name="email" class="form-control form-control-solid" required></div>
                 </div>
@@ -100,6 +115,21 @@
                 <div class="modal-body">
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Nama</label><input type="text" name="name" class="form-control form-control-solid" value="{{ $item->name }}" required></div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Alamat</label><input type="text" name="address" class="form-control form-control-solid" value="{{ $item->address }}" required></div>
+                    <div class="row mb-7">
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">Kota/Kabupaten</label>
+                            <input type="text" name="city" class="form-control form-control-solid" placeholder="cth: Kota Binjai" value="{{ $item->city }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fs-6 fw-semibold mb-2">Kode Kota</label>
+                            <input type="text" name="city_code" class="form-control form-control-solid" placeholder="cth: 03" maxlength="20" value="{{ $item->city }}"CODE>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fs-6 fw-semibold mb-2">Kode Sekolah</label>
+                            <input type="text" name="school_code" class="form-control form-control-solid" placeholder="cth: 0017" maxlength="20" value="{{ $item->school_code }}">
+                        </div>
+                        <div class="col-12 text-muted fs-7 mt-2">Ketiganya mengisi kop lembar <b>Daftar Hadir Peserta</b>. Boleh dikosongkan — nanti ditulis tangan.</div>
+                    </div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Telepon</label><input type="text" name="phone" class="form-control form-control-solid" value="{{ $item->phone }}" required></div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Email</label><input type="text" name="email" class="form-control form-control-solid" value="{{ $item->email }}" required></div>
                 </div>

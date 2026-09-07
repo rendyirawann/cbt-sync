@@ -125,8 +125,9 @@
 
                     <form class="form w-100" id="form_login_siswa">
                         <div class="fv-row mb-7">
-                            <label class="form-label fs-8 fw-bolder text-uppercase ls-1">Email Sekolah</label>
-                            <input type="text" placeholder="email@sekolah.id" name="email" autocomplete="off" class="form-control form-control-pixel" required />
+                            <label class="form-label fs-8 fw-bolder text-uppercase ls-1">Email / Username / NISN</label>
+                            <input type="text" placeholder="email, username, atau NISN" name="login" autocomplete="username" class="form-control form-control-pixel" required />
+                            <div class="text-muted fs-8 mt-2">Bisa memakai salah satu: email sekolah, username pada kartu login, atau NISN.</div>
                         </div>
 
                         <div class="fv-row mb-10">
@@ -182,7 +183,7 @@
                     error: function(xhr) {
                         btn.removeAttr('data-kt-indicator').prop('disabled', false);
                         Swal.fire({
-                            text: xhr.responseJSON?.message || "Email atau password salah!",
+                            text: xhr.responseJSON?.message || "Email/Username/NISN atau password salah!",
                             icon: "error",
                             buttonsStyling: false,
                             confirmButtonText: "Coba Lagi",

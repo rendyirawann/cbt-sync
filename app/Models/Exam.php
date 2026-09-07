@@ -16,7 +16,27 @@ class Exam extends Model
         'normalize' => 'boolean',
         'wrong_penalty' => 'decimal:2',
         'pass_score' => 'decimal:2',
+        'finished_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
+
+    /** Ujian masih dikerjakan siswa (status "Available"). */
+    public function isTersedia(): bool
+    {
+        return $this->status === \App\Support\SiklusUjian::TERSEDIA;
+    }
+
+    /** Sudah dinyatakan selesai otomatis, belum diarsipkan. */
+    public function isSelesai(): bool
+    {
+        return $this->status === \App\Support\SiklusUjian::SELESAI;
+    }
+
+    /** Sudah diarsipkan Superadmin/Developer. */
+    public function isRiwayat(): bool
+    {
+        return $this->status === \App\Support\SiklusUjian::RIWAYAT;
+    }
 
     public function teachingAssignment()
     {

@@ -127,6 +127,9 @@
                 </div>
             </div>
             @yield('mp')
+
+            {{-- Kartu ujian milik siswa sendiri; partialnya diam saja untuk peran lain. --}}
+            @include('backend.my_profile._kartu-ujian')
         </div>
     </div>
     <div class="modal fade" id="Modal_Edit_Avatar" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"

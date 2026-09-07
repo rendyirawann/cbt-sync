@@ -40,6 +40,9 @@ class SchoolController extends Controller
         return [
             'name' => 'required|string|max:255',
             'address' => 'nullable|string|max:1000',
+            'city' => 'nullable|string|max:255',
+            'city_code' => 'nullable|string|max:20',
+            'school_code' => 'nullable|string|max:20',
             'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
         ];
@@ -47,7 +50,10 @@ class SchoolController extends Controller
 
     private function labels(): array
     {
-        return ['name' => 'Nama Sekolah', 'address' => 'Alamat', 'phone' => 'Telepon', 'email' => 'Email'];
+        return [
+            'name' => 'Nama Sekolah', 'address' => 'Alamat', 'phone' => 'Telepon', 'email' => 'Email',
+            'city' => 'Kota/Kabupaten', 'city_code' => 'Kode Kota/Kabupaten', 'school_code' => 'Kode Sekolah',
+        ];
     }
 
     public function template()

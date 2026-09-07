@@ -17,13 +17,27 @@ class ExamSessionController extends Controller
             'name' => 'required|string|max:255',
             'participant_mode' => 'required|in:class,manual',
             'starts_at' => 'required|date',
-            'ends_at' => 'required|date|after:starts_at',
+            'ends_at' => 'required|date|after_or_equal:starts_at',
             'duration_minutes' => 'required|integer|min:1',
             'max_capacity' => 'nullable|integer|min:1',
+        ], [
+            'ends_at.after_or_equal' => 'Tanggal Selesai tidak boleh lebih awal dari Tanggal Mulai '
+                . '(satu hari yang sama diperbolehkan).',
         ]);
 
         $exam = Exam::findOrFail($request->exam_id);
         $this->authorizeExam($exam);
+
+        // Satu ujian hanya punya SATU jadwal. Jadwal berupa rentang tanggal yang
+        // dipakai oleh semua gelombang sekaligus — jam pelaksanaannya diatur di
+        // Master Gelombang. Sesi susulan dikecualikan karena memang menambah
+        // kesempatan untuk siswa yang belum sempat ikut.
+        $susulan = $request->boolean('susulan');
+        if (! $susulan && $exam->sessions()->where('is_makeup', false)->exists()) {
+            return redirect()->back()->with('error',
+                'Ujian ini sudah punya jadwal. Satu ujian hanya boleh punya satu jadwal — '
+                . 'ubah tanggalnya lewat tombol Edit, atau pakai Jadwalkan Susulan untuk kesempatan tambahan.');
+        }
 
         if ($request->participant_mode === 'class') {
             $request->validate(['class_room_id' => 'required|uuid|exists:class_rooms,id']);
@@ -34,9 +48,12 @@ class ExamSessionController extends Controller
         $session = ExamSession::create([
             'exam_id' => $exam->id,
             'name' => $request->name,
+            'is_makeup' => $susulan,
             'class_room_id' => $request->participant_mode === 'class' ? $request->class_room_id : null,
-            'starts_at' => $request->starts_at,
-            'ends_at' => $request->ends_at,
+            // Jadwal hanya tanggal: mulai dihitung dari awal hari, selesai sampai
+            // akhir hari, sehingga siswa boleh masuk kapan saja di dalam rentang itu.
+            'starts_at' => \Carbon\Carbon::parse($request->starts_at)->startOfDay(),
+            'ends_at' => \Carbon\Carbon::parse($request->ends_at)->endOfDay(),
             'duration_minutes' => $request->duration_minutes,
             'max_capacity' => $request->max_capacity,
             'shuffle_questions' => $request->has('shuffle_questions'),
@@ -60,7 +77,8 @@ class ExamSessionController extends Controller
             );
         }
 
-        return redirect()->route('exams.show', $exam->id)->with('success', 'Sesi ujian berhasil dibuat.');
+        return redirect()->route('exams.show', $exam->id)
+            ->with('success', $susulan ? 'Sesi susulan berhasil dibuat.' : 'Jadwal ujian berhasil dibuat.');
     }
 
     public function update(Request $request, $id)
@@ -69,19 +87,22 @@ class ExamSessionController extends Controller
         $this->authorizeExam($session->exam);
 
         if ($session->hasStartedAttempts()) {
-            return redirect()->back()->with('error', 'Sesi tidak bisa diubah karena sudah ada peserta yang memulai.');
+            return redirect()->back()->with('error', 'Jadwal tidak bisa diubah karena sudah ada peserta yang memulai.');
         }
         if ($session->isFinished()) {
-            return redirect()->back()->with('error', 'Sesi tidak bisa diubah karena jadwalnya sudah terlewat/berakhir.');
+            return redirect()->back()->with('error', 'Jadwal tidak bisa diubah karena tanggalnya sudah terlewat.');
         }
 
         $request->validate([
             'name' => 'required|string|max:255',
             'participant_mode' => 'required|in:class,manual',
             'starts_at' => 'required|date',
-            'ends_at' => 'required|date|after:starts_at',
+            'ends_at' => 'required|date|after_or_equal:starts_at',
             'duration_minutes' => 'required|integer|min:1',
             'max_capacity' => 'nullable|integer|min:1',
+        ], [
+            'ends_at.after_or_equal' => 'Tanggal Selesai tidak boleh lebih awal dari Tanggal Mulai '
+                . '(satu hari yang sama diperbolehkan).',
         ]);
 
         // Peserta (kelas / daftar siswa) hanya boleh diubah selama belum ada yang memulai —
@@ -92,8 +113,10 @@ class ExamSessionController extends Controller
             $request->validate(['students' => 'required|array|min:1']);
         }
 
-        $session->update($request->only(['name', 'starts_at', 'ends_at', 'duration_minutes', 'max_capacity'])
+        $session->update($request->only(['name', 'duration_minutes', 'max_capacity'])
             + [
+                'starts_at' => \Carbon\Carbon::parse($request->starts_at)->startOfDay(),
+                'ends_at' => \Carbon\Carbon::parse($request->ends_at)->endOfDay(),
                 'class_room_id' => $request->participant_mode === 'class' ? $request->class_room_id : null,
                 'shuffle_questions' => $request->has('shuffle_questions'),
                 'shuffle_options' => $request->has('shuffle_options'),
@@ -103,7 +126,7 @@ class ExamSessionController extends Controller
         // Sinkronkan daftar siswa manual (kosongkan bila memakai mode kelas).
         $session->students()->sync($request->participant_mode === 'manual' ? $request->students : []);
 
-        return redirect()->back()->with('success', 'Sesi diperbarui.');
+        return redirect()->back()->with('success', 'Jadwal diperbarui.');
     }
 
     public function destroy($id)
@@ -112,7 +135,7 @@ class ExamSessionController extends Controller
         $this->authorizeExam($session->exam);
 
         if ($session->hasStartedAttempts()) {
-            return redirect()->back()->with('error', 'Sesi tidak bisa dihapus karena sudah ada peserta yang memulai ujian.');
+            return redirect()->back()->with('error', 'Jadwal tidak bisa dihapus karena sudah ada peserta yang memulai ujian.');
         }
 
         $examId = $session->exam_id;

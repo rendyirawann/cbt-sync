@@ -7,9 +7,9 @@
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
             <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">{{ $session->exam->title }}</h1>
             <span class="text-muted fs-7 pt-1">
-                Sesi <b>{{ $session->name }}</b> ·
+                Jadwal <b>{{ $session->name }}</b> ·
                 {{ $session->classRoom->name ?? 'peserta pilihan' }} ·
-                {{ \Carbon\Carbon::parse($session->starts_at)->format('d M Y H:i') }}–{{ \Carbon\Carbon::parse($session->ends_at)->format('H:i') }}
+                {{ \Carbon\Carbon::parse($session->starts_at)->translatedFormat('d M Y') }} – {{ \Carbon\Carbon::parse($session->ends_at)->translatedFormat('d M Y') }}
             </span>
         </div>
         <a href="{{ route('exam-monitor.index') }}" class="btn btn-sm btn-light">Kembali</a>

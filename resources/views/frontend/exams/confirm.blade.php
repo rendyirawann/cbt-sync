@@ -76,7 +76,7 @@
                                 <div class="fw-bold fs-6">{{ $exam->teachingAssignment->subject->name ?? '-' }}</div>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <div class="text-muted fs-8">Sesi</div>
+                                <div class="text-muted fs-8">Jadwal</div>
                                 <div class="fw-bold fs-6">{{ $session->name }}</div>
                             </div>
                             <div class="col-md-4 mb-3">

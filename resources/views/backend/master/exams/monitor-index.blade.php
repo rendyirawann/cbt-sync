@@ -40,8 +40,8 @@
                     </div>
                     <div class="fw-bold fs-5 text-gray-900">{{ $s->exam->title }}</div>
                     <div class="text-muted fs-7">
-                        Sesi <b>{{ $s->name }}</b> ·
-                        {{ \Carbon\Carbon::parse($s->starts_at)->format('d M Y H:i') }}–{{ \Carbon\Carbon::parse($s->ends_at)->format('H:i') }}
+                        Jadwal <b>{{ $s->name }}</b> ·
+                        {{ \Carbon\Carbon::parse($s->starts_at)->translatedFormat('d M Y') }} – {{ \Carbon\Carbon::parse($s->ends_at)->translatedFormat('d M Y') }}
                         · {{ $s->duration_minutes }} menit
                         @unless(auth()->user()->hasRole('Guru'))
                             · guru: {{ $s->exam->teachingAssignment->teacher->user->name ?? '-' }}

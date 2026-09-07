@@ -142,6 +142,32 @@
                         </div>
                     </div>
                     <div class="row mb-6">
+                        <label class="col-lg-4 col-form-label fw-semibold fs-6">Kota/Kabupaten</label>
+                        <div class="col-lg-8">
+                            <input type="text" name="city" class="form-control form-control-solid"
+                                value="{{ old('city', $sekolahSaya->city) }}" placeholder="cth: Kota Binjai" />
+                            <span class="text-danger error-text city_error_sekolah"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-6">
+                        <label class="col-lg-4 col-form-label fw-semibold fs-6">Kode Kota / Kode Sekolah</label>
+                        <div class="col-lg-8">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <input type="text" name="city_code" class="form-control form-control-solid"
+                                        value="{{ old('city_code', $sekolahSaya->city_code) }}" placeholder="cth: 03" maxlength="20" />
+                                    <span class="text-danger error-text city_code_error_sekolah"></span>
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" name="school_code" class="form-control form-control-solid"
+                                        value="{{ old('school_code', $sekolahSaya->school_code) }}" placeholder="cth: 0017" maxlength="20" />
+                                    <span class="text-danger error-text school_code_error_sekolah"></span>
+                                </div>
+                            </div>
+                            <div class="text-muted fs-7 mt-2">Mengisi kop lembar <b>Daftar Hadir Peserta</b>. Boleh dikosongkan.</div>
+                        </div>
+                    </div>
+                    <div class="row mb-6">
                         <label class="col-lg-4 col-form-label fw-semibold fs-6">Telepon</label>
                         <div class="col-lg-8">
                             <input type="text" name="phone" class="form-control form-control-solid"

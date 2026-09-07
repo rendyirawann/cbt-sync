@@ -118,7 +118,15 @@ class ExamMonitorController extends Controller
     private function sesiTerjangkau()
     {
         $user = auth()->user();
-        $q = ExamSession::query();
+        // Monitoring mengikuti aturan visibilitas ujian: yang berstatus SELESAI
+        // hilang dari Admin/Guru, dan yang History memang tidak punya tab hasil
+        // bagi mereka — jadi keduanya disaring di sini.
+        $q = ExamSession::query()->whereHas(
+            'exam',
+            fn ($e) => $e->whereIn('status', \App\Support\SiklusUjian::pengawas($user)
+                ? \App\Support\SiklusUjian::statusTerlihat($user)
+                : [\App\Support\SiklusUjian::TERSEDIA, \App\Support\SiklusUjian::DRAFT])
+        );
 
         // Guru: hanya sesi dari ujian yang ia ampu.
         if ($user->hasRole('Guru')) {

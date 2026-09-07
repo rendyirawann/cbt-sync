@@ -36,7 +36,17 @@ class ExamController extends Controller
                 ->get();
         }
 
-        $exams = $query->latest()->get();
+        // Tutup dulu ujian yang sudah tuntas, lalu saring menurut peran: ujian
+        // berstatus SELESAI hilang dari Admin/Guru dan hanya terlihat oleh
+        // Superadmin/Developer. Pemeriksaan status dilakukan SETELAH penutupan
+        // supaya ujian yang baru tuntas langsung ikut tersembunyi.
+        \App\Support\SiklusUjian::segarkan(
+            (clone $query)->where('status', \App\Support\SiklusUjian::TERSEDIA)
+                ->with(['sessions.students', 'sessions.attempts'])->get()
+        );
+
+        $exams = $query->whereIn('status', \App\Support\SiklusUjian::statusTerlihat($user))
+            ->latest()->get();
 
         return view('backend.master.exams.index', compact('exams', 'assignments'));
     }
@@ -77,6 +87,13 @@ class ExamController extends Controller
         ])->findOrFail($id);
 
         $this->authorizeExam($exam);
+
+        // Ujian yang sudah tuntas ditutup di sini juga, supaya membuka halamannya
+        // langsung memindahkan statusnya (bukan menunggu daftar ujian dibuka).
+        \App\Support\SiklusUjian::segarkan($exam);
+
+        // Status SELESAI hanya boleh dibuka Superadmin/Developer.
+        abort_unless(\App\Support\SiklusUjian::bolehLihat($exam), 404);
 
         // Sesi ujian mengikuti kelas ujian (dari penugasan). Peserta = siswa kelas tsb;
         // "Pilih Siswa" hanya untuk memilih SEBAGIAN siswa kelas yang sama.
@@ -125,7 +142,106 @@ class ExamController extends Controller
             ->sortBy(fn ($s) => $s->user->name ?? '')
             ->values();
 
-        return view('backend.master.exams.show', compact('exam', 'examClass', 'students', 'assignments', 'bankQuestions', 'belumUjian'));
+        // Gelombang yang benar-benar dipakai peserta ujian ini — jadi tombol
+        // Daftar Hadir hanya muncul untuk gelombang yang ada isinya.
+        $pesertaUjian = $this->pesertaUjian($exam);
+        $gelombangUjian = \App\Models\Wave::whereIn('id', $pesertaUjian->pluck('wave_id')->filter()->unique())
+            ->terurut()->get()
+            ->map(function ($w) use ($pesertaUjian) {
+                $w->jumlah_peserta = $pesertaUjian->where('wave_id', $w->id)->count();
+                return $w;
+            });
+        $pesertaTanpaGelombang = $pesertaUjian->whereNull('wave_id')->count();
+
+        return view('backend.master.exams.show', compact(
+            'exam', 'examClass', 'students', 'assignments', 'bankQuestions', 'belumUjian',
+            'gelombangUjian', 'pesertaTanpaGelombang'
+        ));
+    }
+
+
+    /**
+     * DAFTAR HADIR PESERTA (PDF) untuk satu ujian, per GELOMBANG.
+     *
+     * Kolom PUKUL diambil dari jam gelombang (Master Gelombang) karena jadwal
+     * ujian kini hanya rentang tanggal. Peserta = seluruh siswa yang berhak ikut
+     * ujian ini (gabungan semua jadwal), disaring menurut gelombangnya.
+     *
+     * GET dan tanpa efek samping: hanya membaca lalu mencetak.
+     */
+    public function attendance(Request $request, $id)
+    {
+        $exam = Exam::with([
+            'teachingAssignment.subject', 'teachingAssignment.classRoom.school',
+            'sessions.students.user', 'sessions.students.wave',
+        ])->findOrFail($id);
+
+        $this->authorizeExam($exam);
+
+        $gelombang = \App\Models\Wave::findOrFail($request->input('wave_id'));
+
+        $peserta = $this->pesertaUjian($exam)
+            ->where('wave_id', $gelombang->id)
+            ->sortBy(fn ($s) => $s->user->username ?? '')
+            ->values();
+
+        $tahun = $exam->teachingAssignment?->academicYear
+            ?? \App\Models\AcademicYear::where('is_active', 1)->first();
+
+        $jadwal = $exam->sessions->where('is_makeup', false)->first() ?? $exam->sessions->first();
+        $rentang = $jadwal
+            ? \Carbon\Carbon::parse($jadwal->starts_at)->translatedFormat('d M Y')
+                . ' – ' . \Carbon\Carbon::parse($jadwal->ends_at)->translatedFormat('d M Y')
+            : '';
+
+        $html = view('backend.master.exams.attendance', [
+            'exam' => $exam,
+            'gelombang' => $gelombang,
+            'peserta' => $peserta,
+            'tahun' => $tahun,
+            'rentangTanggal' => $rentang,
+            'logo' => public_path('assets/media/logos/tut-wuri-handayani.png'),
+        ])->render();
+
+        $options = new \Dompdf\Options();
+        $options->set('chroot', public_path());
+        $options->set('isRemoteEnabled', false);
+        $options->set('defaultFont', 'Helvetica');
+        $options->set('dpi', 96);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $nama = 'Daftar-Hadir-' . \Illuminate\Support\Str::slug($exam->title)
+            . '-' . \Illuminate\Support\Str::slug($gelombang->name) . '.pdf';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $nama . '"',
+        ]);
+    }
+
+    /**
+     * Semua siswa yang berhak mengikuti ujian ini: peserta yang dilampirkan
+     * manual pada jadwal mana pun, ditambah anggota kelas untuk jadwal yang
+     * memakai mode kelas. Dipakai bersama oleh Daftar Hadir dan penghitung
+     * gelombang di halaman Hasil.
+     */
+    private function pesertaUjian(Exam $exam)
+    {
+        $manual = $exam->sessions->flatMap->students;
+
+        $kelasIds = $exam->sessions->pluck('class_room_id')->filter()->unique();
+        $tahunId = $exam->teachingAssignment?->academic_year_id;
+        $dariKelas = $kelasIds->isEmpty() ? collect() : \App\Models\Student::with(['user', 'wave'])
+            ->whereIn('id', \App\Models\ClassStudent::whereIn('class_room_id', $kelasIds)
+                ->when($tahunId, fn ($q) => $q->where('academic_year_id', $tahunId))
+                ->pluck('student_id'))
+            ->get();
+
+        return $manual->concat($dariKelas)->unique('id')->values();
     }
 
     /**
@@ -309,6 +425,14 @@ class ExamController extends Controller
         $exam = Exam::with('questions')->findOrFail($id);
         $this->authorizeExam($exam);
 
+        // Terbit/tarik-draft hanya berlaku pada dua status awal; ujian yang sudah
+        // Selesai/History dipindahkan lewat aksi arsip di bawah.
+        if (! in_array($exam->status, [\App\Support\SiklusUjian::DRAFT, \App\Support\SiklusUjian::TERSEDIA], true)) {
+            return redirect()->back()->with('error',
+                'Ujian berstatus ' . \App\Support\SiklusUjian::labelStatus($exam->status)
+                . ' tidak bisa diterbitkan/ditarik. Gunakan aksi arsip (khusus Superadmin & Developer).');
+        }
+
         if ($exam->status === 'draft' && $exam->questions->count() === 0) {
             return redirect()->back()->with('error', 'Tidak bisa menerbitkan ujian tanpa soal.');
         }
@@ -325,6 +449,65 @@ class ExamController extends Controller
     }
 
     /** Guru hanya boleh mengelola ujian miliknya. */
+    /**
+     * Perpindahan status arsip, KHUSUS Superadmin & Developer:
+     *
+     *   finished  ujian Available ditutup manual → dipakai bila ada peserta yang
+     *             tidak akan pernah mengerjakan sehingga penutupan otomatis
+     *             (yang mensyaratkan semua peserta selesai) tak pernah terjadi.
+     *   history   ujian Selesai diarsipkan → muncul kembali di Admin & Guru,
+     *             tetapi tanpa tab Hasil dan Jadwal.
+     *   available ujian Selesai/History dibuka lagi → dipakai bila masih ada
+     *             siswa yang perlu menyusul setelah ujian sempat tertutup.
+     *
+     * Data ujian tidak pernah dihapus; yang berubah hanya siapa yang melihatnya.
+     */
+    public function archive(Request $request, $id)
+    {
+        abort_unless(\App\Support\SiklusUjian::pengawas(), 403,
+            'Hanya Superadmin dan Developer yang boleh mengubah status arsip ujian.');
+
+        $exam = Exam::findOrFail($id);
+        $tujuan = $request->input('ke');
+
+        if ($tujuan === 'finished') {
+            // Penutupan MANUAL. Perlu karena penutupan otomatis mensyaratkan semua
+            // peserta sudah mengerjakan; siswa yang tidak akan pernah mengerjakan
+            // (pindah/berhenti) akan membuat ujian menggantung Available selamanya.
+            abort_unless($exam->isTersedia(), 422);
+            $exam->update([
+                'status' => \App\Support\SiklusUjian::SELESAI,
+                'finished_at' => now(),
+            ]);
+            $belum = \App\Support\SiklusUjian::belumMengerjakan($exam)->count();
+            $pesan = 'Ujian ditandai Selesai secara manual'
+                . ($belum > 0 ? " walau masih ada $belum peserta yang belum mengerjakan" : '')
+                . '. Ujian ini kini hilang dari Admin, Guru, dan Siswa — hanya Superadmin & Developer '
+                . 'yang bisa membukanya.';
+        } elseif ($tujuan === 'history') {
+            abort_unless($exam->isSelesai() || $exam->isRiwayat(), 422);
+            $exam->update([
+                'status' => \App\Support\SiklusUjian::RIWAYAT,
+                'archived_at' => $exam->archived_at ?? now(),
+            ]);
+            $pesan = 'Ujian dipindahkan ke History. Admin & Guru kembali melihat ujian ini, '
+                . 'tanpa tab Hasil dan Jadwal.';
+        } elseif ($tujuan === 'available') {
+            abort_unless($exam->isSelesai() || $exam->isRiwayat(), 422);
+            $exam->update([
+                'status' => \App\Support\SiklusUjian::TERSEDIA,
+                'finished_at' => null,
+                'archived_at' => null,
+            ]);
+            $pesan = 'Ujian dibuka kembali (Available). Ujian akan menutup sendiri lagi '
+                . 'setelah semua peserta mengerjakan dan tenggatnya terlewat.';
+        } else {
+            abort(422, 'Tujuan status tidak dikenal.');
+        }
+
+        return redirect()->back()->with('success', $pesan);
+    }
+
     private function authorizeExam(Exam $exam): void
     {
         $user = auth()->user();

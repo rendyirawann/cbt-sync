@@ -28,6 +28,8 @@
                                 <th>Nama Lengkap</th>
                                 <th>Username</th>
                                 <th>Tempat &amp; Tgl. Lahir</th>
+                                <th>ID Proktor / Ruang</th>
+                                <th>Gelombang</th>
                                 <th>Asal Sekolah</th>
                                 <th>Email (Akun Login)</th>
                                 <th>Gender</th>
@@ -44,6 +46,17 @@
                                     {{ $item->birth_place ?: '-' }}
                                     <div class="text-muted fs-8 fw-semibold">{{ $item->birth_date ? $item->birth_date->translatedFormat('d F Y') : 'tanggal lahir belum diisi' }}</div>
                                 </td>
+                                <td>
+                                    {{ $item->proctor_id ?: '-' }}
+                                    <div class="text-muted fs-8 fw-semibold">{{ $item->room ?: 'ruang belum diisi' }}</div>
+                                </td>
+                                <td>
+                                    @if($item->wave)
+                                        <span class="badge badge-light-info">{{ $item->wave->name }}</span>
+                                    @else
+                                        <span class="text-muted fw-semibold">-</span>
+                                    @endif
+                                </td>
                                 <td>{{ $item->school->name ?? '-' }}</td>
                                 <td>{{ $item->user->email ?? '-' }}</td>
                                 <td>{{ $item->gender == 'L' ? 'Laki-laki' : 'Perempuan' }}</td>
@@ -57,7 +70,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8">
+                                <td colspan="10">
                                     <div class="text-center px-4 py-15">
                                         <img src="{{ asset('assets/media/illustrations/sigma-1/5.png') }}" alt="" class="mw-100 mh-200px mb-7">
                                         <h3 class="fw-bold text-gray-900 mb-2">Belum ada data siswa</h3>
@@ -94,7 +107,15 @@
                         <input type="text" name="username" class="form-control form-control-solid" placeholder="kosongkan = otomatis memakai NISN">
                         <div class="text-muted fs-7 mt-2">Huruf, angka, titik, garis bawah, dan tanda hubung. Harus unik antar seluruh akun.</div>
                     </div>
-                    <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Password</label><input type="password" name="password" class="form-control form-control-solid" required></div>
+                    <div class="fv-row mb-7">
+                        <label class="fs-6 fw-semibold mb-2">Password</label>
+                        <div class="input-group">
+                            <input type="text" name="password" id="sandiBaru" class="form-control form-control-solid" placeholder="kosongkan = digenerate otomatis" autocomplete="off">
+                            <button type="button" class="btn btn-light-primary" id="btnSandiAcak">Generate</button>
+                        </div>
+                        <div class="text-muted fs-7 mt-2">Kosongkan saja: sistem membuat password acak bergaya ANBK (mis. <b>892777*</b>).
+                            Password ini yang dipakai siswa untuk login dan yang tercetak di <b>Kartu Ujian</b>.</div>
+                    </div>
                     
                     <h5 class="mb-4 text-primary border-top pt-4">Profil Siswa</h5>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Sekolah Asal</label>
@@ -129,6 +150,28 @@
                         </div>
                     </div>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Alamat</label><textarea name="address" class="form-control form-control-solid"></textarea></div>
+
+                    <h5 class="mb-4 text-primary border-top pt-4">Pelaksanaan Ujian</h5>
+                    <div class="row mb-5">
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">ID Proktor</label>
+                            <input type="text" name="proctor_id" class="form-control form-control-solid" placeholder="cth: U07030017-AY8U" maxlength="50">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">Ruang</label>
+                            <input type="text" name="room" class="form-control form-control-solid" placeholder="cth: ANBK-SMA-1" maxlength="100">
+                        </div>
+                    </div>
+                    <div class="fv-row mb-5">
+                        <label class="fs-6 fw-semibold mb-2">Gelombang</label>
+                        <select name="wave_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#addModal">
+                            <option value="">Belum ditentukan</option>
+                            @foreach($waves as $w)
+                                <option value="{{ $w->id }}">{{ $w->name }}</option>
+                            @endforeach
+                        </select>
+                        <div class="text-muted fs-7 mt-2">Pilihan diambil dari <b>Data Master &rarr; Master Gelombang</b>. Ketiga data ini dicetak pada kartu login peserta.</div>
+                    </div>
 
                     <h5 class="mb-4 text-primary border-top pt-4">Data Orang Tua / Wali</h5>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Nama Orang Tua</label><input type="text" name="parent_name" class="form-control form-control-solid" placeholder="Contoh: Bpk. Heru"></div>
@@ -175,7 +218,11 @@
                         <input type="text" name="username" class="form-control form-control-solid" value="{{ $item->user->username ?? '' }}" placeholder="kosongkan = otomatis memakai NISN">
                         <div class="text-muted fs-7 mt-2">Huruf, angka, titik, garis bawah, dan tanda hubung. Harus unik antar seluruh akun.</div>
                     </div>
-                    <div class="fv-row mb-7"><label class="fs-6 fw-semibold mb-2">Password (Kosongkan jika tidak diubah)</label><input type="password" name="password" class="form-control form-control-solid"></div>
+                    <div class="fv-row mb-7">
+                        <label class="fs-6 fw-semibold mb-2">Password (Kosongkan jika tidak diubah)</label>
+                        <input type="text" name="password" class="form-control form-control-solid" autocomplete="off">
+                        <div class="text-muted fs-7 mt-2">Mengisi kolom ini juga mengubah password pada <b>Kartu Ujian</b> siswa ini.</div>
+                    </div>
                     
                     <h5 class="mb-4 text-primary border-top pt-4">Profil Siswa</h5>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Sekolah Asal</label>
@@ -208,6 +255,33 @@
                     </div>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Alamat</label><textarea name="address" class="form-control form-control-solid">{{ $item->address }}</textarea></div>
 
+                    <h5 class="mb-4 text-primary border-top pt-4">Pelaksanaan Ujian</h5>
+                    <div class="row mb-5">
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">ID Proktor</label>
+                            <input type="text" name="proctor_id" class="form-control form-control-solid" value="{{ $item->proctor_id }}" placeholder="cth: U07030017-AY8U" maxlength="50">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fs-6 fw-semibold mb-2">Ruang</label>
+                            <input type="text" name="room" class="form-control form-control-solid" value="{{ $item->room }}" placeholder="cth: ANBK-SMA-1" maxlength="100">
+                        </div>
+                    </div>
+                    <div class="fv-row mb-5">
+                        <label class="fs-6 fw-semibold mb-2">Gelombang</label>
+                        <select name="wave_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal{{ $item->id }}">
+                            <option value="">Belum ditentukan</option>
+                            @foreach($waves as $w)
+                                <option value="{{ $w->id }}" @selected($item->wave_id === $w->id)>{{ $w->name }}</option>
+                            @endforeach
+                            {{-- Gelombang yang sudah dinonaktifkan tetap ditampilkan bila siswa ini memakainya,
+                                 supaya menyimpan form tidak diam-diam menghapus gelombangnya. --}}
+                            @if($item->wave && !$waves->contains('id', $item->wave_id))
+                                <option value="{{ $item->wave_id }}" selected>{{ $item->wave->name }} (nonaktif)</option>
+                            @endif
+                        </select>
+                        <div class="text-muted fs-7 mt-2">Dicetak pada kartu login peserta.</div>
+                    </div>
+
                     <h5 class="mb-4 text-primary border-top pt-4">Data Orang Tua / Wali</h5>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Nama Orang Tua</label><input type="text" name="parent_name" class="form-control form-control-solid" value="{{ $item->parent_name }}"></div>
                     <div class="row mb-5">
@@ -235,6 +309,17 @@
 
 @push('scripts')
 <script>
+    // Tombol Generate hanya mengisi kolomnya di layar. Kalau dibiarkan kosong,
+    // server tetap membuatkan password acak dan menampilkannya setelah simpan.
+    (function () {
+        var btn = document.getElementById('btnSandiAcak');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var n = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+            document.getElementById('sandiBaru').value = n + '*';
+        });
+    })();
+
     document.querySelectorAll('.confirm-delete').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();

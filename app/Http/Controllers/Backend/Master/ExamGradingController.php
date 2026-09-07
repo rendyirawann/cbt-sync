@@ -31,6 +31,7 @@ class ExamGradingController extends Controller
         ])->findOrFail($sessionId);
 
         $this->authorizeExam($session->exam);
+        $this->authorizeHasil($session->exam);
 
         $eligible = $session->eligibleStudents();
         $attemptsByStudent = $session->attempts->keyBy('student_id');
@@ -46,6 +47,7 @@ class ExamGradingController extends Controller
         ])->findOrFail($attemptId);
 
         $this->authorizeExam($attempt->session->exam);
+        $this->authorizeHasil($attempt->session->exam);
 
         $exam = $attempt->session->exam;
         $answers = $attempt->answers->keyBy('question_id');
@@ -284,6 +286,19 @@ class ExamGradingController extends Controller
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Gagal notif nilai ujian: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Hasil & nilai mengikuti aturan siklus ujian: pada ujian berstatus SELESAI
+     * hanya Superadmin/Developer yang boleh membukanya, dan pada ujian HISTORY
+     * tab hasilnya disembunyikan dari Admin & Guru — halaman ini pun ditutup
+     * supaya tidak bisa dicapai lewat URL langsung.
+     */
+    private function authorizeHasil(Exam $exam): void
+    {
+        abort_unless(\App\Support\SiklusUjian::bolehLihat($exam), 404);
+        abort_unless(\App\Support\SiklusUjian::bolehLihatHasil($exam), 403,
+            'Ujian ini sudah diarsipkan sebagai History. Hasil & nilainya hanya dapat dibuka Superadmin dan Developer.');
     }
 
     private function authorizeExam(Exam $exam): void

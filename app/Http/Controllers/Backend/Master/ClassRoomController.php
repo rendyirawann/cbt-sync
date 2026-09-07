@@ -60,6 +60,81 @@ class ClassRoomController extends Controller
         ));
     }
 
+    /**
+     * Export PDF kartu login peserta untuk satu rombel pada satu tahun ajaran.
+     *
+     * Sekali klik mencetak SELURUH anggota rombel pada tahun ajaran terpilih,
+     * dua kartu per baris A4.
+     *
+     * Password kartu diurus App\Support\KartuUjian: yang sudah ada dipakai apa
+     * adanya, yang belum ada diterbitkan sekaligus dipasang sebagai password
+     * akun. Sejak akun siswa dibuat dengan password acak, umumnya semua peserta
+     * sudah punya kartu sehingga mencetak tidak mengubah apa pun.
+     *
+     * Memakai POST, bukan GET, justru karena ada penerbitan password ini.
+     */
+    public function cards(Request $request, $id)
+    {
+        $sid = \App\Support\SchoolScope::id();
+        $classRoom = ClassRoom::with('school')
+            ->when($sid, fn ($q) => $q->where('school_id', $sid))
+            ->findOrFail($id);
+
+        $tahun = $request->input('academic_year_id')
+            ? \App\Models\AcademicYear::find($request->input('academic_year_id'))
+            : \App\Models\AcademicYear::where('is_active', 1)->first();
+
+        $anggota = \App\Models\ClassStudent::with(['student.user', 'student.wave'])
+            ->where('class_room_id', $classRoom->id)
+            ->when($tahun, fn ($q) => $q->where('academic_year_id', $tahun->id))
+            ->get()
+            ->pluck('student')
+            ->filter()
+            ->sortBy(fn ($s) => $s->user->name ?? '')
+            ->values();
+
+        if ($anggota->isEmpty()) {
+            return redirect()->back()->with('error',
+                'Belum ada siswa yang diplot di ' . $classRoom->name
+                . ($tahun ? ' pada tahun ajaran ' . $tahun->name : '') . ', jadi tidak ada kartu untuk dicetak.');
+        }
+
+        $sandi = [];
+        foreach ($anggota as $s) {
+            $sandi[$s->id] = \App\Support\KartuUjian::siapCetak($s);
+        }
+
+        $html = view('backend.master.class-rooms.cards', [
+            'classRoom' => $classRoom,
+            'tahun' => $tahun,
+            'peserta' => $anggota,
+            'sandi' => $sandi,
+            'logo' => public_path('assets/media/logos/tut-wuri-handayani.png'),
+        ])->render();
+
+        $options = new \Dompdf\Options();
+        // chroot dibatasi ke public/ supaya <img> hanya boleh mengambil berkas
+        // dari sana; gambar remote tetap dimatikan.
+        $options->set('chroot', public_path());
+        $options->set('isRemoteEnabled', false);
+        $options->set('defaultFont', 'Helvetica');
+        $options->set('dpi', 96);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $nama = 'Kartu-Ujian-' . \Illuminate\Support\Str::slug($classRoom->name)
+            . ($tahun ? '-' . \Illuminate\Support\Str::slug($tahun->name) : '') . '.pdf';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $nama . '"',
+        ]);
+    }
+
+
     public function store(Request $request)
     {
         $data = $request->validate($this->rules(), $this->idMessages(), $this->labels());

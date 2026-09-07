@@ -143,9 +143,13 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::resource('/admin/schools', \App\Http\Controllers\Backend\Master\SchoolController::class)->middleware('role:Developer');
     Route::resource('/admin/academic-years', \App\Http\Controllers\Backend\Master\AcademicYearController::class);
     Route::resource('/admin/subjects', \App\Http\Controllers\Backend\Master\SubjectController::class);
+    Route::resource('/admin/waves', \App\Http\Controllers\Backend\Master\WaveController::class)->except(['show', 'create', 'edit']);
     // Daftar siswa satu kelas (per tahun ajaran) — didaftarkan SEBELUM resource
     // agar tidak tertangkap route show yang berpola /class-rooms/{id}.
     Route::get('/admin/class-rooms/{id}/students', [\App\Http\Controllers\Backend\Master\ClassRoomController::class, 'students'])->name('class-rooms.students');
+    // Kartu login peserta (PDF). POST karena mencetak kartu dapat MENERBITKAN
+    // password baru bagi siswa yang belum punya password kartu.
+    Route::post('/admin/class-rooms/{id}/cards', [\App\Http\Controllers\Backend\Master\ClassRoomController::class, 'cards'])->name('class-rooms.cards');
     Route::resource('/admin/class-rooms', \App\Http\Controllers\Backend\Master\ClassRoomController::class);
     Route::resource('/admin/teaching-assignments', \App\Http\Controllers\Backend\Master\TeachingAssignmentController::class);
     Route::resource('/admin/learning-modules', \App\Http\Controllers\Backend\Master\LearningModuleController::class);
@@ -166,6 +170,9 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
         ->where('type', 'pg|mixed|essay')->name('exams.word-template');
     Route::post('/admin/exams/{exam}/import-questions', [\App\Http\Controllers\Backend\Master\ExamTemplateController::class, 'import'])->name('exams.import');
     Route::resource('/admin/exams', \App\Http\Controllers\Backend\Master\ExamController::class)->except(['create', 'edit']);
+    // Perpindahan status arsip (Selesai <-> History <-> Available), khusus
+    // Superadmin & Developer — dijaga lagi di dalam controller.
+    Route::post('/admin/exams/{id}/archive', [\App\Http\Controllers\Backend\Master\ExamController::class, 'archive'])->name('exams.archive');
     Route::post('/admin/exams/{id}/publish', [\App\Http\Controllers\Backend\Master\ExamController::class, 'publish'])->name('exams.publish');
     // Bank Soal Bersama (lintas sekolah) + tarik ke ujian
     Route::get('/admin/question-banks', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'index'])->name('question-banks.index');
@@ -174,6 +181,8 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::put('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'update'])->name('question-banks.update');
     Route::delete('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'destroy'])->name('question-banks.destroy');
     // Pengaturan pemilihan soal (semua / manual / acak sebagian per siswa).
+    // Daftar Hadir Peserta (PDF) per gelombang — hanya membaca, jadi GET.
+    Route::get('/admin/exams/{id}/attendance', [\App\Http\Controllers\Backend\Master\ExamController::class, 'attendance'])->name('exams.attendance');
     Route::post('/admin/exams/{exam}/question-selection', [\App\Http\Controllers\Backend\Master\ExamController::class, 'updateQuestionSelection'])->name('exams.question-selection');
     Route::post('/admin/exams/{exam}/pull-bank', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'pullFromBank'])->name('exams.pull-bank');
 
@@ -266,6 +275,8 @@ Route::middleware(['auth', 'role:Siswa'])->prefix('portal')->group(function () {
     
     // Portal Profile
     Route::get('/my-account', [AccountController::class, 'index'])->name('student.account.index');
+    // Kartu ujian milik siswa sendiri. GET karena tidak menerbitkan password.
+    Route::get('/kartu-ujian/pdf', [\App\Http\Controllers\Frontend\PortalController::class, 'kartuUjianPdf'])->name('student.kartu-ujian.pdf');
     Route::post('/my-account/send-otp', [AccountController::class, 'sendOtp'])->name('student.parent.send-otp');
     Route::post('/my-account/verify-otp', [AccountController::class, 'verifyOtp'])->name('student.parent.verify-otp');
     Route::get('/my-account/{id}/avatar', [AccountController::class, 'editAvatar'])->name('student.avatar-edit');

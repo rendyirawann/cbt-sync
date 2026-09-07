@@ -35,6 +35,9 @@ class SchoolProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'name'    => 'required|string|max:255',
             'address' => 'nullable|string|max:1000',
+            'city'        => 'nullable|string|max:255',
+            'city_code'   => 'nullable|string|max:20',
+            'school_code' => 'nullable|string|max:20',
             'phone'   => 'nullable|string|max:30',
             'email'   => 'nullable|email|max:255',
         ], [

@@ -52,6 +52,16 @@
                                         data-bs-target="#grupRombel{{ $loop->index }}">
                                         <i class="ki-outline ki-eye fs-5 me-1"></i>Lihat {{ $anggota->count() }} siswa
                                     </button>
+                                    @if($kelas)
+                                        {{-- Mencetak kartu bisa menerbitkan password baru, jadi POST + konfirmasi. --}}
+                                        <form action="{{ route('class-rooms.cards', $kelas->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="academic_year_id" value="{{ $tahunId }}">
+                                            <button type="submit" class="btn btn-sm btn-light-danger confirm-kartu">
+                                                <i class="ki-outline ki-file-down fs-5 me-1"></i>Export PDF Kartu Ujian
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             </div>
                             <div class="collapse mt-4" id="grupRombel{{ $loop->index }}">
@@ -133,12 +143,13 @@
 
                     <div class="fv-row mb-7">
                         <label class="required fs-6 fw-semibold mb-2">Pilih Siswa</label>
-                        <select name="student_ids[]" class="form-select form-select-solid" data-control="select2" data-close-on-select="false" data-placeholder="Cari siswa..." data-dropdown-parent="#addModal" multiple="multiple" required>
-                            @foreach($students as $s)
-                                <option value="{{ $s->id }}">{{ $s->user->name ?? '-' }} (NISN: {{ $s->nisn }})</option>
-                            @endforeach
-                        </select>
-                        <div class="text-muted fs-7 mt-2">Menampilkan siswa yang belum memiliki kelas di tahun ajaran aktif.</div>
+                        @include('backend.master._pilih-siswa', [
+                            'uid' => 'psPlot',
+                            'name' => 'student_ids[]',
+                            'kosong' => 'Semua siswa sudah punya rombel pada tahun ajaran ini.',
+                        ])
+                        <div class="text-muted fs-7 mt-2">Menampilkan siswa yang belum memiliki kelas di tahun ajaran terpilih.
+                            <b>Pilih semua</b>/<b>Kosongkan</b> berlaku pada daftar yang sedang tampil, dan klik sambil menahan <b>Shift</b> mencentang satu rentang sekaligus.</div>
                     </div>
                 </div>
                 <div class="modal-footer flex-center">
@@ -153,6 +164,23 @@
 
 @push('scripts')
 <script>
+    // Kartu ujian: jelaskan efek penerbitan password sebelum mencetak.
+    document.querySelectorAll('.confirm-kartu').forEach(function (b) {
+        b.addEventListener('click', function (e) {
+            e.preventDefault();
+            var form = this.closest('form');
+            Swal.fire({
+                title: 'Cetak kartu ujian rombel ini?',
+                html: 'Kartu memuat <b>username &amp; password</b> peserta.<br><br>'
+                    + 'Siswa yang <b>belum punya password kartu</b> akan diterbitkan password baru, '
+                    + 'dan password itu menggantikan password akunnya. Siswa yang sudah punya '
+                    + '<b>tidak diubah</b> — mencetak ulang menghasilkan password yang sama.',
+                icon: 'info', showCancelButton: true,
+                confirmButtonText: 'Ya, cetak PDF', cancelButtonText: 'Batal'
+            }).then(function (r) { if (r.isConfirmed) form.submit(); });
+        });
+    });
+
     document.querySelectorAll('.confirm-delete').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();

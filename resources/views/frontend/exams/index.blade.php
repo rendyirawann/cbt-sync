@@ -30,7 +30,7 @@
                         </div>
                         <h3 class="fw-bold text-gray-900 mb-1">{{ $s->exam->title }}</h3>
                         <div class="text-muted fs-7 mb-1">{{ $s->name }}</div>
-                        <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-calendar fs-6 me-1"></i> {{ \Carbon\Carbon::parse($s->starts_at)->format('d M Y H:i') }} – {{ \Carbon\Carbon::parse($s->ends_at)->format('H:i') }}</div>
+                        <div class="text-gray-600 fs-7 mb-1"><i class="ki-outline ki-calendar fs-6 me-1"></i> {{ \Carbon\Carbon::parse($s->starts_at)->translatedFormat('d M Y') }} – {{ \Carbon\Carbon::parse($s->ends_at)->translatedFormat('d M Y') }}</div>
                         <div class="text-gray-600 fs-7 mb-4"><i class="ki-outline ki-timer fs-6 me-1"></i> Durasi {{ $s->duration_minutes }} menit</div>
 
                         <div class="mt-auto">
