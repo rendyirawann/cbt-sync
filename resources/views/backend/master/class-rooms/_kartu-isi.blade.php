@@ -42,7 +42,7 @@
                     <td class="v tebal">{{ $sandi ?: '-' }}</td>
                 </tr>
                 <tr>
-                    <td class="l">Link Ujian</td><td class="s">:</td>
+                    <td class="l">ID Proktor / Ruang</td><td class="s">:</td>
                     <td class="v">
                         @if($s->proctor_id || $s->room)
                             {{ $s->proctor_id ?: '-' }} / {{ $s->room ?: '-' }}

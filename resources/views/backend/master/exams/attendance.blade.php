@@ -28,11 +28,12 @@
     /* --- identitas: label : nilai bergaris --- */
     table.ident { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
     table.ident td { padding: 1.2mm 0; font-size: 9pt; vertical-align: bottom; }
-    td.il { width: 38mm; }
+    /* 42mm: label terpanjang sekarang "ID PROKTOR / RUANG". */
+    td.il { width: 42mm; }
     td.is { width: 4mm; }
     td.iv { border-bottom: 1px solid #000; padding-left: 2mm !important; }
-    td.ik { width: 16mm; text-align: right; padding-right: 2mm !important; }
-    td.ikv { width: 26mm; border-bottom: 1px solid #000; padding-left: 2mm !important; }
+    td.ik { width: 18mm; text-align: right; padding-right: 2mm !important; }
+    td.ikv { width: 30mm; border-bottom: 1px solid #000; padding-left: 2mm !important; }
 
     /* --- tabel peserta --- */
     table.peserta { width: 100%; border-collapse: collapse; }
@@ -56,7 +57,16 @@
     table.rekap { border-collapse: collapse; font-size: 8pt; }
     table.rekap td { border: 1px solid #000; padding: 1.2mm 2mm; }
     table.rekap td.angka { width: 22mm; }
-    .ttdblok { text-align: center; font-size: 9pt; line-height: 1.6; }
+
+    /* Blok tanda tangan. Tanda kurung didorong ke tepi kiri & kanan kolom lewat
+       sel tengah yang melebar, sehingga lebarnya sejajar dengan baris NIP di
+       bawahnya — bukan mengandalkan deretan &nbsp; yang lebarnya menebak-nebak. */
+    .ttdblok { font-size: 9pt; }
+    .ttdblok .jabatan { text-align: center; }
+    table.krg { width: 100%; border-collapse: collapse; margin-top: 16mm; }
+    table.krg td { padding: 0; font-size: 9pt; }
+    table.krg td.tepi { width: 3mm; }
+    .ttdblok .nip { padding-top: .8mm; }
 </style>
 </head>
 <body>
@@ -64,14 +74,22 @@
     $sekolah = $exam->teachingAssignment->classRoom->school ?? null;
     $mapel = $exam->teachingAssignment->subject->name ?? '-';
     $garis = fn ($v) => filled($v) ? $v : '';
-    // LINK UJIAN pada lembar asli berpola "<id proktor> / <ruang>". Keduanya data
-    // per siswa, jadi dipakai nilai yang dipakai bersama; kalau peserta punya
-    // nilai berbeda, dibiarkan kosong agar tidak menyesatkan.
-    $proktor = $peserta->pluck('proctor_id')->filter()->unique();
-    $ruang = $peserta->pluck('room')->filter()->unique();
-    $linkUjian = ($proktor->count() === 1 ? $proktor->first() : '')
-        . ($proktor->count() === 1 && $ruang->count() === 1 ? ' / ' : '')
-        . ($ruang->count() === 1 ? $ruang->first() : '');
+    // KODE di kop = kode MATA PELAJARAN (subjects.code), diisi di
+    // Data Master -> Mata Pelajaran. Bukan nilai tetap di berkas ini.
+    $kodeMapel = $exam->teachingAssignment->subject->code ?? '';
+
+    // ID Proktor & Ruang adalah data PER SISWA (Data Master -> Data Siswa).
+    // Satu lembar berlaku untuk satu ruang, jadi nilainya hanya dicetak bila
+    // SELURUH peserta di gelombang ini memakai nilai yang sama; kalau berbeda
+    // dibiarkan kosong agar lembarnya tidak menyesatkan.
+    $satuNilai = fn ($kolom) => ($n = $peserta->pluck($kolom)->filter()->unique())->count() === 1
+        ? $n->first() : '';
+    $idProktor = $satuNilai('proctor_id');
+    $ruangUjian = $satuNilai('room');
+    // Ditulis sebaris dengan pemisah "/" seperti pada lembar aslinya.
+    $proktorRuang = ($idProktor || $ruangUjian)
+        ? ($idProktor ?: '-') . ' / ' . ($ruangUjian ?: '-')
+        : '';
 @endphp
 
 <table class="kop">
@@ -89,29 +107,34 @@
 <table class="ident">
     <tr>
         <td class="il">KOTA/KABUPATEN</td><td class="is">:</td>
-        <td class="iv" colspan="4">{{ $garis($sekolah->city ?? null) }}</td>
+        <td class="iv">{{ $garis($sekolah->city ?? null) }}</td>
         <td class="ik">KODE</td><td class="is">:</td>
-        <td class="ikv">{{ $garis($sekolah->city_code ?? null) }}</td>
+        <td class="ikv">{{ $kodeMapel }}</td>
     </tr>
     <tr>
         <td class="il">SEKOLAH/MADRASAH</td><td class="is">:</td>
-        <td class="iv" colspan="4">{{ $garis($sekolah->name ?? null) }}</td>
-        <td class="ik">KODE</td><td class="is">:</td>
-        <td class="ikv">{{ $garis($sekolah->school_code ?? null) }}</td>
-    </tr>
-    <tr>
-        <td class="il">LINK UJIAN</td><td class="is">:</td>
-        <td class="iv" colspan="4">{{ $linkUjian }}</td>
+        <td class="iv">{{ $garis($sekolah->name ?? null) }}</td>
         <td class="ik">SESI</td><td class="is">:</td>
         <td class="ikv">{{ $gelombang->name ?? '-' }}</td>
     </tr>
     <tr>
-        <td class="il">HARI</td><td class="is">:</td>
-        <td class="iv" style="width:32mm"></td>
-        <td class="ik" style="width:22mm">TANGGAL</td><td class="is">:</td>
-        <td class="iv"></td>
+        <td class="il">ID PROKTOR / RUANG</td><td class="is">:</td>
+        <td class="iv">{{ $proktorRuang }}</td>
         <td class="ik">PUKUL</td><td class="is">:</td>
         <td class="ikv">{{ $gelombang->rentang_jam ?? '' }}</td>
+    </tr>
+</table>
+
+{{-- HARI & TANGGAL memang DIBIARKAN KOSONG bergaris, sama seperti lembar
+     aslinya: satu jadwal berlaku beberapa hari dan siswa boleh masuk kapan saja
+     di dalamnya, jadi hari pelaksanaan tiap lembar ditulis tangan oleh pengawas
+     saat ruangan dipakai. Rentang tanggalnya dicetak sebagai catatan di bawah. --}}
+<table class="ident">
+    <tr>
+        <td class="il">HARI</td><td class="is">:</td>
+        <td class="iv" style="width:38mm"></td>
+        <td class="ik" style="width:24mm">TANGGAL</td><td class="is">:</td>
+        <td class="iv"></td>
     </tr>
 </table>
 
@@ -156,23 +179,22 @@
 
 <table class="tutup">
     <tr>
-        <td style="width:52%">
+        <td style="width:44%">
             <table class="rekap">
                 <tr><td>Jumlah Peserta yang Seharusnya Hadir</td><td>:</td><td class="angka">{{ $peserta->count() }} peserta</td></tr>
                 <tr><td>Jumlah Peserta yang Tidak Hadir</td><td>:</td><td class="angka">&nbsp;</td></tr>
                 <tr><td>Jumlah Peserta Hadir</td><td>:</td><td class="angka">&nbsp;</td></tr>
             </table>
         </td>
-        <td style="width:24%" class="ttdblok">
-            Proktor<br><br><br><br>
-            (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br>
-            <div style="text-align:left;padding-left:2mm">NIP.</div>
+        @foreach(['Proktor', 'Pengawas'] as $jabatan)
+        <td style="width:26%;padding:0 5mm" class="ttdblok">
+            <div class="jabatan">{{ $jabatan }}</div>
+            <table class="krg">
+                <tr><td class="tepi">(</td><td></td><td class="tepi" style="text-align:right">)</td></tr>
+            </table>
+            <div class="nip">NIP.</div>
         </td>
-        <td style="width:24%" class="ttdblok">
-            Pengawas<br><br><br><br>
-            (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br>
-            <div style="text-align:left;padding-left:2mm">NIP.</div>
-        </td>
+        @endforeach
     </tr>
 </table>
 </body>
