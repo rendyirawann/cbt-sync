@@ -117,8 +117,9 @@
                             </select>
                             <div class="text-muted fs-7 mt-2">
                                 Pilih bila akun user siswa ini <b>sudah dibuat lebih dulu</b> di User Management.
-                                Yang muncul hanya akun yang belum dipakai data siswa lain.
-                                @if($akunTersedia->isEmpty())<span class="text-warning d-block mt-1">Belum ada akun yang bisa dipakai — biarkan kosong agar akun baru dibuat.</span>@endif
+                                Yang muncul hanya akun ber-role <b>Siswa</b> yang belum dipakai data siswa lain —
+                                akun admin, guru, dan kepala sekolah tidak ikut ditawarkan.
+                                @if($akunTersedia->isEmpty())<span class="text-warning d-block mt-1">Belum ada akun Siswa yang bisa dipakai — biarkan kosong agar akun baru dibuat.</span>@endif
                             </div>
                         </div>
 

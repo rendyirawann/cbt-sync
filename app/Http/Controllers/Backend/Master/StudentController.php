@@ -21,6 +21,9 @@ class StudentController extends Controller
 {
     use ValidatesMasterData, ExcelMasterTemplate;
 
+    /** Nama role siswa yang diterima (huruf besar/kecil pernah dipakai keduanya). */
+    private const ROLE_SISWA = ['Siswa', 'siswa'];
+
     public function index()
     {
         $sid = \App\Support\SchoolScope::id();
@@ -32,13 +35,18 @@ class StudentController extends Controller
         // dinonaktifkan tetap terbaca pada data siswa yang memakainya.
         $waves = \App\Models\Wave::where('is_active', true)->terurut()->get();
 
-        // Akun yang BISA dipakai untuk siswa baru: belum punya profil siswa,
-        // masih di sekolah yang sama (atau belum bersekolah), dan bukan akun
-        // pengelola/tersembunyi. Dipakai bila operator sudah membuat data user
-        // lebih dulu, baru kemudian mengisi data siswanya.
+        // Akun yang BISA dipakai untuk siswa baru: HANYA yang ber-role Siswa,
+        // belum punya profil siswa, dan masih di sekolah yang sama (atau belum
+        // bersekolah). Dipakai bila operator sudah membuat data user lebih dulu,
+        // baru kemudian mengisi data siswanya.
+        //
+        // Sebelumnya penyaringnya berupa daftar role yang DIKECUALIKAN, dan itu
+        // keliru: akun Admin (dan akun tanpa role sama sekali) tetap ikut muncul
+        // karena tidak ada di daftar itu. Sekarang syaratnya positif — harus
+        // punya role Siswa — sehingga akun pengelola tidak mungkin lolos.
         $akunTersedia = \App\Models\User::doesntHave('student')
+            ->whereHas('roles', fn ($q) => $q->whereIn('name', self::ROLE_SISWA))
             ->when($sid, fn ($q) => $q->where(fn ($w) => $w->where('school_id', $sid)->orWhereNull('school_id')))
-            ->whereDoesntHave('roles', fn ($q) => $q->whereIn('name', ['Superadmin', 'superadmin', 'Developer', 'Guru', 'Kepala Sekolah']))
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'username']);
 
@@ -101,6 +109,18 @@ class StudentController extends Controller
                     return redirect()->back()->withInput()
                         ->with('error', 'Akun "' . $user->name . '" sudah dipakai oleh data siswa lain.');
                 }
+                // Dijaga di server juga: hanya akun ber-role Siswa yang boleh dipakai,
+                // supaya akun Admin/Guru tidak bisa "dijadikan siswa" lewat id yang
+                // dikirim langsung.
+                if (!$user->hasRole(self::ROLE_SISWA)) {
+                    DB::rollBack();
+
+                    return redirect()->back()->withInput()->with('error',
+                        'Akun "' . $user->name . '" bukan akun siswa (role: '
+                        . ($user->getRoleNames()->implode(', ') ?: 'tanpa role')
+                        . '). Hanya akun ber-role Siswa yang bisa dipakai di sini.');
+                }
+
                 $sekolahAkun = $user->school_id;
                 if ($sekolahAkun && $schoolId && $sekolahAkun !== $schoolId) {
                     DB::rollBack();
