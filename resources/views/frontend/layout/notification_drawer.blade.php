@@ -9,39 +9,28 @@
 	</div>
 	<div class="offcanvas-body p-0">
 		@php
+			// Dulu panel ini dirakit dari LearningModule, Assignment, dan Attendance —
+			// semuanya bawaan LMS yang tabelnya kosong di CBT, jadi isinya selalu
+			// "Belum ada notifikasi". NotifikasiCbt sudah punya cabang khusus Siswa
+			// (lihat NotifikasiCbt::untukSiswa) dan menghitung dari keadaan CBT saat
+			// ini: ujian siap dikerjakan, yang belum diselesaikan, jadwal berikutnya,
+			// dan nilai yang baru keluar.
 			$studentNotifs = collect();
-			
-			// Modul pembelajaran terbaru
-			if(class_exists('\App\Models\LearningModule')) {
-				foreach(\App\Models\LearningModule::latest()->take(3)->get() as $module) {
+			try {
+				foreach (app(\App\Services\NotifikasiCbt::class)->untuk(auth()->user()) as $b) {
 					$studentNotifs->push([
-						'icon' => 'ki-book', 'color' => 'success',
-						'title' => 'Modul Baru: ' . $module->title,
-						'time' => $module->created_at->diffForHumans()
+						'icon'  => $b['ikon'],
+						'color' => $b['warna'],
+						'title' => $b['judul'],
+						'time'  => $b['waktu'],
+						'url'   => $b['url'] ?? null,
+						'text'  => $b['teks'] ?? null,
 					]);
 				}
-			}
-			
-			// Penugasan terbaru
-			if(class_exists('\App\Models\Assignment')) {
-				foreach(\App\Models\Assignment::latest()->take(3)->get() as $assignment) {
-					$studentNotifs->push([
-						'icon' => 'ki-notepad-edit', 'color' => 'warning',
-						'title' => 'Tugas Baru: ' . $assignment->title,
-						'time' => $assignment->created_at->diffForHumans()
-					]);
-				}
-			}
-			
-			// Absensi terbaru milik siswa ini
-			if(class_exists('\App\Models\Attendance') && auth()->user()) {
-				foreach(\App\Models\Attendance::where('user_id', auth()->id())->latest()->take(3)->get() as $attendance) {
-					$studentNotifs->push([
-						'icon' => 'ki-badge', 'color' => 'primary',
-						'title' => 'Absensi ' . ucfirst($attendance->type) . ': ' . ucfirst($attendance->status),
-						'time' => $attendance->created_at->diffForHumans()
-					]);
-				}
+			} catch (\Throwable $e) {
+				// Panel ini ada di NAVBAR: galat di sini akan menjatuhkan SELURUH
+				// halaman, termasuk halaman ujian. Jadi ditelan di sini saja.
+				report($e);
 			}
 		@endphp
 
@@ -62,8 +51,15 @@
 					</span>
 				</div>
 				<div class="flex-grow-1">
-					<span class="fs-6 text-gray-800 fw-bold d-block">{{ Str::limit($notif['title'], 50) }}</span>
-					<span class="text-gray-400 fs-7">{{ $notif['time'] }}</span>
+					@if($notif['url'] ?? null)
+						<a href="{{ $notif['url'] }}" class="fs-6 text-gray-800 fw-bold d-block text-hover-primary">{{ Str::limit($notif['title'], 60) }}</a>
+					@else
+						<span class="fs-6 text-gray-800 fw-bold d-block">{{ Str::limit($notif['title'], 60) }}</span>
+					@endif
+					@if($notif['text'] ?? null)
+						<span class="text-gray-600 fs-7 d-block">{{ $notif['text'] }}</span>
+					@endif
+					<span class="text-gray-400 fs-8">{{ $notif['time'] }}</span>
 				</div>
 			</div>
 			<div class="separator separator-dashed"></div>
