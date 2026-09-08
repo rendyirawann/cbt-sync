@@ -209,23 +209,10 @@ class ExamQuestionController extends Controller
     }
 
     /** Salin file gambar (agar independen dari Bank Soal). Kembalikan path baru atau null. */
+    /** Isinya pindah ke GambarSoal::salin() agar dipakai bersama fitur Duplikat Ujian. */
     private function copyImage(?string $src): ?string
     {
-        if (!$src) {
-            return null;
-        }
-        try {
-            $disk = Storage::disk('public');
-            if (!$disk->exists($src)) {
-                return null;
-            }
-            $ext = pathinfo($src, PATHINFO_EXTENSION) ?: 'png';
-            $dest = 'exam-questions/' . \Illuminate\Support\Str::uuid() . '.' . $ext;
-            $disk->copy($src, $dest);
-            return $dest;
-        } catch (\Throwable $e) {
-            return null;
-        }
+        return \App\Support\GambarSoal::salin($src);
     }
 
     /**

@@ -134,10 +134,29 @@
             </div>
         @endunless
 
+        @if($exam->source_exam_id)
+            <div class="alert alert-light-primary d-flex align-items-center py-3 mb-5 fs-8">
+                <i class="ki-outline ki-copy fs-4 me-3"></i>
+                <div>Ujian ini <b>duplikat</b> dari kelas
+                    <b>{{ $exam->sourceExam?->teachingAssignment?->classRoom?->name ?? '(ujian sumber sudah dihapus)' }}</b>.
+                    Soalnya salinan milik ujian ini sendiri, jadi memeriksa nilai di sini
+                    <b>tidak</b> memengaruhi kelas asalnya.</div>
+            </div>
+        @endif
         <div class="tab-content">
             {{-- ================= TAB SOAL ================= --}}
             <div class="tab-pane fade show active" id="tab_soal">
                 <div class="d-flex flex-wrap gap-2 mb-5">
+                    {{-- Duplikat ke kelas lain: satu ujian tetap milik satu kelas, tapi
+                         soalnya tidak perlu ditulis ulang. Tetap tampil walau soal
+                         terkunci, karena yang dibaca adalah ujian ini dan yang dibuat
+                         adalah ujian baru di kelas lain. --}}
+                    @if($targetPenugasan->isNotEmpty())
+                        <button class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#duplicateExamModal"
+                                @if($exam->questions->count() === 0) disabled title="Tambah soal dulu" @endif>
+                            <i class="ki-outline ki-copy fs-5 me-1"></i>Duplikat ke Kelas Lain ({{ $targetPenugasan->where('sudah_ada', false)->count() }})
+                        </button>
+                    @endif
                     @if($locked)
                         <span class="text-muted fs-7"><i class="ki-outline ki-lock-2 fs-5 text-primary me-1"></i> Soal terkunci — sudah ada peserta yang memulai.</span>
                     @else
@@ -615,18 +634,29 @@
                                     @php $sMode = $s->class_room_id ? 'class' : 'manual'; $sStudentIds = $s->students->pluck('id')->all(); @endphp
                                     <label class="form-label required d-block">Peserta <span class="text-muted fs-8">— kelas <b>{{ $examClass->name ?? '-' }}</b></span></label>
                                     <input type="hidden" name="class_room_id" value="{{ $examClass->id ?? '' }}">
-                                    <div class="d-flex gap-4 mb-3 participant-toggle">
-                                        <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" @checked($sMode==='class')> <span class="form-check-label ms-2">Seluruh kelas {{ $examClass->name ?? '' }}</span></label>
-                                        <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual" @checked($sMode==='manual')> <span class="form-check-label ms-2">Pilih sebagian siswa</span></label>
-                                    </div>
+                                    {{-- Toggle mode peserta disembunyikan untuk sesi biasa. Tapi kalau
+                                         sesi ini MEMANG sudah memakai peserta pilihan (mis. sesi susulan),
+                                         toggle-nya tetap ditampilkan — menyembunyikannya akan membuat form
+                                         mengirim participant_mode=class dan diam-diam mengubah pesertanya
+                                         menjadi seluruh kelas. --}}
+                                    @if($sMode === 'manual')
+                                        <div class="d-flex gap-4 mb-3 participant-toggle">
+                                            <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" @checked($sMode==='class')> <span class="form-check-label ms-2">Seluruh kelas {{ $examClass->name ?? '' }}</span></label>
+                                            <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual" @checked($sMode==='manual')> <span class="form-check-label ms-2">Pilih sebagian siswa</span></label>
+                                        </div>
+                                    @else
+                                        <input type="hidden" name="participant_mode" value="class">
+                                    @endif
                                     <div class="by-class-wrap mb-4" style="{{ $sMode==='class' ? '' : 'display:none' }}">
                                         <div class="alert alert-light-primary py-2 mb-0 fs-8">Semua siswa kelas <b>{{ $examClass->name ?? '-' }}</b> ({{ $students->count() }} siswa) menjadi peserta.</div>
                                     </div>
-                                    <div class="by-student-wrap mb-4" style="{{ $sMode==='manual' ? '' : 'display:none' }}">
-                                        @include('backend.master._pilih-siswa', ['terpilih' => $sStudentIds, 'uid' => 'psEdit'.$s->id])
-                                        <span class="text-muted fs-8 d-block mt-2">Centang siswa kelas {{ $examClass->name ?? '' }} yang ikut sesi ini.
-                                            <b>Pilih semua</b>/<b>Kosongkan</b> berlaku pada daftar yang sedang tampil, dan klik sambil menahan <b>Shift</b> mencentang satu rentang sekaligus.</span>
-                                    </div>
+                                    @if($sMode === 'manual')
+                                        <div class="by-student-wrap mb-4">
+                                            @include('backend.master._pilih-siswa', ['terpilih' => $sStudentIds, 'uid' => 'psEdit'.$s->id])
+                                            <span class="text-muted fs-8 d-block mt-2">Centang siswa kelas {{ $examClass->name ?? '' }} yang ikut sesi ini.
+                                                <b>Pilih semua</b>/<b>Kosongkan</b> berlaku pada daftar yang sedang tampil, dan klik sambil menahan <b>Shift</b> mencentang satu rentang sekaligus.</span>
+                                        </div>
+                                    @endif
 
                                     <div class="row">
                                         <div class="col-md-6 mb-4"><label class="form-label required">Tanggal Mulai</label><input type="date" name="starts_at" class="form-control" value="{{ \Carbon\Carbon::parse($s->starts_at)->format('Y-m-d') }}" required></div>

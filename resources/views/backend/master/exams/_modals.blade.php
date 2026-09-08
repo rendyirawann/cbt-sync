@@ -141,19 +141,16 @@
             <div class="modal-body px-8 py-6">
                 <div class="mb-4"><label class="form-label required">Nama Jadwal</label><input type="text" name="name" class="form-control" placeholder="cth: Asesmen Nasional 2026" value="{{ $exam->title }}" required></div>
 
+                {{-- Mode peserta "Pilih sebagian siswa" disembunyikan: satu ujian
+                     memang milik satu kelas, jadi jadwalnya selalu untuk SELURUH
+                     kelas itu. Jalur peserta pilihan tidak dihapus — Sesi Susulan
+                     tetap memakainya dengan mengirim participant_mode=manual
+                     sendiri. --}}
                 <label class="form-label required d-block">Peserta <span class="text-muted fs-8">— ujian ini untuk kelas <b>{{ $examClass->name ?? '-' }}</b></span></label>
                 <input type="hidden" name="class_room_id" value="{{ $examClass->id ?? '' }}">
-                <div class="d-flex gap-4 mb-3 participant-toggle">
-                    <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="class" checked> <span class="form-check-label ms-2">Seluruh kelas {{ $examClass->name ?? '' }}</span></label>
-                    <label class="form-check form-check-custom"><input class="form-check-input" type="radio" name="participant_mode" value="manual"> <span class="form-check-label ms-2">Pilih sebagian siswa</span></label>
-                </div>
+                <input type="hidden" name="participant_mode" value="class">
                 <div class="by-class-wrap mb-4">
                     <div class="alert alert-light-primary py-2 mb-0 fs-8">Semua siswa kelas <b>{{ $examClass->name ?? '-' }}</b> ({{ $students->count() }} siswa) otomatis menjadi peserta.</div>
-                </div>
-                <div class="by-student-wrap mb-4" style="display:none">
-                    @include('backend.master._pilih-siswa', ['uid' => 'psBuat'])
-                    <span class="text-muted fs-8 d-block mt-2">Centang siswa kelas {{ $examClass->name ?? '' }} yang ikut jadwal ini.
-                        <b>Pilih semua</b>/<b>Kosongkan</b> berlaku pada daftar yang sedang tampil, dan klik sambil menahan <b>Shift</b> mencentang satu rentang sekaligus.</span>
                 </div>
 
                 <div class="row">
@@ -182,3 +179,55 @@
         </form>
     </div></div>
 </div>
+
+{{-- ===== Duplikat Ujian ke Kelas Lain =====
+
+     Satu ujian memang milik satu kelas: soal disimpan per ujian
+     (questions.exam_id) dan BOBOT NILAI ditulis ke soal saat memeriksa. Kalau
+     dua kelas berbagi baris soal, memeriksa X-1 akan mengubah nilai X-2. Maka
+     yang dilakukan di sini adalah MENYALIN soal ke ujian baru, bukan berbagi. --}}
+@if(($targetPenugasan ?? collect())->isNotEmpty())
+<div class="modal fade drawer-modal" id="duplicateExamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+        <form action="{{ route('exams.duplicate', $exam->id) }}" method="POST">
+            @csrf
+            <div class="modal-header">
+                <h3 class="modal-title">Duplikat ke Kelas Lain</h3>
+                <div class="btn btn-icon btn-sm" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-2"></i></div>
+            </div>
+            <div class="modal-body px-8 py-6">
+                <div class="alert alert-light-primary py-3 mb-5 fs-8">
+                    Ujian baru dibuat untuk setiap kelas yang dicentang, lengkap dengan
+                    <b>{{ $exam->questions->count() }} soal</b> hasil salinan. Semuanya dibuat
+                    sebagai <b>Draft</b> — menerbitkan tetap keputusan Anda per kelas.
+                    <div class="mt-2">Nilai dan bobot tiap kelas <b>berdiri sendiri</b>: memeriksa
+                    hasil kelas satu tidak mengubah kelas lainnya.</div>
+                </div>
+
+                <label class="form-label required d-block">Kelas tujuan</label>
+                <div class="text-muted fs-8 mb-3">Hanya kelas dengan <b>mapel, guru, tahun ajaran,
+                    dan tingkat</b> yang sama dengan ujian ini.</div>
+
+                <div class="d-flex flex-column gap-2">
+                    @foreach($targetPenugasan as $t)
+                        <label class="form-check form-check-custom {{ $t->sudah_ada ? 'opacity-50' : '' }}">
+                            <input class="form-check-input" type="checkbox" name="assignment_ids[]"
+                                   value="{{ $t->id }}" @disabled($t->sudah_ada)>
+                            <span class="form-check-label ms-2">
+                                <b>{{ $t->classRoom->name ?? '-' }}</b>
+                                @if($t->sudah_ada)
+                                    <span class="badge badge-light-warning ms-2">sudah ada ujian berjudul sama</span>
+                                @endif
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary">Duplikat Sekarang</button>
+            </div>
+        </form>
+    </div></div>
+</div>
+@endif

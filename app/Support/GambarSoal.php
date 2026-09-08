@@ -36,6 +36,35 @@ class GambarSoal
      * Selalu mengembalikan path yang sama — nama berkas tidak berubah supaya
      * baris basis data tidak perlu disentuh.
      */
+    /**
+     * Gandakan berkas gambar di disk 'public' dan kembalikan path barunya.
+     *
+     * WAJIB menggandakan berkasnya, bukan cuma menyalin path: menghapus soal
+     * menjalankan Storage::delete($question->image_path), jadi dua baris soal
+     * yang menunjuk satu berkas berarti menghapus soal di kelas X-1 mematikan
+     * gambar soal di kelas X-2.
+     */
+    public static function salin(?string $src): ?string
+    {
+        if (blank($src)) {
+            return null;
+        }
+
+        try {
+            $disk = Storage::disk('public');
+            if (! $disk->exists($src)) {
+                return null;
+            }
+            $ext = pathinfo($src, PATHINFO_EXTENSION) ?: 'png';
+            $dest = 'exam-questions/' . \Illuminate\Support\Str::uuid() . '.' . $ext;
+            $disk->copy($src, $dest);
+
+            return $dest;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     public static function kecilkan(?string $path): ?string
     {
         if (blank($path)) {
