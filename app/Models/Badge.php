@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\LogsAllActivity;
 
 class Badge extends Model
 {
-    use HasUuids;
+    use HasUuids, LogsAllActivity;
 
     protected $fillable = [
         'name',

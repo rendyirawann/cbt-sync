@@ -55,11 +55,10 @@ class LogActivityController extends Controller implements HasMiddleware
             ->select('activity_log.*')
             ->orderBy('created_at', 'desc');
 
-        // Cakupan berjenjang: Superadmin=semua, Admin=sekolahnya, Guru=dirinya+siswanya, Siswa=sendiri.
-        $visibleIds = app(\App\Services\ActivityScope::class)->visibleCauserIds($user);
-        if ($visibleIds !== null) {
-            $postsQuery->whereIn('causer_id', $visibleIds);
-        }
+        // Cakupan per peran: Developer=semua; Superadmin=semua kecuali Developer;
+        // Admin=semua kecuali Superadmin & Developer; Guru & Siswa=hanya dirinya.
+        // Lihat App\Services\ActivityScope.
+        app(\App\Services\ActivityScope::class)->terapkan($postsQuery, $user);
 
         // Pencarian Manual
         if (!empty($searchValue)) {

@@ -10,8 +10,12 @@ use Cog\Contracts\Ban\Bannable as BannableContract;
 use Cog\Laravel\Ban\Traits\Bannable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids; // 1. Ini penawar errornya
 
+use App\Traits\LogsAllActivity;
+
 class User extends Authenticatable implements BannableContract
 {
+    use LogsAllActivity;
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     // 2. Masukkan HasUuids ke dalam use
     use HasFactory, Notifiable, HasRoles, Bannable, HasUuids;

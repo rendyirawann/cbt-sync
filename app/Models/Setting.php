@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use App\Traits\LogsAllActivity;
 
 class Setting extends Model
 {
+    use LogsAllActivity;
+
     protected $fillable = ['key', 'value'];
 
     /**

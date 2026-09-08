@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\LogsAllActivity;
 
 class Schedule extends Model
 {
+    use LogsAllActivity;
+
     protected $fillable = [
         'teaching_assignment_id',
         'day_of_week',

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\LogsAllActivity;
 
 class Attendance extends Model
 {
-    use HasUuids;
+    use HasUuids, LogsAllActivity;
 
     protected $fillable = [
         'user_id',

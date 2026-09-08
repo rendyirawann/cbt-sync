@@ -91,7 +91,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ \App\Support\SiklusUjian::bolehHapusUjianDikerjakan() ? 11 : 10 }}">
+                                <td class="baris-kosong" colspan="{{ \App\Support\SiklusUjian::bolehHapusUjianDikerjakan() ? 11 : 10 }}">
                                     <div class="text-center px-4 py-15">
                                         <img src="{{ asset('assets/media/illustrations/sigma-1/5.png') }}" alt="" class="mw-100 mh-200px mb-7">
                                         <h3 class="fw-bold text-gray-900 mb-2">Belum ada data siswa</h3>
@@ -358,6 +358,18 @@
 
         // Kolom yang TIDAK boleh diurutkan: kolom centang (bila ada) dan kolom Aksi.
         var takUrut = bolehHapus ? [0, -1] : [-1];
+
+        // Baris "belum ada data siswa" adalah SATU sel ber-colspan, sementara
+        // DataTables mengharap sel sebanyak kolom di kepala tabel. Memasangnya
+        // pada keadaan itu melempar:
+        //   "Requested unknown parameter '1' for row 0, column 1"
+        // dan galatnya muncul sebagai kotak peringatan di layar pengguna.
+        //
+        // Jadi saat kosong, DataTables tidak dipasang — tampilan kosong bergambar
+        // yang sudah ada justru lebih jelas daripada tabel kosong berpaging.
+        if (document.querySelector('#tabelSiswa td.baris-kosong')) {
+            return;
+        }
 
         var tabel = $('#tabelSiswa').DataTable({
             // Sisi-klien: seluruh baris sudah ada di halaman, jadi pencarian dan

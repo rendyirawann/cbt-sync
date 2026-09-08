@@ -3,59 +3,86 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\Student;
-use App\Models\Teacher;
-use App\Models\ClassRoom;
-use App\Models\TeachingAssignment;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Menentukan cakupan Log Activity per peran (berjenjang):
- *  - Superadmin : semua log (null = tanpa filter)
- *  - Admin      : semua user di sekolahnya (users.school_id)
- *  - Guru       : dirinya + siswa yang diajarnya (via kelas pada teaching_assignment)
- *  - Siswa/lain : hanya aktivitasnya sendiri
+ * Cakupan Log Activity per peran.
+ *
+ * Aturannya BUKAN "siapa melihat apa saja" berbasis daftar id yang boleh
+ * dilihat, melainkan "peran mana yang disembunyikan". Bentuk itu dipilih karena
+ * daftar id yang boleh dilihat ikut membesar bersama jumlah user (ribuan siswa
+ * berarti klausa IN berisi ribuan uuid), sedangkan daftar yang DISEMBUNYIKAN
+ * selalu kecil — hanya beberapa akun Superadmin/Developer.
+ *
+ *  - Developer  : seluruh aktivitas, tanpa kecuali.
+ *  - Superadmin : semua, KECUALI aktivitas akun ber-role Developer.
+ *  - Admin      : semua, KECUALI Superadmin & Developer.
+ *  - Guru       : hanya aktivitasnya sendiri.
+ *  - Siswa/lain : hanya aktivitasnya sendiri.
+ *
+ * Aktivitas tanpa causer (dipicu sistem, mis. perintah terjadwal) ikut terlihat
+ * oleh Admin ke atas — itu bukan aktivitas milik akun siapa pun, dan justru
+ * bagian yang perlu terpantau. Guru & Siswa tidak melihatnya.
  */
 class ActivityScope
 {
-    /** Daftar causer_id (user id) yang boleh dilihat; null berarti tanpa filter (Superadmin). */
-    public function visibleCauserIds($user): ?array
+    /** Peran yang aktivitasnya disembunyikan dari peran tertentu. */
+    private const SEMBUNYI_DARI_SUPERADMIN = ['Developer'];
+    private const SEMBUNYI_DARI_ADMIN = ['Developer', 'Superadmin', 'superadmin'];
+
+    /** Tempelkan pembatasan ke query Activity. */
+    public function terapkan(Builder $query, $user): Builder
     {
-        if (!$user) {
-            return [];
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->hasRole('Developer')) {
+            return $query;
         }
 
         if ($user->hasRole(['Superadmin', 'superadmin'])) {
-            return null;
+            return $this->kecualikanPeran($query, self::SEMBUNYI_DARI_SUPERADMIN);
         }
 
         if ($user->hasRole(['Admin', 'admin'])) {
-            $schoolId = $user->school_id ?? null;
-            return $schoolId ? $this->schoolUserIds($schoolId) : [$user->id];
+            return $this->kecualikanPeran($query, self::SEMBUNYI_DARI_ADMIN);
         }
 
-        if ($user->hasRole('Guru') && $user->teacher) {
-            $classIds = TeachingAssignment::where('teacher_id', $user->teacher->id)->pluck('class_room_id');
-            $ids = Student::whereHas('classStudents', fn ($q) => $q->whereIn('class_room_id', $classIds))
-                ->pluck('user_id')->filter()->all();
-            $ids[] = $user->id;
-            return array_values(array_unique($ids));
-        }
-
-        // Siswa & peran lain: hanya aktivitas sendiri.
-        return [$user->id];
+        // Guru, Siswa, dan peran lain: hanya miliknya sendiri.
+        return $query->where('causer_id', $user->id);
     }
 
-    /** Semua user_id yang tergabung dalam satu sekolah (admin/user, siswa, dan guru pengampu kelas). */
-    private function schoolUserIds($schoolId): array
+    /**
+     * Buang aktivitas yang causer-nya punya salah satu peran tersebut.
+     * Aktivitas tanpa causer tetap ikut (lihat catatan di kepala kelas).
+     */
+    private function kecualikanPeran(Builder $query, array $peran): Builder
     {
-        $ids = User::where('school_id', $schoolId)->pluck('id')->all();
+        $idTersembunyi = User::whereHas('roles', fn ($q) => $q->whereIn('name', $peran))
+            ->pluck('id');
 
-        $ids = array_merge($ids, Student::where('school_id', $schoolId)->pluck('user_id')->filter()->all());
+        if ($idTersembunyi->isEmpty()) {
+            return $query;
+        }
 
-        $classIds = ClassRoom::where('school_id', $schoolId)->pluck('id');
-        $teacherIds = TeachingAssignment::whereIn('class_room_id', $classIds)->pluck('teacher_id')->unique();
-        $ids = array_merge($ids, Teacher::whereIn('id', $teacherIds)->pluck('user_id')->filter()->all());
+        return $query->where(fn ($q) => $q->whereNull('causer_id')
+            ->orWhereNotIn('causer_id', $idTersembunyi));
+    }
 
-        return array_values(array_unique(array_filter($ids)));
+    /**
+     * Bentuk lama (daftar id yang boleh dilihat) — dipertahankan agar pemanggil
+     * lain tidak mendadak rusak. null berarti tanpa pembatasan.
+     */
+    public function visibleCauserIds($user): ?array
+    {
+        if (! $user) {
+            return [];
+        }
+        if ($user->hasRole(['Developer', 'Superadmin', 'superadmin', 'Admin', 'admin'])) {
+            return null;
+        }
+
+        return [$user->id];
     }
 }
