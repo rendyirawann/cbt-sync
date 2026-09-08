@@ -128,7 +128,8 @@
                                         <th class="min-w-125px">IP Address</th>
                                         <th class="min-w-125px">Operating System</th>
                                         <th class="min-w-125px">Device</th>
-                                        <th class="text-end min-w-125px">Date</th>
+                                        <th class="min-w-125px">Date</th>
+                                        <th class="text-end min-w-100px">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="text-gray-600 fw-semibold">
@@ -227,6 +228,13 @@
                             orderable: false,
                             searchable: false
                         },
+                        {
+                            data: 'aksi',
+                            name: 'aksi',
+                            orderable: false,
+                            searchable: false,
+                            className: 'text-end'
+                        },
                     ]
 
                 });
@@ -261,3 +269,50 @@
         </script>
     @endpush
 @endsection
+
+{{-- Modal rincian log: isinya diambil lewat AJAX per baris. Satu kerangka untuk
+     semua baris — daftar log bisa ribuan, jadi menyiapkan satu modal per baris
+     jelas tidak masuk akal di sini. --}}
+<div class="modal fade" id="modalDetailLog" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content" id="wadahDetailLog">
+            <div class="modal-body py-15 text-center">
+                <span class="spinner-border text-primary"></span>
+                <div class="text-muted mt-3">Memuat rincian…</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    $(function () {
+        var el = document.getElementById('modalDetailLog');
+        var wadah = document.getElementById('wadahDetailLog');
+        if (!el || !wadah) return;
+
+        var bs = null;
+        var kosong = wadah.innerHTML;
+
+        // Delegasi ke document: baris tabel digambar ulang tiap kali DataTables
+        // memuat data, jadi pendengar yang dipasang langsung ke tombol akan
+        // hilang setelah pindah halaman.
+        $(document).on('click', '.btn-detail-log', function () {
+            var id = this.dataset.id;
+            wadah.innerHTML = kosong;
+            bs = bs || new bootstrap.Modal(el);
+            bs.show();
+
+            $.get('{{ url('admin/log-activity') }}/' + id + '/detail')
+                .done(function (res) { wadah.innerHTML = res.html || ''; })
+                .fail(function (x) {
+                    wadah.innerHTML = '<div class="modal-body py-15 text-center text-danger">'
+                        + (x.status === 404
+                            ? 'Log ini tidak tersedia untuk Anda.'
+                            : 'Gagal memuat rincian (' + (x.status || 'jaringan') + ').')
+                        + '</div>';
+                });
+        });
+    });
+</script>
+@endpush

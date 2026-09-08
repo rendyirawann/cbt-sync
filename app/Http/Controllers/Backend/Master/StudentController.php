@@ -314,8 +314,11 @@ class StudentController extends Controller
 
         // Admin sekolah: semua siswa dipaksa ke sekolahnya (kolom Sekolah di file diabaikan).
         $sid = \App\Support\SchoolScope::id();
-        $rules = ['name' => 'required|string|max:255', 'email' => 'required|email', 'school' => ($sid ? 'nullable' : 'required') . '|string', 'gender' => 'nullable|in:L,P'];
-        $labels = ['name' => 'Nama', 'email' => 'Email', 'school' => 'Nama Sekolah', 'gender' => 'Gender'];
+        // NISN diwajibkan saat impor (permintaan sekolah): tanpa NISN, username
+        // jatuh ke email dan kartu ujian kehilangan nomor peserta — itu yang
+        // membuat sekelas siswa masuk tanpa NISN pada impor sebelumnya.
+        $rules = ['name' => 'required|string|max:255', 'email' => 'required|email', 'school' => ($sid ? 'nullable' : 'required') . '|string', 'gender' => 'nullable|in:L,P', 'nisn' => 'required|string|max:30'];
+        $labels = ['name' => 'Nama', 'email' => 'Email', 'school' => 'Nama Sekolah', 'gender' => 'Gender', 'nisn' => 'NISN'];
         $activeYear = AcademicYear::where('is_active', 1)->first() ?? AcademicYear::first();
         // Kolom Gelombang di Excel diisi NAMA gelombang; dipetakan ke id di sini.
         $gelombang = \App\Models\Wave::pluck('id', 'name')
@@ -326,7 +329,7 @@ class StudentController extends Controller
         // barisnya tetap masuk dan pengguna baru sadar ada yang kosong setelah
         // melihat tabel atau mencetak kartu ujian.
         $penting = [
-            'nisn' => 'NISN', 'birth_place' => 'Tempat Lahir', 'birth_date' => 'Tanggal Lahir',
+            'birth_place' => 'Tempat Lahir', 'birth_date' => 'Tanggal Lahir',
             'gender' => 'Gender', 'proctor_id' => 'ID Proktor', 'room' => 'Ruang', 'wave' => 'Gelombang',
         ];
 
@@ -439,6 +442,7 @@ class StudentController extends Controller
             'title' => 'DATA SISWA',
             'file' => 'Template_Data_Siswa.xlsx',
             'guide' => [
+                'NISN WAJIB diisi dan harus unik. Tanpa NISN, username siswa jatuh ke email dan nomor peserta di Kartu Ujian ikut kosong.',
                 'Email jadi akun login siswa dan harus unik. Baris dengan email yang sudah terdaftar DILEWATI (tidak menimpa data lama).',
                 'Password boleh dikosongkan — sistem membuat sandi ACAK bergaya ANBK (mis. 892777*), dan sandi itulah yang tercetak di Kartu Ujian serta dipakai siswa untuk login.',
                 'Username kosong = otomatis memakai NISN (atau email bila NISN juga kosong). Harus unik antar seluruh akun.',
@@ -452,7 +456,7 @@ class StudentController extends Controller
                 ['key' => 'email', 'label' => 'Email', 'required' => true, 'width' => 26, 'hint' => 'untuk login'],
                 ['key' => 'password', 'label' => 'Password', 'width' => 16, 'format' => 'text', 'hint' => 'kosongkan = acak bergaya ANBK'],
                 ['key' => 'username', 'label' => 'Username', 'width' => 18, 'format' => 'text', 'hint' => 'kosongkan = memakai NISN'],
-                ['key' => 'nisn', 'label' => 'NISN', 'width' => 18, 'format' => 'text', 'hint' => 'angka 0 di depan dipertahankan'],
+                ['key' => 'nisn', 'label' => 'NISN', 'required' => true, 'width' => 18, 'format' => 'text', 'hint' => 'wajib & unik; angka 0 di depan dipertahankan'],
                 ['key' => 'school', 'label' => 'Nama Sekolah', 'required' => true, 'width' => 30, 'options' => $pilihanSekolah, 'hint' => 'harus sudah terdaftar'],
                 ['key' => 'class', 'label' => 'Kelas', 'width' => 16, 'options' => $pilihanKelas, 'hint' => 'nama rombel yang sudah ada'],
                 ['key' => 'gender', 'label' => 'Gender', 'width' => 10, 'options' => ['L', 'P']],

@@ -269,7 +269,10 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     // HELP (Log Activity): view_help — Superadmin, admin
     // ====================================================
     Route::middleware('can:view_help')->group(function () {
-        Route::resource('/admin/log-activity', LogActivityController::class);
+        // Didaftarkan SEBELUM resource: kalau tidak, /admin/log-activity/{id}/detail
+    // tetap jalan, tapi menempatkannya di sini membuat urutannya jelas.
+    Route::get('/admin/log-activity/{id}/detail', [\App\Http\Controllers\Backend\Help\LogActivityController::class, 'detail'])->name('log-activity.detail');
+    Route::resource('/admin/log-activity', LogActivityController::class);
         Route::get('/admin/get-datalogactivity', [LogActivityController::class, 'getDataLogActivity'])->name('get-datalogactivity');
     });
 

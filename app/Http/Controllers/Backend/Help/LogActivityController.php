@@ -111,7 +111,11 @@ class LogActivityController extends Controller implements HasMiddleware
 
                 return '<i class="ki-outline ki-question-2 text-danger me-2"></i>' . $deviceRaw;
             })
-            ->rawColumns(['causer_id', 'log_name', 'created_at', 'ip', 'os', 'device'])
+            ->addColumn('aksi', function ($data) {
+                return '<button type="button" class="btn btn-sm btn-light-primary btn-detail-log" data-id="'
+                    . $data->id . '"><i class="ki-outline ki-eye fs-5"></i> Detail</button>';
+            })
+            ->rawColumns(['causer_id', 'log_name', 'created_at', 'ip', 'os', 'device', 'aksi'])
             ->make(true);
     }
 
@@ -119,5 +123,25 @@ class LogActivityController extends Controller implements HasMiddleware
     {
         $data = Activity::findOrFail($id);
         return view('backend.help.log_activity.show', compact('data'));
+    }
+
+    /**
+     * Rincian satu log untuk modal: menyandingkan nilai SEBELUM & SESUDAH dan
+     * menandai kolom yang berubah.
+     *
+     * Cakupan peran ditegakkan ULANG di sini, bukan hanya di daftar: id log bisa
+     * dipanggil langsung, jadi tanpa ini seorang Admin bisa membaca rincian log
+     * milik Developer hanya dengan menebak id-nya.
+     */
+    public function detail($id)
+    {
+        $q = Activity::with('causer')->whereKey($id);
+        app(\App\Services\ActivityScope::class)->terapkan($q, auth()->user());
+
+        $data = $q->firstOrFail();
+
+        return response()->json([
+            'html' => view('backend.help.log_activity._detail', compact('data'))->render(),
+        ]);
     }
 }
