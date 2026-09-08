@@ -298,3 +298,31 @@ body#kt_body, body {
 [data-bs-theme="dark"] body#kt_body { background:#0A1628 !important; }
 [data-bs-theme="dark"] .card { background:#0F2138 !important; }
 [data-bs-theme="dark"] #kt_header.header { background: rgba(10,22,40,.85)!important; }
+
+/* ==================== FONT IKON KEENICONS (jangan dihapus) ====================
+   Masalah: ikon breadcrumb (ki-home & ki-right) muncul sebagai KOTAK KOSONG,
+   sementara ikon lain di halaman yang sama normal.
+
+   Sebabnya bukan font dan bukan codepoint — keduanya sudah benar. Ikon
+   breadcrumb ditulis dengan kelas tambahan `text-gray-700`:
+
+       <i class="ki-outline ki-home text-gray-700 fs-6"></i>
+
+   dan blok TYPOGRAPHY di berkas ini memasang
+   `font-family: 'Plus Jakarta Sans' ... !important` pada selector
+   `.text-gray-700`. Spesifisitasnya SAMA dengan `.ki-outline` (sama-sama satu
+   kelas) dan keduanya `!important`, sehingga pemenangnya ditentukan urutan
+   pemuatan — dan berkas ini dimuat PALING AKHIR. Akibatnya elemen ikon
+   memakai font teks biasa, yang tidak punya glyph di area Private Use Area,
+   lalu peramban menggambar kotak pengganti.
+
+   Aturan di bawah memakai `[class]` + kelas keluarga sehingga spesifisitasnya
+   lebih tinggi (dua penyeleksi), jadi menang tanpa perlu mengubah blok
+   TYPOGRAPHY dan tanpa bergantung pada urutan berkas. Berlaku untuk elemen
+   apa pun dan kelas utilitas apa pun yang menempel di ikon (text-*, fw-*, fs-*).
+   ============================================================================ */
+[class].ki-outline { font-family: keenicons-outline !important; }
+[class].ki-solid   { font-family: keenicons-solid   !important; }
+[class].ki-duotone { font-family: keenicons-duotone !important; }
+[class].ki-outline::before, [class].ki-solid::before, [class].ki-duotone::before,
+[class].ki-duotone > i { font-family: inherit !important; }

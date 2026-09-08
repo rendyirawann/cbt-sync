@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend\UserManagement;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AksesUser;
 // use App\Models\Skpd;
 use Spatie\Permission\Models\Role;
 use DB;
@@ -55,9 +56,9 @@ class UserController extends Controller implements HasMiddleware
      */
     public function index(): View
     {
-        $roles = Role::where('name', '!=', 'Developer')   // role Developer disembunyikan (hanya via seeder)
-            ->orderBy('id', 'desc')
-            ->get();
+        // Pemilih role ikut aturan keterlihatan: yang bukan pengawas tidak melihat
+        // — dan karenanya tidak bisa memberikan — role Superadmin/Developer.
+        $roles = AksesUser::roleUntukForm();
         // Daftar sekolah untuk pemilih di form (hanya dipakai bila yang login Developer).
         $schools = \App\Models\School::orderBy('name')->get();
 
@@ -69,10 +70,9 @@ class UserController extends Controller implements HasMiddleware
     public function getDataUsers(Request $request)
     {
         if ($request->ajax()) {
-            $sid = \App\Support\SchoolScope::id();
-            $postsQuery = User::with('roles')
-                ->when($sid, fn ($q) => $q->where('school_id', $sid))   // Superadmin/Admin sekolah: hanya user sekolahnya
-                ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Developer'))   // akun Developer disembunyikan
+            // Pembatasan sekolah + penyembunyian role dipusatkan di AksesUser::saring()
+            // supaya daftar, detail, edit dan hapus memakai aturan yang sama.
+            $postsQuery = AksesUser::saring(User::with('roles'))
                 ->orderBy('created_at', 'desc');
 
             // --- FIX BAGIAN INI ---
@@ -173,42 +173,42 @@ class UserController extends Controller implements HasMiddleware
                     }
                 })
                 ->addColumn('action', function ($row) {
-                    // Ambil user yang sedang login
-                    $user = auth()->user();
+                    // Hak akses per baris. Dulu semua item digantung pada
+                    // $user->username == 'superadmin' (nama akun, bukan role),
+                    // sehingga bagi Admin daftar ini terbit KOSONG — yang di layar
+                    // terlihat seperti dropdown terpotong/tidak bisa di-scroll.
+                    $boleh = \App\Support\AksesUser::bolehKelola($row);
+                    $bolehKeras = \App\Support\AksesUser::bolehTindakKeras($row);
 
-                    $x = '<div class="dropdown text-end">
-                            <button class="btn btn-sm btn-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Actions <i class="ki-outline ki-down fs-5 ms-1"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-dark fs-6">';
+                    $item = '';
 
-                    // 1. Cek Permission Show
-                    if ($user->username == 'superadmin') {
-                        $x .= '<li><a class="dropdown-item btn px-3 btn-detail" href="javascript:void(0)" data-id="' . $row->id . '" >Detail</a></li>';
+                    if ($boleh) {
+                        $item .= '<li><a class="dropdown-item btn px-3 btn-detail" href="javascript:void(0)" data-id="' . $row->id . '" >Detail</a></li>';
+                        $item .= '<li><a class="dropdown-item btn px-3 btn-edit" href="javascript:void(0)" data-id="' . $row->id . '" >Edit</a></li>';
                     }
 
-                    // 2. Cek Permission Edit
-                    if ($user->username == 'superadmin') {
-                        $x .= '<li><a class="dropdown-item btn px-3 btn-edit" href="javascript:void(0)" data-id="' . $row->id . '" >Edit</a></li>';
-                    }
+                    if ($bolehKeras) {
+                        $item .= '<li><a class="dropdown-item btn px-3" data-id="' . $row->id . '" data-bs-toggle="modal" data-bs-target="#Modal_Hapus_Data" id="getDeleteId">Hapus</a></li>';
 
-                    // 3. Cek Permission Delete
-                    if ($user->username == 'superadmin') {
-                        $x .= '<li><a class="dropdown-item btn px-3" data-id="' . $row->id . '" data-bs-toggle="modal" data-bs-target="#Modal_Hapus_Data" id="getDeleteId">Hapus</a></li>';
-                    }
-
-                    // 4. Cek Permission Ban
-                    if ($user->username == 'superadmin') {
                         if ($row->isBanned()) {
-                            $x .= '<li><a class="dropdown-item px-3 text-success" href="javascript:void(0)" onclick="unbanUser(\'' . $row->id . '\')">Unbanned</a></li>';
+                            $item .= '<li><a class="dropdown-item px-3 text-success" href="javascript:void(0)" onclick="unbanUser(\'' . $row->id . '\')">Unbanned</a></li>';
                         } else {
-                            $x .= '<li><a class="dropdown-item px-3 text-danger" href="javascript:void(0)" onclick="openBanModal(\'' . $row->id . '\')">Banned</a></li>';
+                            $item .= '<li><a class="dropdown-item px-3 text-danger" href="javascript:void(0)" onclick="openBanModal(\'' . $row->id . '\')">Banned</a></li>';
                         }
                     }
 
-                    $x .= '</ul></div>';
+                    // Tanpa satu pun item, tombolnya tidak diterbitkan sama sekali —
+                    // lebih jelas daripada dropdown kosong yang tidak bisa dibuka.
+                    if ($item === '') {
+                        return '<div class="text-end text-muted">&mdash;</div>';
+                    }
 
-                    return $x;
+                    return '<div class="dropdown text-end">
+                            <button class="btn btn-sm btn-secondary" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                                Actions <i class="ki-outline ki-down fs-5 ms-1"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark fs-6">' . $item . '</ul>
+                        </div>';
                 })
 
 
@@ -411,7 +411,7 @@ class UserController extends Controller implements HasMiddleware
      */
     public function show(Request $request, $id)
     {
-        $data = User::findOrFail($id);
+        $data = AksesUser::ambilAtau404($id);
 
         // 1. Hitung Total Activity
         $totalActivity = \Spatie\Activitylog\Models\Activity::where('causer_type', 'App\Models\User')
@@ -451,6 +451,8 @@ class UserController extends Controller implements HasMiddleware
 
     public function getLoginSession(Request $request, $id)
     {
+        AksesUser::ambilAtau404($id);   // riwayat login akun tersembunyi tidak boleh dibaca
+
         $postsQuery = Activity::with('causer')
             ->where('causer_id', $id)
             ->whereIn('log_name', ['login', 'logout'])
@@ -531,6 +533,7 @@ class UserController extends Controller implements HasMiddleware
 
     public function getActivity(Request $request, $id)
     {
+        AksesUser::ambilAtau404($id);   // idem: log aktivitas ikut aturan keterlihatan
 
         $postsQuery = Activity::with('causer')
             ->where('causer_id', $id)
@@ -617,7 +620,7 @@ class UserController extends Controller implements HasMiddleware
      */
     public function edit($id)
     {
-        $user = User::findOrFail($id);
+        $user = AksesUser::ambilAtau404($id);
         // $skpd = Skpd::orderBy('nama_skpd')->get();
 
         // Kirim data ke view untuk di-render
@@ -625,7 +628,7 @@ class UserController extends Controller implements HasMiddleware
             'user' => $user,
             // 'skpd' => $skpd,
             'userRole' => $user->getRoleNames()->toArray(),
-            'roles' => Role::where('guard_name', '=', 'web')->where('name', '!=', 'Developer')->select(['id', 'name'])->get(),
+            'roles' => AksesUser::roleUntukForm(),   // pemilih role di form edit ikut aturan yang sama
             'schools' => \App\Models\School::orderBy('name')->get(),
         ])->render();
 
@@ -674,7 +677,7 @@ class UserController extends Controller implements HasMiddleware
         try {
             \DB::beginTransaction();
 
-            $data = User::findOrFail($id);
+            $data = AksesUser::ambilAtau404($id);
             $oldData = $data->toArray();
 
             if ($request->hasFile('avatar')) {
@@ -791,7 +794,7 @@ class UserController extends Controller implements HasMiddleware
         try {
             \DB::beginTransaction();
 
-            $data = User::findOrFail($id);
+            $data = AksesUser::ambilAtau404($id);
             $getData = $data->toArray();
 
             // ===============================
@@ -864,7 +867,12 @@ class UserController extends Controller implements HasMiddleware
         try {
             \DB::beginTransaction();
 
-            $ids = $request->ids;
+            // Id disaring ulang di server: yang tidak boleh dilihat/dihapus oleh
+            // yang login akan lolos dari daftar meski dikirim dari peramban.
+            $ids = collect(AksesUser::saring(User::whereIn('id', (array) $request->ids))->get())
+                ->filter(fn ($u) => AksesUser::bolehTindakKeras($u))
+                ->pluck('id')
+                ->all();
 
             if (!empty($ids)) {
                 // Dapatkan data pengguna yang akan dihapus untuk logging
@@ -941,7 +949,7 @@ class UserController extends Controller implements HasMiddleware
             'duration' => 'required|in:permanent,1h,24h,1w',
         ]);
 
-        $user = User::findOrFail($id);
+        $user = AksesUser::ambilAtau404($id);
 
         // Cegah ban diri sendiri
         if ($user->id === auth()->id()) {
@@ -985,7 +993,7 @@ class UserController extends Controller implements HasMiddleware
 
     public function unban(Request $request, $id)
     {
-        $user = User::findOrFail($id);
+        $user = AksesUser::ambilAtau404($id);
 
         // Cegah unban jika user tidak dibanned
         if ($user->isNotBanned()) {

@@ -74,9 +74,10 @@
     $sekolah = $exam->teachingAssignment->classRoom->school ?? null;
     $mapel = $exam->teachingAssignment->subject->name ?? '-';
     $garis = fn ($v) => filled($v) ? $v : '';
-    // KODE di kop = kode MATA PELAJARAN (subjects.code), diisi di
-    // Data Master -> Mata Pelajaran. Bukan nilai tetap di berkas ini.
-    $kodeMapel = $exam->teachingAssignment->subject->code ?? '';
+    // DUA kode di kop, keduanya berlabel "KODE" seperti lembar ANBK aslinya:
+    // sebaris KOTA/KABUPATEN memakai schools.city_code, dan sebaris
+    // SEKOLAH/MADRASAH memakai schools.school_code. Keduanya diisi di
+    // Data Master -> Sekolah, bukan nilai tetap di berkas ini.
 
     // ID Proktor & Ruang adalah data PER SISWA (Data Master -> Data Siswa).
     // Satu lembar berlaku untuk satu ruang, jadi nilainya hanya dicetak bila
@@ -104,37 +105,41 @@
     </tr>
 </table>
 
+{{-- Baris HARI & TANGGAL memang DIBIARKAN KOSONG bergaris, sama seperti lembar
+     aslinya: satu jadwal berlaku beberapa hari dan siswa boleh masuk kapan saja
+     di dalamnya, jadi hari pelaksanaan tiap lembar ditulis tangan oleh pengawas
+     saat ruangan dipakai. Rentang tanggalnya dicetak sebagai catatan di bawah.
+
+     Baris ini disatukan dengan kop (bukan tabel terpisah) supaya kolom kanan
+     KODE/KODE/SESI/PUKUL berbaris rapi pada satu kisi kolom. Sel isi di kiri
+     memakai colspan="4" karena baris HARI/TANGGAL memecah bagian kiri menjadi
+     enam sel. --}}
 <table class="ident">
     <tr>
         <td class="il">KOTA/KABUPATEN</td><td class="is">:</td>
-        <td class="iv">{{ $garis($sekolah->city ?? null) }}</td>
+        <td class="iv" colspan="4">{{ $garis($sekolah->city ?? null) }}</td>
         <td class="ik">KODE</td><td class="is">:</td>
-        <td class="ikv">{{ $kodeMapel }}</td>
+        <td class="ikv">{{ $garis($sekolah->city_code ?? null) }}</td>
     </tr>
     <tr>
         <td class="il">SEKOLAH/MADRASAH</td><td class="is">:</td>
-        <td class="iv">{{ $garis($sekolah->name ?? null) }}</td>
-        <td class="ik">SESI</td><td class="is">:</td>
-        <td class="ikv">{{ $gelombang->name ?? '-' }}</td>
+        <td class="iv" colspan="4">{{ $garis($sekolah->name ?? null) }}</td>
+        <td class="ik">KODE</td><td class="is">:</td>
+        <td class="ikv">{{ $garis($sekolah->school_code ?? null) }}</td>
     </tr>
     <tr>
         <td class="il">ID PROKTOR / RUANG</td><td class="is">:</td>
-        <td class="iv">{{ $proktorRuang }}</td>
-        <td class="ik">PUKUL</td><td class="is">:</td>
-        <td class="ikv">{{ $gelombang->rentang_jam ?? '' }}</td>
+        <td class="iv" colspan="4">{{ $proktorRuang }}</td>
+        <td class="ik">SESI</td><td class="is">:</td>
+        <td class="ikv">{{ $gelombang->name ?? '-' }}</td>
     </tr>
-</table>
-
-{{-- HARI & TANGGAL memang DIBIARKAN KOSONG bergaris, sama seperti lembar
-     aslinya: satu jadwal berlaku beberapa hari dan siswa boleh masuk kapan saja
-     di dalamnya, jadi hari pelaksanaan tiap lembar ditulis tangan oleh pengawas
-     saat ruangan dipakai. Rentang tanggalnya dicetak sebagai catatan di bawah. --}}
-<table class="ident">
     <tr>
         <td class="il">HARI</td><td class="is">:</td>
         <td class="iv" style="width:38mm"></td>
         <td class="ik" style="width:24mm">TANGGAL</td><td class="is">:</td>
         <td class="iv"></td>
+        <td class="ik">PUKUL</td><td class="is">:</td>
+        <td class="ikv">{{ $gelombang->rentang_jam ?? '' }}</td>
     </tr>
 </table>
 
