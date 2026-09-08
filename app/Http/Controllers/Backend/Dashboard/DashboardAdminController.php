@@ -23,16 +23,37 @@ class DashboardAdminController extends Controller
             return redirect()->route('student.dashboard');
         }
 
-        if ($user->hasAnyRole(['Superadmin', 'Admin', 'admin'])) {
+        // 'Kepala Sekolah' ikut cabang ini. Sebelumnya peran itu tidak tertangkap
+        // di mana pun, jatuh ke cabang terakhir, lalu RETURN LEBIH AWAL karena tidak
+        // punya profil siswa — sehingga ringkasan CBT tidak pernah dihitung dan ia
+        // melihat dashboard bergaya siswa berisi angka nol.
+        if ($user->hasAnyRole(['Developer', 'Superadmin', 'superadmin', 'Admin', 'admin', 'Kepala Sekolah'])) {
+            // Dibatasi per sekolah. Sebelumnya seluruh cacah ini memakai count()
+            // tanpa batas apa pun, jadi Admin sekolah A melihat jumlah guru, siswa,
+            // dan kelas SELURUH sekolah — angka yang bukan miliknya.
+            $sid = \App\Support\SchoolScope::id();
+
             $stats = [
                 'type' => 'admin',
-                'schools' => School::count(),
-                'teachers' => Teacher::count(),
-                'students' => Student::count(),
-                'classes' => ClassRoom::count(),
+                'schools' => $sid ? 1 : School::count(),
+                'teachers' => Teacher::when($sid, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('school_id', $sid)))->count(),
+                'students' => Student::when($sid, fn ($q) => $q->where('school_id', $sid))->count(),
+                'classes' => ClassRoom::when($sid, fn ($q) => $q->where('school_id', $sid))->count(),
             ];
 
-            $recentData = TeachingAssignment::with(['teacher.user', 'classRoom', 'subject'])
+            // Dulu kartu ini berisi "Penugasan Guru Terbaru" — 5 baris terakhir
+            // tabel master teaching_assignments (guru/mapel/kelas). Itu warisan dari
+            // lms-sync: tidak memuat satu pun informasi ujian, dan query-nya juga
+            // tidak dibatasi per sekolah sehingga nama guru & kelas sekolah lain
+            // ikut terlihat. Diganti dengan UJIAN TERBARU, yang memang inti
+            // aplikasi ini, lengkap dengan status, jadwal, dan jumlah soal.
+            $recentData = \App\Models\Exam::with([
+                    'teachingAssignment.subject', 'teachingAssignment.classRoom', 'teachingAssignment.teacher.user',
+                ])
+                ->when($sid, fn ($q) => $q->whereHas('teachingAssignment.classRoom',
+                    fn ($c) => $c->where('school_id', $sid)))
+                ->whereIn('status', \App\Support\SiklusUjian::statusTerlihat($user))
+                ->withCount(['questions', 'sessions'])
                 ->latest()
                 ->take(5)
                 ->get();
@@ -56,9 +77,13 @@ class DashboardAdminController extends Controller
                 })->count(),
             ];
 
-            $recentData = LearningModule::whereHas('teachingAssignment', function($q) use ($teacherId) {
-                $q->where('teacher_id', $teacherId);
-            })->with(['teachingAssignment.subject', 'teachingAssignment.classRoom'])->latest()->take(5)->get();
+            // Kartu daftar untuk Guru juga diisi UJIAN yang ia ampu, bukan modul
+            // LMS: aplikasi ini aplikasi ujian, dan modul tidak dipakai di sini.
+            $recentData = \App\Models\Exam::whereHas('teachingAssignment', fn ($q) => $q->where('teacher_id', $teacherId))
+                ->with(['teachingAssignment.subject', 'teachingAssignment.classRoom', 'teachingAssignment.teacher.user'])
+                ->whereIn('status', \App\Support\SiklusUjian::statusTerlihat($user))
+                ->withCount(['questions', 'sessions'])
+                ->latest()->take(5)->get();
         } else {
             // User tanpa role yang dikenali (fallback aman).
             $student = $user->student;

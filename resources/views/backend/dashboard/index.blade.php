@@ -1,11 +1,13 @@
 @extends('backend.layout.app')
 @section('title', 'Dashboard')
+@section('lebar', 'container-fluid px-4 px-lg-6')
+
 @section('content')
 
 <!--begin::Toolbar-->
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <!--begin::Toolbar container-->
-    <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
+    <div id="kt_app_toolbar_container" class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
         <!--begin::Page title-->
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
             <!--begin::Title-->
@@ -36,15 +38,8 @@
 <!--end::Toolbar-->
 
 
-{{-- Ringkasan CBT diletakkan paling atas: itu inti aplikasi ini, dan yang
-     dicari orang saat membuka dashboard. --}}
-<div id="kt_app_content" class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
-        @include('backend.dashboard._cbt')
-    </div>
-</div>
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         <!-- Dashboard Header -->
         <div class="d-flex flex-column flex-column-fluid mb-8">
             <h1 class="text-gray-900 fw-bold mb-1">Selamat Datang, {{ auth()->user()->name }}!</h1>
@@ -58,6 +53,10 @@
                 @endif
             </div>
         </div>
+
+        {{-- Ringkasan CBT diletakkan SESUDAH sapaan: sapaan adalah pembuka halaman,
+             jadi angka-angka tidak boleh mendahuluinya. --}}
+        @include('backend.dashboard._cbt')
 
         <!-- Statistics Cards -->
         <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
@@ -157,12 +156,14 @@
                     <div class="card-header pt-7">
                         <h3 class="card-title align-items-start flex-column">
                             <span class="card-label fw-bold text-gray-800">
-                                @if($stats['type'] == 'admin') Penugasan Guru Terbaru
-                                @elseif($stats['type'] == 'guru') Modul Terbaru Saya
+                                @if($stats['type'] == 'admin') Ujian Terbaru
+                                @elseif($stats['type'] == 'guru') Ujian Saya Terbaru
                                 @else Materi Terbaru Untuk Anda
                                 @endif
                             </span>
-                            <span class="text-gray-500 mt-1 fw-semibold fs-6">5 data terakhir</span>
+                            <span class="text-gray-500 mt-1 fw-semibold fs-6">
+                                @if($stats['type'] != 'siswa') 5 ujian terakhir dibuat @else 5 data terakhir @endif
+                            </span>
                         </h3>
                     </div>
                     <div class="card-body pt-6">
@@ -170,14 +171,12 @@
                             <table class="table table-row-dashed align-middle gs-0 gy-3">
                                 <thead>
                                     <tr class="fs-7 fw-bold text-gray-500 border-bottom-0">
-                                        @if($stats['type'] == 'admin')
-                                            <th class="min-w-175px">GURU</th>
-                                            <th class="text-end">PELAJARAN</th>
-                                            <th class="text-end">KELAS</th>
-                                        @elseif($stats['type'] == 'guru')
-                                            <th class="min-w-175px">JUDUL MODUL</th>
-                                            <th class="text-end">PELAJARAN</th>
-                                            <th class="text-end">KELAS</th>
+                                        @if($stats['type'] != 'siswa')
+                                            <th class="min-w-175px">UJIAN</th>
+                                            <th>MAPEL / KELAS</th>
+                                            <th class="text-center">SOAL</th>
+                                            <th class="text-center">JADWAL</th>
+                                            <th class="text-end">STATUS</th>
                                         @else
                                             <th class="min-w-175px">MODUL</th>
                                             <th class="text-end">GURU</th>
@@ -186,23 +185,38 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($recentData as $item)
+                                    @forelse($recentData as $item)
                                     <tr>
-                                        @if($stats['type'] == 'admin')
-                                            <td>{{ $item->teacher->user->name ?? '-' }}</td>
-                                            <td class="text-end">{{ $item->subject->name ?? '-' }}</td>
-                                            <td class="text-end">{{ $item->classRoom->name ?? '-' }}</td>
-                                        @elseif($stats['type'] == 'guru')
-                                            <td>{{ $item->title }}</td>
-                                            <td class="text-end">{{ $item->teachingAssignment->subject->name ?? '-' }}</td>
-                                            <td class="text-end">{{ $item->teachingAssignment->classRoom->name ?? '-' }}</td>
+                                        @if($stats['type'] != 'siswa')
+                                            <td>
+                                                <a href="{{ route('exams.show', $item->id) }}" class="fw-bold text-gray-900 text-hover-primary">{{ $item->title }}</a>
+                                            </td>
+                                            <td class="text-muted fs-7">
+                                                {{ $item->teachingAssignment->subject->name ?? '-' }}
+                                                <span class="text-gray-500">· {{ $item->teachingAssignment->classRoom->name ?? '-' }}</span>
+                                            </td>
+                                            <td class="text-center fw-bold">{{ $item->questions_count }}</td>
+                                            <td class="text-center">{{ $item->sessions_count }}</td>
+                                            <td class="text-end">
+                                                <span class="badge badge-light-{{ \App\Support\SiklusUjian::warnaStatus($item->status) }}">
+                                                    {{ \App\Support\SiklusUjian::labelStatus($item->status) }}
+                                                </span>
+                                            </td>
                                         @else
                                             <td>{{ $item->title }}</td>
                                             <td class="text-end">{{ $item->teachingAssignment->teacher->user->name ?? '-' }}</td>
                                             <td class="text-end">{{ $item->teachingAssignment->subject->name ?? '-' }}</td>
                                         @endif
                                     </tr>
-                                    @endforeach
+                                    @empty
+                                    {{-- Tanpa cabang ini, tabel kosong hanya menampilkan kepala kolom
+                                         dan terlihat seperti halaman yang rusak. --}}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-8">
+                                            @if($stats['type'] != 'siswa') Belum ada ujian dibuat. @else Belum ada data. @endif
+                                        </td>
+                                    </tr>
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>

@@ -117,6 +117,125 @@
     </div>
 </div>
 
+
+{{-- ================= GRAFIK =================
+     ApexCharts sudah ada di plugins.bundle.js dan bundel itu dimuat layout
+     SEBELUM @stack('scripts'), jadi tidak ada pustaka baru yang perlu ditambah
+     dan tidak perlu di-push per halaman. Warna & gaya mengikuti token Metronic
+     yang sudah dipakai halaman Analytics supaya seragam. --}}
+@php
+    $sebaran = $r['sebaran_nilai'] ?? [];
+    $perUjian = $r['rata_per_ujian'] ?? collect();
+    $adaNilai = array_sum($sebaran) > 0;
+    $statusLabel = [];
+    $statusData = [];
+    foreach ($r['ujian_per_status'] as $st => $jml) {
+        $statusLabel[] = \App\Support\SiklusUjian::labelStatus($st);
+        $statusData[] = $jml;
+    }
+@endphp
+<div class="row g-5 g-xl-8 mb-5">
+    <div class="col-xl-5">
+        <div class="card card-flush h-100">
+            <div class="card-header pt-5">
+                <h3 class="card-title fs-5 fw-bold">Komposisi Status Ujian</h3>
+            </div>
+            <div class="card-body pt-2">
+                @if(array_sum($statusData) > 0)
+                    <div id="grafikStatusUjian" style="height:260px"></div>
+                @else
+                    <div class="text-muted fs-7 py-10 text-center">Belum ada ujian untuk digambarkan.</div>
+                @endif
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-7">
+        <div class="card card-flush h-100">
+            <div class="card-header pt-5">
+                <h3 class="card-title fs-5 fw-bold">Sebaran Nilai Siswa</h3>
+                <div class="card-toolbar"><span class="text-muted fs-8">dari pengerjaan yang sudah dinilai</span></div>
+            </div>
+            <div class="card-body pt-2">
+                @if($adaNilai)
+                    <div id="grafikSebaranNilai" style="height:260px"></div>
+                @else
+                    {{-- Grafik kosong lebih membingungkan daripada satu kalimat jelas. --}}
+                    <div class="text-muted fs-7 py-10 text-center">Belum ada nilai. Grafik muncul setelah ada pengerjaan yang dinilai.</div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+@if($perUjian->isNotEmpty())
+<div class="card card-flush mb-5">
+    <div class="card-header pt-5">
+        <h3 class="card-title fs-5 fw-bold">Rata-rata Nilai per Ujian</h3>
+        <div class="card-toolbar"><span class="text-muted fs-8">8 ujian terakhir yang dinilai</span></div>
+    </div>
+    <div class="card-body pt-2"><div id="grafikRataUjian" style="height:300px"></div></div>
+</div>
+@endif
+
+@push('scripts')
+<script>
+    (function () {
+        // Guard: kalau bundel gagal dimuat, jangan sampai galat ini mematikan
+        // skrip lain di halaman yang sama.
+        if (typeof ApexCharts === 'undefined') { return; }
+
+        var abu = '#a1a5b7', garis = '#e4e6ef';
+        var dasar = {
+            chart: { fontFamily: 'inherit', toolbar: { show: false }, animations: { enabled: false } },
+            grid: { borderColor: garis, strokeDashArray: 4 },
+            dataLabels: { enabled: false },
+            legend: { labels: { colors: abu } },
+        };
+
+        var elStatus = document.getElementById('grafikStatusUjian');
+        if (elStatus) {
+            new ApexCharts(elStatus, Object.assign({}, dasar, {
+                chart: Object.assign({}, dasar.chart, { type: 'donut', height: 260 }),
+                series: @json($statusData),
+                labels: @json($statusLabel),
+                colors: ['#f6c000', '#17c653', '#7239ea', '#a1a5b7'],
+                legend: { position: 'bottom', labels: { colors: abu } },
+                plotOptions: { pie: { donut: { labels: { show: true,
+                    total: { show: true, label: 'Total Ujian', color: abu } } } } },
+            })).render();
+        }
+
+        var elSebaran = document.getElementById('grafikSebaranNilai');
+        if (elSebaran) {
+            new ApexCharts(elSebaran, Object.assign({}, dasar, {
+                chart: Object.assign({}, dasar.chart, { type: 'bar', height: 260 }),
+                series: [{ name: 'Jumlah siswa', data: @json(array_values($sebaran)) }],
+                xaxis: { categories: @json(array_keys($sebaran)), labels: { style: { colors: abu } } },
+                yaxis: { labels: { style: { colors: abu } } },
+                // Warna per batang: merah untuk yang di bawah KKM, hijau untuk yang baik.
+                colors: ['#f8285a', '#f6c000', '#17c653', '#0bb783'],
+                plotOptions: { bar: { distributed: true, borderRadius: 5, columnWidth: '45%' } },
+                legend: { show: false },
+                tooltip: { y: { formatter: function (v) { return v + ' siswa'; } } },
+            })).render();
+        }
+
+        var elRata = document.getElementById('grafikRataUjian');
+        if (elRata) {
+            new ApexCharts(elRata, Object.assign({}, dasar, {
+                chart: Object.assign({}, dasar.chart, { type: 'bar', height: 300 }),
+                series: [{ name: 'Rata-rata nilai', data: @json($perUjian->map(fn ($x) => round((float) $x->rata, 2))->values()) }],
+                xaxis: { categories: @json($perUjian->pluck('title')->values()), labels: { style: { colors: abu }, rotate: -25, trim: true } },
+                yaxis: { min: 0, max: 100, labels: { style: { colors: abu } } },
+                colors: ['#7239ea'],
+                plotOptions: { bar: { borderRadius: 5, columnWidth: '40%' } },
+                tooltip: { y: { formatter: function (v) { return v + ' rata-rata'; } } },
+            })).render();
+        }
+    })();
+</script>
+@endpush
+
 @if($r['berjalan']->isNotEmpty())
 <div class="card card-flush mb-5">
     <div class="card-header pt-5">

@@ -355,55 +355,60 @@
 	</div>
 	<div class="offcanvas-body p-0">
 		@php
+			/*
+			 | Isi panel notifikasi.
+			 |
+			 | Dulu: baca tabel notifications (yang tidak pernah ditulis siapa pun,
+			 | jadi selalu kosong), lalu jatuh ke daftar Modul & Penugasan warisan
+			 | lms-sync. Akibatnya panel ini selalu berbunyi "Belum ada notifikasi
+			 | baru" dan tidak berguna.
+			 |
+			 | Sekarang: dihitung dari keadaan CBT saat ini lewat NotifikasiCbt, dan
+			 | setiap butir menunjuk satu hal yang PERLU DIKERJAKAN. Baris dari tabel
+			 | notifications tetap dipakai bila memang ada (mis. pemberitahuan nilai
+			 | yang dikirim sistem), ditaruh lebih dulu.
+			 */
 			$notifications = collect();
-			if(auth()->check()) {
-				$dbNotifications = \App\Models\Notification::where('user_id', auth()->id())->latest()->take(15)->get();
-				foreach($dbNotifications as $dn) {
-					$icon = 'ki-notification-status';
-					$color = 'primary';
-					if ($dn->type === 'assignment') { $icon = 'ki-notepad-edit'; $color = 'warning'; }
-					elseif ($dn->type === 'announcement') { $icon = 'ki-book-open'; $color = 'success'; }
-					elseif ($dn->type === 'badge_earned') { $icon = 'ki-award'; $color = 'danger'; }
-					elseif ($dn->type === 'assignment_deadline') { $icon = 'ki-time'; $color = 'danger'; }
-					
+
+			if (auth()->check()) {
+				foreach (\App\Models\Notification::where('user_id', auth()->id())->latest()->take(5)->get() as $dn) {
+					$ikon = 'ki-notification-status';
+					$warna = 'primary';
+					if ($dn->type === 'exam_result') { $ikon = 'ki-verify'; $warna = 'success'; }
+					elseif ($dn->type === 'assignment_deadline') { $ikon = 'ki-time'; $warna = 'danger'; }
+
 					$notifications->push([
-						'icon' => $icon,
-						'color' => $color,
+						'icon' => $ikon,
+						'color' => $warna,
 						'title' => $dn->title,
 						'time' => $dn->created_at->diffForHumans(),
 						'url' => $dn->url ?: '#',
 						'message' => $dn->message,
-						'is_read' => $dn->is_read
+						'is_read' => $dn->is_read,
 					]);
 				}
-			}
-			
-			// Fallback/Generic system updates if empty or not logged in
-			if ($notifications->isEmpty()) {
-				if(class_exists('\App\Models\LearningModule')) {
-					foreach(\App\Models\LearningModule::latest()->take(3)->get() as $module) {
+
+				// Butir CBT: dihitung, bukan disimpan — begitu pekerjaannya selesai,
+				// butirnya hilang sendiri tanpa perlu ditandai "sudah dibaca".
+				try {
+					foreach (app(\App\Services\NotifikasiCbt::class)->untuk(auth()->user()) as $b) {
 						$notifications->push([
-							'icon' => 'ki-book', 'color' => 'success',
-							'title' => 'Modul Baru: ' . $module->title,
-							'time' => $module->created_at->diffForHumans(),
-							'url' => '#',
-							'message' => 'Materi baru telah diunggah oleh pengajar.',
-							'is_read' => true
+							'icon' => $b['ikon'],
+							'color' => $b['warna'],
+							'title' => $b['judul'],
+							'time' => $b['waktu'],
+							'url' => $b['url'],
+							'message' => $b['teks'],
+							'is_read' => true,
 						]);
 					}
+				} catch (\Throwable $e) {
+					// Panel notifikasi ada di NAVBAR: kalau ia melempar galat, SELURUH
+					// halaman ikut gagal. Jadi kegagalannya ditelan di sini saja.
+					report($e);
 				}
-				if(class_exists('\App\Models\Assignment')) {
-					foreach(\App\Models\Assignment::latest()->take(3)->get() as $assignment) {
-						$notifications->push([
-							'icon' => 'ki-notepad-edit', 'color' => 'warning',
-							'title' => 'Penugasan: ' . $assignment->title,
-							'time' => $assignment->created_at->diffForHumans(),
-							'url' => '#',
-							'message' => 'Penugasan baru telah diterbitkan.',
-							'is_read' => true
-						]);
-					}
-				}
+
+				$notifications = $notifications->take(15);
 			}
 		@endphp
 

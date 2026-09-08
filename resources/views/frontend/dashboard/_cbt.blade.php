@@ -46,6 +46,49 @@
     @endforeach
 </div>
 
+
+{{-- Grafik tren nilai. ApexCharts sudah ada di plugins.bundle.js yang dimuat
+     layout portal sebelum @stack('scripts'), jadi tanpa pustaka tambahan. --}}
+@php $tren = $r['tren_nilai'] ?? collect(); @endphp
+@if($tren->count() >= 2)
+<div class="card card-flush mb-5">
+    <div class="card-header pt-5">
+        <h3 class="card-title fs-5 fw-bold">Perkembangan Nilai Kamu</h3>
+        <div class="card-toolbar"><span class="text-muted fs-8">urut waktu dikumpulkan</span></div>
+    </div>
+    <div class="card-body pt-2"><div id="grafikTrenNilai" style="height:280px"></div></div>
+</div>
+
+@push('scripts')
+<script>
+    (function () {
+        if (typeof ApexCharts === 'undefined') { return; }
+        var el = document.getElementById('grafikTrenNilai');
+        if (!el) { return; }
+
+        var abu = '#a1a5b7';
+        new ApexCharts(el, {
+            chart: { type: 'line', height: 280, fontFamily: 'inherit', toolbar: { show: false }, animations: { enabled: false } },
+            series: [
+                { name: 'Nilai kamu', data: @json($tren->map(fn ($x) => round((float) $x->final_score, 2))->values()) },
+                // Garis KKM ikut digambar supaya siswa langsung melihat mana yang
+                // di bawah batas, tanpa perlu mengingat angkanya.
+                { name: 'KKM', data: @json($tren->map(fn ($x) => round((float) $x->pass_score, 2))->values()) },
+            ],
+            xaxis: { categories: @json($tren->pluck('title')->values()), labels: { style: { colors: abu }, trim: true, rotate: -20 } },
+            yaxis: { min: 0, max: 100, labels: { style: { colors: abu } } },
+            colors: ['#7239ea', '#f8285a'],
+            stroke: { width: [3, 2], curve: 'smooth', dashArray: [0, 5] },
+            markers: { size: [5, 0] },
+            grid: { borderColor: '#e4e6ef', strokeDashArray: 4 },
+            legend: { position: 'top', labels: { colors: abu } },
+            dataLabels: { enabled: false },
+        }).render();
+    })();
+</script>
+@endpush
+@endif
+
 <div class="row g-5 mb-5">
     <div class="col-xl-7">
         <div class="card card-flush h-100">

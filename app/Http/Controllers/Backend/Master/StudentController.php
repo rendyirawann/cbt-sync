@@ -294,7 +294,7 @@ class StudentController extends Controller
             'name' => 'Nama Lengkap', 'email' => 'Email', 'username' => 'Username',
             'password' => 'Password', 'nisn' => 'NISN', 'school_id' => 'Sekolah',
             'birth_place' => 'Tempat Lahir', 'birth_date' => 'Tanggal Lahir',
-            'proctor_id' => 'ID Proktor', 'room' => 'Ruang', 'wave_id' => 'Gelombang',
+            'proctor_id' => 'ID Proktor', 'room' => 'Ruang', 'wave' => 'Gelombang',
         ];
     }
 
@@ -356,7 +356,11 @@ class StudentController extends Controller
                 // Password kosong = acak bergaya ANBK (bukan lagi default seragam
                 // "siswa12345"), lalu disimpan sebagai password kartu.
                 $sandiBaris = $row['password'] !== '' ? $row['password'] : \App\Support\KartuUjian::sandiBaru();
-                DB::transaction(function () use ($row, $school, $nisn, $activeYear, $sandiBaris) {
+                // $gelombang WAJIB ikut di daftar use. Tanpa itu variabelnya tidak ada
+                // di dalam closure, sehingga $gelombang[...] ?? null selalu bernilai
+                // null — dan kolom Gelombang di Excel tidak pernah tersimpan sama
+                // sekali, tanpa galat apa pun karena ditelan operator ??.
+                DB::transaction(function () use ($row, $school, $nisn, $activeYear, $sandiBaris, $gelombang) {
                     $username = $this->rapikanUsername($row['username'] ?? '', $nisn !== '' ? $nisn : $row['email']);
                     $user = User::create([
                         'name' => $row['name'],

@@ -101,7 +101,13 @@ License: For each use you must have a valid license purchased only from above li
 				<div class="wrapper d-flex flex-column flex-row-fluid" id="kt_wrapper">
 					@include('backend.layout.navbar')
 					<!--begin::Container-->
-					<div id="kt_content_container" class="d-flex flex-column-fluid align-items-start container-xxl">
+					{{-- Lebar isi halaman bisa ditentukan per halaman lewat @section('lebar').
+					     Bawaannya container-xxl (±1320px) seperti sebelumnya, jadi seluruh
+					     halaman lain tidak berubah; halaman yang butuh selebar layar cukup
+					     mengisi @section('lebar', 'container-fluid'). Dibuat begini, bukan
+					     mengubah kelasnya langsung, supaya tidak ada halaman lain yang
+					     ikut berubah tanpa diminta. --}}
+					<div id="kt_content_container" class="d-flex flex-column-fluid align-items-start @yield('lebar', 'container-xxl')">
 						<!--begin::Post-->
 						<div class="content flex-row-fluid" id="kt_content">
 							@yield('content')

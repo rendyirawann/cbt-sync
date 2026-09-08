@@ -103,6 +103,25 @@ class RingkasanCbt
             'lulus' => $lulus,
             'tidak_lulus' => max(0, (int) ($nilai->n ?? 0) - $lulus),
 
+            // ---- data grafik ----
+            //
+            // Sebaran nilai dihitung DI DATABASE dengan CASE, bukan dengan
+            // mengambil semua nilai lalu mengelompokkannya di PHP: jumlah
+            // pengerjaan bisa ribuan, dan dashboard tidak boleh memuat semuanya
+            // hanya untuk empat angka.
+            'sebaran_nilai' => $this->sebaranNilai($idSesi),
+
+            // Rata-rata nilai per ujian, untuk grafik batang. Dibatasi 8 ujian
+            // terakhir supaya grafiknya tetap terbaca.
+            'rata_per_ujian' => ExamAttempt::whereIn('exam_attempts.exam_session_id', $idSesi)
+                ->where('exam_attempts.status', 'graded')
+                ->join('exam_sessions', 'exam_sessions.id', '=', 'exam_attempts.exam_session_id')
+                ->join('exams', 'exams.id', '=', 'exam_sessions.exam_id')
+                ->selectRaw('exams.title, avg(exam_attempts.final_score) as rata, count(*) as n')
+                ->groupBy('exams.title')
+                ->orderByRaw('max(exam_attempts.submitted_at) desc nulls last')
+                ->limit(8)->get(),
+
             // Daftar ujian yang jadwalnya sedang berjalan, dengan kemajuannya.
             'berjalan' => ExamSession::whereIn('id', $idSesi)
                 ->with(['exam.teachingAssignment.subject', 'exam.teachingAssignment.classRoom'])
@@ -114,6 +133,30 @@ class RingkasanCbt
                 ])
                 ->orderBy('ends_at')
                 ->limit(5)->get(),
+        ];
+    }
+
+    /**
+     * Sebaran nilai dalam empat rentang, dihitung satu kali di database.
+     * Rentangnya mengikuti kebiasaan rapor: di bawah 60 kurang, 60–74 cukup,
+     * 75–84 baik, 85+ sangat baik.
+     */
+    private function sebaranNilai($idSesi): array
+    {
+        $b = ExamAttempt::whereIn('exam_session_id', $idSesi)
+            ->where('status', 'graded')
+            ->selectRaw("
+                count(case when final_score < 60 then 1 end) as kurang,
+                count(case when final_score >= 60 and final_score < 75 then 1 end) as cukup,
+                count(case when final_score >= 75 and final_score < 85 then 1 end) as baik,
+                count(case when final_score >= 85 then 1 end) as sangat_baik
+            ")->first();
+
+        return [
+            '< 60' => (int) ($b->kurang ?? 0),
+            '60–74' => (int) ($b->cukup ?? 0),
+            '75–84' => (int) ($b->baik ?? 0),
+            '85–100' => (int) ($b->sangat_baik ?? 0),
         ];
     }
 
@@ -164,6 +207,15 @@ class RingkasanCbt
                 ->where('status', 'graded')
                 ->with(['session.exam.teachingAssignment.subject'])
                 ->latest('submitted_at')->limit(5)->get(),
+
+            // Tren nilai untuk grafik: urut waktu dikumpulkan, bukan urut nilai.
+            'tren_nilai' => ExamAttempt::where('student_id', $siswa->id)
+                ->where('exam_attempts.status', 'graded')
+                ->join('exam_sessions', 'exam_sessions.id', '=', 'exam_attempts.exam_session_id')
+                ->join('exams', 'exams.id', '=', 'exam_sessions.exam_id')
+                ->selectRaw('exams.title, exam_attempts.final_score, exams.pass_score, exam_attempts.submitted_at')
+                ->orderBy('exam_attempts.submitted_at')
+                ->limit(12)->get(),
 
             // Data yang tercetak di kartu ujian — ditampilkan agar siswa tidak
             // perlu membuka kartunya hanya untuk melihat ruang/gelombang.

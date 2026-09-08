@@ -1,12 +1,11 @@
 @extends('frontend.layout.app')
 @section('title', 'Portal Siswa - Dashboard')
 
+@section('lebar', 'container-fluid px-3 px-lg-5')
+
 @section('content')
 
 {{-- Ringkasan CBT di paling atas — bagian yang paling dicari siswa. --}}
-<div class="container-xxl pt-5">
-    @include('frontend.dashboard._cbt')
-</div>
 <style>
     /* Custom Styling for Student Portal */
     .student-welcome-card {
@@ -35,7 +34,7 @@
 
 <!--begin::Toolbar-->
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
+    <div id="kt_app_toolbar_container" class="app-container container-fluid px-3 px-lg-5 d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
             <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">Beranda Siswa</h1>
             <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
@@ -50,8 +49,15 @@
     </div>
 </div>
 
+{{-- Ringkasan CBT diletakkan sesudah judul halaman, bukan mendahuluinya. --}}
+<div class="app-content flex-column-fluid pt-0">
+    <div class="app-container container-fluid px-3 px-lg-5">
+        @include('frontend.dashboard._cbt')
+    </div>
+</div>
+
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-3 px-lg-5">
         
         <!-- Welcome Banner -->
         <div class="card student-welcome-card mb-10 border-0">
