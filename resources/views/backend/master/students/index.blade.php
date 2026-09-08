@@ -364,7 +364,7 @@
             // pindah halaman terjadi tanpa permintaan ke server. Cukup untuk
             // ukuran satu sekolah; kalau nanti datanya sampai puluhan ribu,
             // barulah pindah ke serverSide seperti User Management.
-            pageLength: 25,
+            pageLength: 10,
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
             order: bolehHapus ? [[2, 'asc']] : [[1, 'asc']],   // urut nama
             columnDefs: [{ orderable: false, searchable: false, targets: takUrut }],

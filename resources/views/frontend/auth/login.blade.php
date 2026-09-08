@@ -140,7 +140,7 @@
                         <div class="fv-row mb-10">
                             <div class="d-flex flex-stack mb-2">
                                 <label class="form-label fs-8 fw-bolder text-uppercase ls-1 mb-0">Password</label>
-                                <a href="#" class="link-primary fs-8 fw-bold">Lupa Password?</a>
+                                <a href="#" class="link-primary fs-8 fw-bold" id="lupaSandiSiswa">Lupa Password?</a>
                             </div>
                             <input type="password" placeholder="••••••••" name="password" autocomplete="off" class="form-control form-control-pixel" required />
                         </div>
@@ -214,3 +214,32 @@
 @include('partials.dev-credit')
 </body>
 </html>
+
+<script>
+    // Lupa sandi TIDAK dibuat mandiri (tanpa email reset) dan itu disengaja:
+    // sandi siswa tercetak di Kartu Ujian dan diterbitkan oleh admin/guru, jadi
+    // jalur pemulihannya memang lewat orang — bukan lewat surel siswa, yang
+    // banyak di antaranya bahkan memakai alamat buatan sekolah.
+    //
+    // Pendengarnya dipasang pada document (bukan pada elemennya langsung) supaya
+    // tidak bergantung pada urutan pemuatan skrip di halaman ini.
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest('#lupaSandiSiswa');
+        if (!a) return;
+        e.preventDefault();
+
+        Swal.fire({
+            title: 'Lupa Password?',
+            html: '<div class="text-start fs-6">'
+                + 'Password siswa <b>tidak bisa direset sendiri</b>.'
+                + '<div class="mt-3">Silakan <b>hubungi admin atau guru</b> di sekolahmu.</div>'
+                + '<div class="text-muted fs-7 mt-3">Password kamu tercetak di <b>Kartu Ujian</b>. '
+                + 'Bila kartunya hilang, admin/guru bisa menerbitkan kartu baru beserta password barunya.</div>'
+                + '</div>',
+            icon: 'info',
+            confirmButtonText: 'Mengerti',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false
+        });
+    });
+</script>

@@ -38,7 +38,7 @@
 
                         <div class="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
                             <div></div>
-                            <a href="{{ route('password.request') }}" class="link-primary">Lupa Password ?</a>
+                            <a href="#" class="link-primary" id="lupaSandiAdmin">Lupa Password ?</a>
                         </div>
 
                         <div class="d-grid mb-10">
@@ -358,3 +358,28 @@
         </script>
     @endpush
 @endsection
+
+<script>
+    // Sama seperti portal siswa: pemulihan sandi akun pengelola ditangani manusia,
+    // bukan surel reset. Tautan ke route password.request dilepas dari tampilan
+    // (route-nya sendiri dibiarkan ada agar tidak ada yang tiba-tiba rusak).
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest('#lupaSandiAdmin');
+        if (!a) return;
+        e.preventDefault();
+
+        Swal.fire({
+            title: 'Lupa Password?',
+            html: '<div class="text-start fs-6">'
+                + 'Reset password akun pengelola dilakukan oleh <b>Admin sekolah</b> atau <b>Developer</b>.'
+                + '<div class="mt-3">Silakan hubungi salah satunya untuk mendapatkan password baru.</div>'
+                + '<div class="text-muted fs-7 mt-3">Admin dapat menggantinya di menu '
+                + '<b>User Management &rsaquo; Edit</b>.</div>'
+                + '</div>',
+            icon: 'info',
+            confirmButtonText: 'Mengerti',
+            customClass: { confirmButton: 'btn btn-primary' },
+            buttonsStyling: false
+        });
+    });
+</script>
