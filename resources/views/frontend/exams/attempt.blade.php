@@ -60,7 +60,7 @@
 
         <div class="row g-5">
             {{-- ====== Panel Navigasi (kiri di desktop) ====== --}}
-            <div class="col-lg-4 col-xxl-3 order-lg-2">
+            <div class="col-lg-4 col-xxl-3 order-2 order-lg-2">
                 <div class="card shadow-sm exam-panel">
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
@@ -87,7 +87,7 @@
             </div>
 
             {{-- ====== Area Soal (kanan/utama) ====== --}}
-            <div class="col-lg-8 col-xxl-9 order-lg-1">
+            <div class="col-lg-8 col-xxl-9 order-1 order-lg-1">
                 @php
                     $subjectName = $exam->teachingAssignment->subject->name ?? 'Ujian';
                     $kelasName = $session->class_room_id
@@ -322,7 +322,15 @@
         const nb = document.getElementById('nextBtn');
         nb.style.visibility = (current === total - 1) ? 'hidden' : 'visible';
         document.getElementById('qcounter').textContent = `Soal ${current + 1} / ${total}`;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Digulir ke kartu soalnya, BUKAN ke puncak halaman. Di layar sempit
+        // panel navigasi ada di atas soal (tinggi ±590px untuk 40 soal), jadi
+        // scrollTo(top:0) melempar siswa ke puncak panel dan soal berikutnya
+        // berada di luar layar — harus digulir turun manual tiap kali.
+        if (cards[current] && cards[current].scrollIntoView) {
+            cards[current].scrollIntoView({ block: 'start', behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
     function go(i){ if (i >= 0 && i < total){ current = i; tampilkan(); } }
     document.getElementById('prevBtn').addEventListener('click', () => go(current - 1));

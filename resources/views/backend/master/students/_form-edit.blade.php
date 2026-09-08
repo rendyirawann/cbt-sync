@@ -36,7 +36,7 @@
                     
                     <h5 class="mb-4 text-primary border-top pt-4">Profil Siswa</h5>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Sekolah Asal</label>
-                        <select name="school_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModalIsi" required>
+                        <select name="school_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal" required>
                             @foreach($schools as $s)
                                 <option value="{{ $s->id }}" {{ $item->school_id == $s->id ? 'selected' : '' }}>{{ $s->name }}</option>
                             @endforeach
@@ -48,7 +48,7 @@
                     </div>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Telepon</label><input type="text" name="phone" class="form-control form-control-solid" value="{{ $item->phone }}"></div>
                     <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Jenis Kelamin</label>
-                        <select name="gender" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModalIsi">
+                        <select name="gender" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal">
                             <option value="L" {{ $item->gender == 'L' ? 'selected' : '' }}>Laki-laki</option>
                             <option value="P" {{ $item->gender == 'P' ? 'selected' : '' }}>Perempuan</option>
                         </select>
@@ -78,7 +78,7 @@
                     </div>
                     <div class="fv-row mb-5">
                         <label class="fs-6 fw-semibold mb-2">Gelombang</label>
-                        <select name="wave_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModalIsi">
+                        <select name="wave_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal">
                             <option value="">Belum ditentukan</option>
                             @foreach($waves as $w)
                                 <option value="{{ $w->id }}" @selected($item->wave_id === $w->id)>{{ $w->name }}</option>
