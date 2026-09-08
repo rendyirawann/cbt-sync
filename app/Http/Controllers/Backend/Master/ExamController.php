@@ -165,9 +165,40 @@ class ExamController extends Controller
             });
         $pesertaTanpaGelombang = $pesertaUjian->whereNull('wave_id')->count();
 
+        // Kelas tujuan untuk "Duplikat ke Kelas Lain". Batasnya sengaja ketat:
+        // guru yang sama, mapel yang sama, tahun ajaran yang sama, dan kelas
+        // dengan TINGKAT (level) serta sekolah yang sama. Daftar ini hanya untuk
+        // tampilan — batas yang sama diperiksa ULANG di duplicate(), karena isi
+        // form bisa dipalsukan.
+        $ta = $exam->teachingAssignment;
+        $targetPenugasan = collect();
+        if ($ta && $examClass) {
+            $targetPenugasan = TeachingAssignment::with('classRoom')
+                ->where('subject_id', $ta->subject_id)
+                ->where('teacher_id', $ta->teacher_id)
+                ->where('academic_year_id', $ta->academic_year_id)
+                ->where('id', '!=', $ta->id)
+                ->whereHas('classRoom', fn ($q) => $q
+                    ->where('level', $examClass->level)
+                    ->where('school_id', $examClass->school_id))
+                ->get()
+                ->sortBy(fn ($t) => $t->classRoom->name ?? '')
+                ->values();
+
+            // Kelas yang sudah punya ujian berjudul sama ditandai, bukan dibuang:
+            // guru perlu tahu kenapa kelas itu tidak bisa dipilih.
+            $sudahAda = Exam::whereIn('teaching_assignment_id', $targetPenugasan->pluck('id'))
+                ->where('title', $exam->title)
+                ->pluck('teaching_assignment_id')
+                ->all();
+            $targetPenugasan->each(function ($t) use ($sudahAda) {
+                $t->sudah_ada = in_array($t->id, $sudahAda, true);
+            });
+        }
+
         return view('backend.master.exams.show', compact(
             'exam', 'examClass', 'students', 'assignments', 'bankQuestions', 'belumUjian',
-            'gelombangUjian', 'pesertaTanpaGelombang'
+            'gelombangUjian', 'pesertaTanpaGelombang', 'targetPenugasan'
         ));
     }
 
@@ -572,6 +603,129 @@ class ExamController extends Controller
         }
 
         return redirect()->back()->with('success', $pesan);
+    }
+
+    /**
+     * Duplikat ujian ini ke kelas lain: satu baris exams baru per kelas tujuan,
+     * dengan SALINAN seluruh soalnya.
+     *
+     * Kenapa disalin dan bukan dibagi: bobot nilai ditulis ke
+     * questions.points/points_set pada saat memeriksa, dan storeGrade menilai
+     * ulang attempt lain milik ujian yang sama bila bobotnya berubah. Kalau dua
+     * kelas berbagi baris soal, memeriksa X-1 akan mengubah nilai X-2.
+     *
+     * Salinan TIDAK dicerminkan lagi ke Bank Soal: soalnya sudah ada di sana
+     * atas nama ujian sumber, dan mencerminkan ulang akan menggandakan katalog
+     * sebanyak kelas yang diduplikat.
+     */
+    public function duplicate(Request $request, $id)
+    {
+        $exam = Exam::with(['questions.options', 'teachingAssignment.classRoom'])->findOrFail($id);
+        $this->authorizeExam($exam);
+
+        $request->validate(
+            ['assignment_ids' => 'required|array|min:1'],
+            [],
+            ['assignment_ids' => 'Kelas tujuan']
+        );
+
+        $ta = $exam->teachingAssignment;
+        $kelasAsal = $ta?->classRoom;
+        if (! $ta || ! $kelasAsal) {
+            return back()->with('error', 'Ujian ini tidak punya penugasan/kelas, jadi tidak bisa diduplikat.');
+        }
+        if ($exam->questions->isEmpty()) {
+            return back()->with('error', 'Ujian ini belum punya soal, jadi tidak ada yang bisa diduplikat.');
+        }
+
+        // Batas yang sama seperti daftar di layar, diperiksa ULANG di server.
+        $targets = TeachingAssignment::with('classRoom')
+            ->whereIn('id', $request->assignment_ids)
+            ->where('subject_id', $ta->subject_id)
+            ->where('teacher_id', $ta->teacher_id)
+            ->where('academic_year_id', $ta->academic_year_id)
+            ->where('id', '!=', $ta->id)
+            ->whereHas('classRoom', fn ($q) => $q
+                ->where('level', $kelasAsal->level)
+                ->where('school_id', $kelasAsal->school_id))
+            ->get();
+
+        if ($targets->isEmpty()) {
+            return back()->with('error', 'Tidak ada kelas tujuan yang sah. Kelas tujuan harus mapel, guru, tahun ajaran, dan tingkat yang sama.');
+        }
+
+        $dibuat = [];
+        $dilewati = [];
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($exam, $targets, &$dibuat, &$dilewati) {
+            foreach ($targets as $t) {
+                $namaKelas = $t->classRoom->name ?? '?';
+
+                if (Exam::where('teaching_assignment_id', $t->id)->where('title', $exam->title)->exists()) {
+                    $dilewati[] = $namaKelas;
+                    continue;
+                }
+
+                $baru = Exam::create([
+                    'teaching_assignment_id' => $t->id,
+                    'source_exam_id'         => $exam->id,
+                    'title'                  => $exam->title,
+                    'description'            => $exam->description,
+                    'type'                   => $exam->type,
+                    'points_mode'            => $exam->points_mode,
+                    'question_selection'     => $exam->question_selection,
+                    'active_question_count'  => $exam->active_question_count,
+                    'wrong_penalty'          => $exam->wrong_penalty,
+                    'normalize'              => $exam->normalize,
+                    'pass_score'             => $exam->pass_score,
+                    // SELALU draft: menerbitkan ujian adalah keputusan sadar per kelas.
+                    'status'                 => 'draft',
+                ]);
+
+                foreach ($exam->questions->sortBy('order') as $q) {
+                    $qBaru = $baru->questions()->create([
+                        'type'          => $q->type,
+                        'question_text' => $q->question_text,
+                        'image_path'    => \App\Support\GambarSoal::salin($q->image_path),
+                        'points'        => $q->points,
+                        'penalty'       => $q->penalty,
+                        'order'         => $q->order,
+                        // points_set dibiarkan false: bobot untuk kelas ini
+                        // ditentukan saat memeriksa, terpisah dari kelas sumber.
+                        'points_set'    => false,
+                        'is_active'     => $q->is_active ?? true,
+                    ]);
+
+                    if ($q->type === 'mc') {
+                        foreach ($q->options->sortBy('order') as $opt) {
+                            $qBaru->options()->create([
+                                'label'       => $opt->label,
+                                'option_text' => $opt->option_text,
+                                'image_path'  => \App\Support\GambarSoal::salin($opt->image_path),
+                                'is_correct'  => $opt->is_correct,
+                                'order'       => $opt->order,
+                            ]);
+                        }
+                    }
+                }
+
+                $dibuat[] = $namaKelas;
+            }
+        });
+
+        if (! $dibuat) {
+            return back()->with('error', 'Tidak ada ujian yang dibuat. ' . ($dilewati
+                ? 'Kelas ' . implode(', ', $dilewati) . ' sudah punya ujian berjudul sama.'
+                : ''));
+        }
+
+        $pesan = count($dibuat) . ' ujian dibuat sebagai draft untuk kelas ' . implode(', ', $dibuat)
+            . ', lengkap dengan ' . $exam->questions->count() . ' soal.';
+        if ($dilewati) {
+            $pesan .= ' Kelas ' . implode(', ', $dilewati) . ' dilewati karena sudah punya ujian berjudul sama.';
+        }
+
+        return back()->with('success', $pesan);
     }
 
     private function authorizeExam(Exam $exam): void

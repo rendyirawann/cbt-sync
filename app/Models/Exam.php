@@ -163,6 +163,18 @@ class Exam extends Model
         return $this->hasMany(QuestionBank::class, 'source_exam_id');
     }
 
+    /** Ujian asal bila ujian ini lahir dari "Duplikat ke Kelas Lain". */
+    public function sourceExam()
+    {
+        return $this->belongsTo(Exam::class, 'source_exam_id');
+    }
+
+    /** Ujian kelas lain yang diduplikat DARI ujian ini. */
+    public function duplicates()
+    {
+        return $this->hasMany(Exam::class, 'source_exam_id');
+    }
+
     public function hasMc(): bool
     {
         return in_array($this->type, ['mixed', 'mc']);

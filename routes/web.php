@@ -203,6 +203,7 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::get('/admin/exams/{id}/attendance', [\App\Http\Controllers\Backend\Master\ExamController::class, 'attendance'])->name('exams.attendance');
     Route::post('/admin/exams/{exam}/question-selection', [\App\Http\Controllers\Backend\Master\ExamController::class, 'updateQuestionSelection'])->name('exams.question-selection');
     Route::post('/admin/exams/{exam}/pull-bank', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'pullFromBank'])->name('exams.pull-bank');
+    Route::post('/admin/exams/{exam}/duplicate', [\App\Http\Controllers\Backend\Master\ExamController::class, 'duplicate'])->name('exams.duplicate');
 
     Route::post('/admin/exam-questions', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'store'])->name('exam-questions.store');
     Route::put('/admin/exam-questions/{id}', [\App\Http\Controllers\Backend\Master\ExamQuestionController::class, 'update'])->name('exam-questions.update');
