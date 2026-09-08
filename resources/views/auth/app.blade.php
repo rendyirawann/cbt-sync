@@ -1,26 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <!--begin::Head-->
 
 <head>
 
-    <title>@yield('title') — {{ $appSettings['site_name'] ?? 'CBT-SYNC' }}</title>
-    <meta charset="utf-8" />
-    <meta name="description" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }} — Authentication" />
-    <meta name="author" content="Rendy Irawan" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta property="og:locale" content="id_ID" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }} — Login" />
-    <meta property="og:url" content="{{ url()->current() }}" />
-    <meta property="og:site_name" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }}" />
-    <link rel="canonical" href="{{ url()->current() }}" />
+    {{-- Login PENGELOLA (guru/admin) sengaja noindex: pintu masuk panel tidak
+         perlu muncul di hasil pencarian. Yang boleh terindeks hanya login
+         siswa & landing. Judul tetap dari @yield('title') tiap halaman. --}}
+    @include('partials.head-meta', ['metaRobots' => 'noindex, nofollow'])
     @php
         $siteLogo = $appSettings['site_logo'] ?? 'cbt-logo.svg';
         $siteFont = $appSettings['site_font'] ?? 'Plus Jakarta Sans';
         $siteName = $appSettings['site_name'] ?? 'CBT-SYNC';
     @endphp
-    <link rel="shortcut icon" href="{{ asset('assets/media/logos/' . $siteLogo) }}" />
     <!--begin::Fonts-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={{ str_replace(' ', '+', $siteFont) }}:wght@300;400;500;600;700;800&display=swap" />
     <!--end::Fonts-->

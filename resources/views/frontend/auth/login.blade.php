@@ -1,11 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-    <title>Login Siswa | {{ $appSettings['site_name'] ?? 'CBT-SYNC' }}</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="shortcut icon" href="{{ URL::to('assets/media/logos/favicon.ico') }}" />
+    {{-- Halaman INI yang dibaca ketika tautan domain dibagikan: akar domain
+         dialihkan ke /login, jadi meta lengkapnya harus dipasang di sini —
+         bukan hanya di layout portal yang baru muncul setelah siswa masuk.
+         Sebelumnya halaman ini cuma punya <title>, itu sebabnya pratinjau di
+         WhatsApp tampil polos tanpa keterangan dan tanpa gambar. --}}
+    @include('partials.head-meta', [
+        'metaTitle' => 'Login Siswa',
+        'metaDescription' => 'Masuk ke portal ujian ' . ($appSettings['site_name'] ?? 'CBT SYNC')
+            . ' memakai username, email, atau NISN untuk mengikuti ujian berbasis komputer,'
+            . ' melihat kartu ujian dan jadwal, serta hasil dan nilai.',
+        'metaRobots' => 'index, follow',
+    ])
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Outfit:300,400,500,600,700" />
     <link href="{{ URL::to('assets/plugins/global/plugins.bundle.css') }}?v={{ filemtime(public_path('assets/plugins/global/plugins.bundle.css')) }}" rel="stylesheet" type="text/css" />
     <link href="{{ URL::to('assets/css/style.bundle.css') }}?v={{ filemtime(public_path('assets/css/style.bundle.css')) }}" rel="stylesheet" type="text/css" />

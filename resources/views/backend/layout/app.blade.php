@@ -14,7 +14,10 @@ License: For each use you must have a valid license purchased only from above li
 	<!--begin::Head-->
 	<head>
 		<base href="{{ url('/') }}/" />
-		@include('partials.head-meta')
+		{{-- noindex: halaman ini hanya untuk pengguna yang sudah masuk, jadi tidak
+		     boleh masuk hasil pencarian. Yang dibiarkan terindeks hanya halaman
+		     login & landing. --}}
+		@include('partials.head-meta', ['metaRobots' => 'noindex, nofollow'])
 		<meta charset="utf-8" />
 		<meta name="description" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }} — Admin Dashboard" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />

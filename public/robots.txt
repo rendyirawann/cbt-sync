@@ -1,2 +1,19 @@
+# CBT SYNC — portal ujian berbasis komputer.
+#
+# Yang boleh terindeks hanya halaman publik (landing & login siswa). Sisanya
+# butuh login dan tidak ada gunanya di hasil pencarian; halaman-halaman itu
+# juga sudah mengirim <meta name="robots" content="noindex"> masing-masing,
+# jadi ini lapisan kedua, bukan satu-satunya penjaga.
+#
+# CATATAN: berkas ini hanya terbaca perayap bila aplikasi berada di AKAR domain
+# (mis. https://cbt.hustlesync.my.id/robots.txt). Untuk pemasangan di subfolder
+# seperti /cbt-sync, perayap tetap membaca robots.txt milik akar domain, bukan
+# yang ini — di sana penjaganya adalah meta robots per halaman.
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /portal
+Disallow: /license
+Disallow: /logout
+Disallow: /register
+Disallow: /storage/
+Allow: /

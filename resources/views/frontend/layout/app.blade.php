@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="id">
 	<head>
-		@include('partials.head-meta')
+		{{-- noindex: halaman ini hanya untuk pengguna yang sudah masuk, jadi tidak
+		     boleh masuk hasil pencarian. Yang dibiarkan terindeks hanya halaman
+		     login & landing. --}}
+		@include('partials.head-meta', ['metaRobots' => 'noindex, nofollow'])
 			<script>window.addEventListener('error',function(e){try{console.warn('JS suppressed:',e&&e.message);}catch(_){}});window.addEventListener('unhandledrejection',function(e){try{console.warn('Promise rejection:',e&&e.reason);}catch(_){}});</script>
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
 		<link href="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.css') }}" rel="stylesheet" type="text/css" />
