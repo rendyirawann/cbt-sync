@@ -384,7 +384,29 @@
                                 @if($isAuto)
                                     <div class="text-success fs-8 mt-2"><i class="ki-outline ki-check-circle fs-6 text-success"></i> Mode <b>Otomatis</b>: poin dibagi rata sistem — tiap bagian bertotal 100. Nilai akhir = <b>(Nilai PG + Nilai Essay) ÷ 2</b>.</div>
                                 @else
-                                    <div class="text-muted fs-8 mt-2">Mode <b>Manual</b>: poin tiap soal diisi guru. Nilai tiap bagian dihitung 0–100 dari total poin bagiannya, lalu nilai akhir = <b>(Nilai PG + Nilai Essay) ÷ 2</b>.</div>
+                                    <div class="text-muted fs-8 mt-2">Mode <b>Manual</b>: poin tiap soal diisi guru saat membuat soal. Nilai tiap bagian dihitung 0–100 dari total poin bagiannya, lalu nilai akhir = <b>(Nilai PG + Nilai Essay) ÷ 2</b>.</div>
+                                    {{-- Peringatan bila jatah satu bagian belum pas 100. Nilainya tetap
+                                         benar (sistem menyekala memakai total bobot yang ada), tetapi
+                                         "bobot" yang guru bayangkan jadi tidak sesuai — mis. soal 30 poin
+                                         dari total 80 sebenarnya bernilai 37,5% bagian itu. --}}
+                                    @php
+                                        $ringkas = [];
+                                        foreach (['mc' => 'Pilihan Ganda', 'essay' => 'Essay'] as $tp => $nm) {
+                                            if ($exam->questions->where('type', $tp)->isEmpty()) { continue; }
+                                            $terpakai = $exam->totalBobot($tp);
+                                            $belumDiatur = $exam->questions->where('type', $tp)->where('points_set', false)->count();
+                                            if (abs($terpakai - 100) > 0.01 || $belumDiatur > 0) {
+                                                $ringkas[] = $nm . ': terisi ' . $fmt($terpakai) . '/100 poin'
+                                                    . ($belumDiatur > 0 ? ', ' . $belumDiatur . ' soal belum diatur (sementara dibagi rata)' : '');
+                                            }
+                                        }
+                                    @endphp
+                                    @if($ringkas)
+                                        <div class="text-warning fs-8 mt-1">
+                                            <i class="ki-outline ki-information-5 fs-6 text-warning"></i>
+                                            Bobot belum pas 100 poin per bagian — {{ implode(' • ', $ringkas) }}.
+                                        </div>
+                                    @endif
                                 @endif
                             </div>
                         </div>
@@ -444,19 +466,26 @@
                                         <div class="math-preview" id="prev_edit_{{ $q->id }}"></div>
                                     </div>
                                     @php $fB = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.'); @endphp
-                                    @if($q->type === 'essay' && $exam->points_mode !== 'auto')
-                                        {{-- Mode Manual: bobot essay milik guru, bisa diubah di sini.
-                                             Sisa jatah sudah TIDAK memasukkan bobot soal ini sendiri. --}}
-                                        @php $sisaB = $exam->sisaBobotEssay($q->id); @endphp
+                                    @if($exam->points_mode !== 'auto')
+                                        {{-- Mode Manual: bobot soal (PG maupun Essay) milik guru dan bisa
+                                             diubah di sini. Sisa jatah sudah TIDAK memasukkan bobot soal ini
+                                             sendiri, kalau tidak nilai yang sama pun akan tertolak. --}}
+                                        @php
+                                            $sisaB = $exam->sisaBobot($q->type, $q->id);
+                                            $bagian = $q->type === 'mc' ? 'Pilihan Ganda' : 'Essay';
+                                            // Soal yang bobotnya belum pernah diatur guru diberi nilai awal
+                                            // dari sisa jatah, bukan angka bawaan 1 yang menyesatkan.
+                                            $nilaiBobot = $q->points_set ? (float) $q->points : max($sisaB, 0);
+                                        @endphp
                                         <div class="mb-4">
                                             <label class="form-label required">Bobot / Nilai maksimal soal ini</label>
                                             <div class="input-group">
                                                 <input type="number" name="points" class="form-control" step="0.01" min="0.01" max="100"
-                                                       value="{{ $fB($q->points) }}" required>
+                                                       value="{{ $fB($nilaiBobot) }}" required>
                                                 <span class="input-group-text">poin</span>
                                             </div>
-                                            <div class="form-text">Total bobot essay 100 poin. Selain soal ini sudah terpakai
-                                                <b>{{ $fB($exam->totalBobotEssay($q->id)) }}</b>, jadi bobot soal ini maksimal <b>{{ $fB($sisaB) }}</b>.</div>
+                                            <div class="form-text">Total bobot bagian <b>{{ $bagian }}</b> 100 poin. Selain soal ini sudah terpakai
+                                                <b>{{ $fB($exam->totalBobot($q->type, $q->id)) }}</b>, jadi bobot soal ini maksimal <b>{{ $fB($sisaB) }}</b>.</div>
                                         </div>
                                     @else
                                         <div class="row">

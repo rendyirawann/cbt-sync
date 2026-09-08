@@ -43,10 +43,23 @@ Route::post('/login', [\App\Http\Controllers\Frontend\PortalController::class, '
 
 
 
-// CBT-SYNC: tanpa landing/frontend — root langsung ke login siswa (portal).
-// Login guru/admin/superadmin diakses via URL /admin/login.
+// CBT-SYNC: akar domain = MENU LOGIN (pilih Siswa atau Admin & Guru).
+//
+// Dulu akar langsung dialihkan ke /login (portal siswa), sehingga guru & admin
+// harus hafal alamat /admin/login dan mengganti-ganti URL sendiri. Sekarang
+// keduanya berangkat dari satu halaman.
+//
+// Yang SUDAH masuk tidak perlu melihat menu ini lagi: langsung diantar ke
+// berandanya masing-masing, supaya menekan logo/alamat domain tidak terasa
+// seperti keluar dari aplikasi.
 Route::get('/', function () {
-    return redirect()->route('student.login');
+    $u = auth()->user();
+
+    if ($u) {
+        return redirect()->route($u->hasRole('Siswa') ? 'student.dashboard' : 'dashboard');
+    }
+
+    return view('frontend.pilih-login');
 })->name('landing');
 
 

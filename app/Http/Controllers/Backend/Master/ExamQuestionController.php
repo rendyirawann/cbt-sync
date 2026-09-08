@@ -31,10 +31,11 @@ class ExamQuestionController extends Controller
             return redirect()->back()->with('error', 'Soal tidak bisa ditambah karena sudah ada siswa yang memulai ujian.');
         }
 
-        // Bobot essay mode MANUAL diisi guru di sini, saat membuat soal — permintaan
-        // sekolah: waktu mengoreksi, nilai maksimal tiap soal sudah tertera. Pada mode
-        // otomatis kolom ini tidak ada di form dan bobot dibagi rata oleh sistem.
-        if ($galat = $this->periksaBobotEssay($request, $exam)) {
+        // Bobot soal mode MANUAL diisi guru di sini, saat membuat soal — permintaan
+        // sekolah: waktu mengoreksi, nilai maksimal tiap soal sudah tertera. Berlaku
+        // untuk PG maupun Essay. Pada mode otomatis kolom ini tidak ada di form dan
+        // bobot dibagi rata oleh sistem.
+        if ($galat = $this->periksaBobot($request, $exam)) {
             return $galat;
         }
 
@@ -52,6 +53,7 @@ class ExamQuestionController extends Controller
                     'type' => $request->type,
                     'question_text' => $request->question_text,
                     'points' => $this->bobotDisimpan($request, $exam),
+                    'points_set' => $this->bobotDiisiGuru($request, $exam),
                     'penalty' => $request->penalty ?: 0,
                     'order' => ($exam->questions()->max('order') ?? 0) + 1,
                 ];
@@ -96,7 +98,7 @@ class ExamQuestionController extends Controller
 
         // Bobot soal yang sedang diedit dikecualikan dari total, kalau tidak nilai
         // yang sama pun akan tertolak karena dihitung dua kali.
-        if ($galat = $this->periksaBobotEssay($request, $question->exam, $question)) {
+        if ($galat = $this->periksaBobot($request, $question->exam, $question)) {
             return $galat;
         }
 
@@ -112,6 +114,7 @@ class ExamQuestionController extends Controller
                 $data = [
                     'question_text' => $request->question_text,
                     'points' => $this->bobotDisimpan($request, $question->exam, $question),
+                    'points_set' => $this->bobotDiisiGuru($request, $question->exam, $question),
                     'penalty' => $request->penalty ?: 0,
                 ];
 
@@ -353,15 +356,14 @@ class ExamQuestionController extends Controller
     }
 
     /**
-     * Apakah soal ini memakai bobot yang diisi guru? Hanya essay pada ujian
-     * bermode manual. Di luar itu bobot dihitung sistem (bagi rata) dan kolom
-     * bobot tidak ditampilkan di form.
+     * Apakah soal ini memakai bobot yang diisi guru? Berlaku untuk PG MAUPUN
+     * Essay, selama ujiannya bermode manual — itu memang yang dijanjikan label
+     * pengaturannya, "Manual — poin tiap soal diisi guru". Pada mode otomatis
+     * kolom bobot tidak ditampilkan dan sistem membagi rata.
      */
     private function bobotDiisiGuru(Request $request, Exam $exam, ?Question $question = null): bool
     {
-        $tipe = $question->type ?? $request->type;
-
-        return $tipe === 'essay' && $exam->points_mode !== 'auto';
+        return $exam->points_mode !== 'auto';
     }
 
     /**
@@ -374,29 +376,34 @@ class ExamQuestionController extends Controller
      * ditegakkan di sini supaya guru tahu sisa jatahnya SAAT membuat soal,
      * bukan baru ketahuan waktu mengoreksi.
      */
-    private function periksaBobotEssay(Request $request, Exam $exam, ?Question $question = null)
+    private function periksaBobot(Request $request, Exam $exam, ?Question $question = null)
     {
         if (!$this->bobotDiisiGuru($request, $exam, $question)) {
             return null;
         }
 
+        $tipe = $question->type ?? $request->type;
+        $namaBagian = $tipe === 'mc' ? 'Pilihan Ganda' : 'Essay';
+        $f = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+
         $bobot = (float) $request->input('points');
         if ($bobot <= 0) {
             return redirect()->back()->withInput()
-                ->with('error', 'Bobot (nilai maksimal) soal essay wajib diisi dan harus lebih dari 0.');
+                ->with('error', 'Bobot (nilai maksimal) soal wajib diisi dan harus lebih dari 0.');
         }
         if ($bobot > 100) {
             return redirect()->back()->withInput()
-                ->with('error', 'Bobot satu soal essay tidak boleh lebih dari 100.');
+                ->with('error', 'Bobot satu soal tidak boleh lebih dari 100.');
         }
 
-        $sisa = $exam->sisaBobotEssay($question->id ?? null);
+        // Jatah PG dan Essay TERPISAH, masing-masing 100, karena nilai akhir
+        // merata-ratakan kedua bagian yang sama-sama berskala 0–100.
+        $sisa = $exam->sisaBobot($tipe, $question->id ?? null);
         if ($bobot > $sisa + 0.01) {
-            $f = fn ($v) => rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
-
             return redirect()->back()->withInput()->with('error',
-                'Bobot ' . $f($bobot) . ' melebihi sisa jatah bobot essay yang tersedia (' . $f($sisa) . ' dari total 100). '
-                . 'Kurangi bobot soal ini atau ubah bobot soal essay lain lebih dulu.');
+                'Bobot ' . $f($bobot) . ' melebihi sisa jatah bobot ' . $namaBagian
+                . ' yang tersedia (' . $f($sisa) . ' dari total 100). '
+                . 'Kurangi bobot soal ini atau ubah bobot soal ' . $namaBagian . ' lain lebih dulu.');
         }
 
         return null;

@@ -158,6 +158,16 @@
                             <span class="text-gray-600 fs-8 fw-bold">Butuh bantuan teknis?</span>
                             <a href="#" class="link-primary fs-8 fw-bolder ms-1">Hubungi Guru</a>
                         </div>
+
+                        {{-- Tautan silang: guru/admin yang salah membuka halaman ini tidak
+                             perlu mengetik ulang alamat /admin/login. --}}
+                        <div class="separator separator-content my-6"><span class="text-gray-500 fs-8 fw-semibold">Bukan siswa?</span></div>
+                        <div class="text-center">
+                            <a href="{{ route('login') }}" class="btn btn-sm btn-light-dark fw-bold">
+                                <i class="ki-outline ki-setting-2 fs-5"></i> Masuk sebagai Admin / Guru
+                            </a>
+                            <div class="mt-3"><a href="{{ route('landing') }}" class="link-primary fs-8 fw-semibold">Kembali ke Menu Login</a></div>
+                        </div>
                     </form>
                 </div>
             </div>

@@ -65,9 +65,22 @@
                                     <a href="{{ route('exams.show', $exam->id) }}" class="btn btn-sm btn-light-primary">
                                         <i class="ki-outline ki-setting-3 fs-5"></i> Kelola
                                     </a>
+                                    @php
+                                        // Ujian yang sudah dikerjakan hanya boleh dihapus Superadmin/Developer,
+                                        // karena jawaban & nilai siswa ikut terhapus. Bagi Guru/Admin tombolnya
+                                        // dinonaktifkan sekalian — dulu tombolnya aktif lalu menampilkan dialog
+                                        // penolakan, yang membingungkan.
+                                        $adaPengerjaan = (bool) ($exam->sudah_dikerjakan ?? false);
+                                        $bolehHapus = !$adaPengerjaan || \App\Support\SiklusUjian::pengawas();
+                                    @endphp
                                     <form action="{{ route('exams.destroy', $exam->id) }}" method="POST" class="d-inline custom-ajax-confirm">
                                         @csrf @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-light-danger btn-delete"><i class="ki-outline ki-trash fs-5"></i></button>
+                                        <button type="submit" class="btn btn-sm btn-light-danger btn-delete"
+                                            data-dikerjakan="{{ $adaPengerjaan ? '1' : '0' }}"
+                                            @disabled(!$bolehHapus)
+                                            title="{{ $bolehHapus
+                                                ? ($adaPengerjaan ? 'Hapus ujian beserta jawaban & nilai siswa (khusus Superadmin)' : 'Hapus ujian')
+                                                : 'Sudah dikerjakan siswa — hanya Superadmin yang boleh menghapus' }}"><i class="ki-outline ki-trash fs-5"></i></button>
                                     </form>
                                 </td>
                             </tr>
@@ -158,7 +171,20 @@
         btn.addEventListener('click', function(e){
             e.preventDefault();
             const form = this.closest('form');
-            Swal.fire({title:'Hapus ujian?', text:'Soal & sesi terkait ikut terhapus.', icon:'warning', showCancelButton:true, confirmButtonText:'Ya, hapus', cancelButtonText:'Batal', confirmButtonColor:'#d33'})
+            // Peringatan dibuat lebih keras bila ujian itu SUDAH dikerjakan siswa:
+            // yang terhapus bukan cuma soal & sesi, tapi jawaban dan nilai mereka.
+            // Hanya Superadmin/Developer yang bisa sampai ke titik ini (lihat
+            // ExamController::destroy) — bagi Guru/Admin server menolaknya.
+            var adaPengerjaan = btn.dataset.dikerjakan === '1';
+            Swal.fire({
+                title: adaPengerjaan ? 'Hapus ujian yang SUDAH dikerjakan?' : 'Hapus ujian?',
+                html: adaPengerjaan
+                    ? 'Ujian ini sudah dikerjakan siswa. Menghapusnya juga menghapus <b>jawaban dan nilai</b> mereka, dan tidak bisa dibatalkan.'
+                    : 'Soal &amp; sesi terkait ikut terhapus.',
+                icon:'warning', showCancelButton:true,
+                confirmButtonText: adaPengerjaan ? 'Ya, hapus beserta nilainya' : 'Ya, hapus',
+                cancelButtonText:'Batal', confirmButtonColor:'#d33'
+            })
               .then(r => { if(r.isConfirmed) form.submit(); });
         });
     });

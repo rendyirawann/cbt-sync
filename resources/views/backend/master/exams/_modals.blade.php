@@ -72,10 +72,31 @@
                     <textarea name="question_text" class="form-control math-input" data-preview="#prev_addmc" rows="3" required></textarea>
                     <div class="math-preview" id="prev_addmc"></div>
                 </div>
-                <div class="alert alert-light-primary py-3 mb-4 fs-7">
-                    <i class="ki-outline ki-information-5 fs-4 text-primary me-1"></i>
-                    Poin tidak perlu diisi — sistem membagi rata otomatis: <b>100 ÷ jumlah soal PG</b>.
-                </div>
+                @if($exam->points_mode === 'auto')
+                    <div class="alert alert-light-primary py-3 mb-4 fs-7">
+                        <i class="ki-outline ki-information-5 fs-4 text-primary me-1"></i>
+                        Poin tidak perlu diisi — sistem membagi rata otomatis: <b>100 ÷ jumlah soal PG</b>.
+                    </div>
+                @else
+                    {{-- Mode MANUAL: bobot PG juga diisi guru di sini. Jatah PG TERPISAH
+                         dari jatah essay (masing-masing 100), karena nilai akhir
+                         merata-ratakan kedua bagian yang sama-sama berskala 0-100. --}}
+                    @php $sisaPg = $exam->sisaBobot('mc'); $fP = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.'); @endphp
+                    <div class="mb-4">
+                        <label class="form-label required">Bobot / Nilai maksimal soal ini</label>
+                        <div class="input-group">
+                            <input type="number" name="points" class="form-control" step="0.01" min="0.01" max="100"
+                                   value="{{ $fP(max($sisaPg, 0)) }}" required>
+                            <span class="input-group-text">poin</span>
+                        </div>
+                        <div class="form-text">
+                            Mode <b>Manual</b>: total bobot seluruh soal <b>Pilihan Ganda 100 poin</b>
+                            (terpisah dari jatah Essay). Terpakai <b>{{ $fP($exam->totalBobot('mc')) }}</b>,
+                            sisa <b class="{{ $sisaPg > 0 ? 'text-primary' : 'text-danger' }}">{{ $fP($sisaPg) }}</b> poin.
+                            Jawaban benar mendapat bobot penuh soal ini.
+                        </div>
+                    </div>
+                @endif
                 <div class="mb-4"><label class="form-label">Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
                 <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci jawaban • tiap opsi boleh teks, rumus $…$, dan/atau gambar)</span></label>
                 <div class="mc-options">

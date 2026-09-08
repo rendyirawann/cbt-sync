@@ -114,25 +114,43 @@ class Exam extends Model
     }
 
     /**
-     * Total bobot seluruh soal essay yang SUDAH diisi guru (mode manual).
-     * Dipakai untuk menjaga agar totalnya tidak melewati 100 saat menambah soal,
-     * dan untuk menampilkan sisa jatah di form.
+     * Total bobot soal satu bagian yang SUDAH diisi guru (mode manual).
+     *
+     * PG dan Essay punya JATAH TERPISAH, masing-masing 100, karena tiap bagian
+     * memang berskala 0–100 dan nilai akhir merata-ratakan keduanya
+     * (lihat sectionWeights()). Jadi 100 poin PG + 100 poin essay, bukan 100
+     * untuk keduanya.
+     *
+     * Hanya soal yang bobotnya ditandai points_set yang dihitung; soal yang
+     * belum diatur guru masih memakai bagi rata dan tidak memakan jatah.
      *
      * $kecuali dipakai saat MENGEDIT satu soal: bobot lama soal itu tidak ikut
      * dihitung, kalau tidak guru tidak akan pernah bisa menyimpan nilai yang sama.
      */
-    public function totalBobotEssay(?string $kecuali = null): float
+    public function totalBobot(string $tipe, ?string $kecuali = null): float
     {
         return (float) $this->questions()
-            ->where('type', 'essay')
+            ->where('type', $tipe)
+            ->where('points_set', true)
             ->when($kecuali, fn ($q) => $q->where('id', '!=', $kecuali))
             ->sum('points');
     }
 
-    /** Sisa jatah bobot essay (100 - yang sudah terpakai). */
+    /** Sisa jatah bobot satu bagian (100 - yang sudah terpakai). */
+    public function sisaBobot(string $tipe, ?string $kecuali = null): float
+    {
+        return round(100 - $this->totalBobot($tipe, $kecuali), 2);
+    }
+
+    /** Pintasan lama untuk bagian essay (dipakai tampilan). */
+    public function totalBobotEssay(?string $kecuali = null): float
+    {
+        return $this->totalBobot('essay', $kecuali);
+    }
+
     public function sisaBobotEssay(?string $kecuali = null): float
     {
-        return round(100 - $this->totalBobotEssay($kecuali), 2);
+        return $this->sisaBobot('essay', $kecuali);
     }
 
     public function hasMc(): bool

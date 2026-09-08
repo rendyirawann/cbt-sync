@@ -52,6 +52,16 @@
                         <!-- <div class="text-gray-500 text-center fw-semibold fs-6">Belum punya akun?
                             <a href="{{ route('register') }}" class="link-primary">Daftar</a>
                         </div> -->
+                    
+                    {{-- Tautan silang ke portal siswa, supaya siswa yang salah membuka
+                         halaman pengelola tidak perlu mengetik ulang alamatnya. --}}
+                    <div class="separator separator-content my-6"><span class="text-gray-500 fs-8 fw-semibold">Bukan admin/guru?</span></div>
+                    <div class="text-center">
+                        <a href="{{ route('student.login') }}" class="btn btn-sm btn-light-primary fw-bold">
+                            <i class="ki-outline ki-teacher fs-5"></i> Masuk sebagai Siswa
+                        </a>
+                        <div class="mt-3"><a href="{{ route('landing') }}" class="link-primary fs-8 fw-semibold">Kembali ke Menu Login</a></div>
+                    </div>
                     </form>
 
                     {{-- Social Login Section --}}

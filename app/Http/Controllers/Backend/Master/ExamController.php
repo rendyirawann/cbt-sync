@@ -14,7 +14,11 @@ class ExamController extends Controller
     {
         $user = auth()->user();
         $query = Exam::with(['teachingAssignment.subject', 'teachingAssignment.classRoom', 'teachingAssignment.teacher.user'])
-            ->withCount(['questions', 'sessions']);
+            ->withCount(['questions', 'sessions'])
+            // Dipakai tampilan untuk menentukan boleh-tidaknya tombol hapus. Dihitung
+            // sekali lewat subquery; memanggil hasStartedAttempts() per baris akan
+            // menghasilkan satu query tambahan untuk setiap ujian di daftar.
+            ->withExists(['sessions as sudah_dikerjakan' => fn ($q) => $q->whereHas('attempts')]);
 
         $sid = \App\Support\SchoolScope::id();
 
@@ -423,13 +427,26 @@ class ExamController extends Controller
         $exam = Exam::findOrFail($id);
         $this->authorizeExam($exam);
 
-        if ($exam->hasStartedAttempts()) {
-            return redirect()->back()->with('error', 'Ujian tidak bisa dihapus karena sudah ada siswa yang memulai/mengerjakan.');
+        // Guru & Admin tetap dilarang menghapus ujian yang sudah dikerjakan —
+        // itu menghapus jawaban & nilai siswa. Superadmin/Developer dikecualikan
+        // karena merekalah yang membereskan ujian percobaan atau salah buat.
+        $sudahDikerjakan = $exam->hasStartedAttempts();
+        if ($sudahDikerjakan && !\App\Support\SiklusUjian::pengawas()) {
+            return redirect()->back()->with('error',
+                'Ujian tidak bisa dihapus karena sudah ada siswa yang memulai/mengerjakan. '
+                . 'Hubungi Superadmin bila ujian ini memang perlu dihapus.');
         }
+
+        // Dihitung SEBELUM dihapus, untuk dilaporkan ke penghapusnya.
+        $jmlPercobaan = $sudahDikerjakan
+            ? \App\Models\ExamAttempt::whereIn('exam_session_id', $exam->sessions()->select('id'))->count()
+            : 0;
 
         $exam->delete();
 
-        return redirect()->route('exams.index')->with('success', 'Ujian berhasil dihapus.');
+        return redirect()->route('exams.index')->with('success', $jmlPercobaan > 0
+            ? 'Ujian dihapus beserta ' . $jmlPercobaan . ' pengerjaan siswa (jawaban & nilainya ikut hilang).'
+            : 'Ujian berhasil dihapus.');
     }
 
     public function publish($id)

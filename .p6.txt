@@ -1,0 +1,45 @@
+feat(cbt-sync): menu login di akar domain, bobot PG mode manual, hapus ujian untuk Superadmin
+
+1) MENU LOGIN di akar domain. Dulu "/" langsung dialihkan ke /login (portal
+   siswa), sehingga guru & admin harus hafal /admin/login dan mengganti-ganti
+   URL sendiri. Sekarang akar menampilkan pilihan: Menu Siswa atau
+   Menu Admin & Guru. Kedua halaman login juga saling bertaut, dan yang SUDAH
+   masuk langsung diantar ke berandanya masing-masing (siswa -> portal,
+   selainnya -> dashboard admin) supaya menekan alamat domain tidak terasa
+   seperti keluar dari aplikasi. Halaman ini memakai partials.head-meta, jadi
+   pratinjau tautan domain tetap lengkap.
+
+2) Bobot soal PILIHAN GANDA pada mode Manual kini juga diisi guru saat membuat
+   soal, seperti Essay. Sebelumnya PG selalu dibagi rata (100 / jumlah soal PG)
+   di kedua mode — termasuk di lms-sync — padahal label pengaturannya sendiri
+   berjanji "Manual — poin tiap soal diisi guru". Jatah PG dan Essay TERPISAH,
+   masing-masing 100 poin, karena nilai akhir merata-ratakan dua bagian yang
+   sama-sama berskala 0-100.
+
+   Ditambahkan kolom questions.points_set sebagai penanda "bobot diisi guru".
+   Sebelumnya bobot guru dibedakan dengan menebak points > 1; tebakan itu tidak
+   bisa dipakai untuk PG karena SEMUA soal lama sudah punya points = 1 dari
+   nilai bawaan, sehingga bobot 1 poin yang disengaja tak bisa dibedakan dari
+   soal yang belum diatur. Migrasinya aman untuk data lama: soal yang ada tetap
+   false (bagi rata), kecuali essay yang bobotnya sudah pernah diisi cara lama
+   (points > 1) yang dipertahankan artinya.
+
+   Soal yang belum diatur tetap dibagi rata, dan halaman ujian memperingatkan
+   bila total satu bagian belum pas 100 poin atau masih ada soal yang belum
+   diatur.
+
+3) Menghapus ujian yang SUDAH dikerjakan siswa kini boleh untuk Superadmin &
+   Developer; Guru & Admin tetap ditolak dengan alasan yang jelas. Bagi mereka
+   tombolnya sekalian dinonaktifkan — dulu tombolnya aktif lalu memunculkan
+   dialog penolakan, yang membingungkan. Untuk yang berwenang, dialog
+   konfirmasinya menegaskan bahwa jawaban dan nilai siswa ikut terhapus, dan
+   pesan sesudahnya menyebut jumlah pengerjaan yang terhapus. Penanda "sudah
+   dikerjakan" dihitung sekali lewat subquery withExists, bukan satu query per
+   baris daftar.
+
+Diverifikasi dengan data uji dalam transaksi yang di-rollback, ujian campuran
+mode manual (PG 70+30, Essay 60+40): jatah tiap bagian terpakai 100 & sisa 0;
+soal PG ketiga yang belum diatur tetap 33,33; PG benar 70 + salah 30 -> mc 70;
+essay 60 benar & 40 salah -> essay 60; nilai akhir (70+60)/2 = 65.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>

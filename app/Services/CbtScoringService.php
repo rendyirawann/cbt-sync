@@ -19,23 +19,25 @@ class CbtScoringService
      * Bobot (skor maksimal) sebuah soal. Guru TIDAK perlu mengisi poin apa pun —
      * sistem selalu membagi rata di dalam bagiannya sehingga tiap bagian bertotal 100.
      *
-     *  - Pilihan Ganda (kedua mode) : 100 ÷ jumlah soal PG    (mis. 13 soal → 7,69/soal)
-     *  - Essay mode auto            : 100 ÷ jumlah soal essay (mis. 7 soal → 14,29/soal)
-     *  - Essay mode manual          : batas per soal 100, karena guru bebas menentukan
-     *                                 nilai tiap essay; yang dibatasi adalah TOTAL essay
-     *                                 (≤ 100, divalidasi saat menyimpan penilaian).
+     *  - Mode otomatis    : 100 ÷ jumlah soal pada bagiannya (PG dan Essay dihitung
+     *                       terpisah, mis. 13 soal PG → 7,69/soal).
+     *  - Mode manual      : bobot yang DIISI GURU saat membuat soal, untuk PG maupun
+     *                       Essay (kolom points, ditandai points_set). Soal yang belum
+     *                       diatur tetap dibagi rata. Jatah tiap bagian 100 poin.
      *
      * Parameter $count dipertahankan agar pemanggil lama tetap jalan, tapi tidak dipakai.
      */
     public static function questionWeight(Exam $exam, Question $question, int $count = 0): float
     {
         $n = $exam->questions->where('type', $question->type)->count();
-        if ($question->type === 'essay' && $exam->points_mode !== 'auto') {
-            // Mode manual: bobot tiap essay ditentukan guru saat menilai (disimpan di kolom
-            // points, total seluruh essay wajib 100). Sebelum diisi, tampilkan bagi rata.
-            $set = (float) $question->points;
-            return $set > 1 ? $set : ($n > 0 ? 100 / $n : 0.0);
+
+        // Mode manual: bobot soal — PG maupun Essay — diisi guru saat MEMBUAT soal
+        // dan ditandai points_set. Yang belum diatur tetap dibagi rata, sehingga
+        // ujian lama & soal yang baru ditambahkan tidak kehilangan nilai.
+        if ($exam->points_mode !== 'auto' && $question->points_set) {
+            return (float) $question->points;
         }
+
         return $n > 0 ? 100 / $n : 0.0;
     }
 
@@ -70,10 +72,8 @@ class CbtScoringService
     {
         $n = $paket->where('type', $question->type)->count();
 
-        if ($question->type === 'essay' && $exam->points_mode !== 'auto') {
-            $set = (float) $question->points;
-
-            return $set > 1 ? $set : ($n > 0 ? 100 / $n : 0.0);
+        if ($exam->points_mode !== 'auto' && $question->points_set) {
+            return (float) $question->points;
         }
 
         return $n > 0 ? 100 / $n : 0.0;
