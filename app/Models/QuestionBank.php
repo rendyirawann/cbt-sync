@@ -77,11 +77,24 @@ class QuestionBank extends Model
                 $q->where('school_id', $schoolId);
             }
 
-            $q->orWhereNull('source_exam_id')
+            // Soal tanpa ujian sumber SEKALI PUN (source_exam_title juga kosong)
+            // dianggap milik umum. Isi bank selalu lahir dari ujian, jadi bentuk
+            // ini hanya muncul pada data lama.
+            $q->orWhere(fn ($x) => $x->whereNull('source_exam_id')->whereNull('source_exam_title'))
               ->orWhereHas('sourceExam', fn ($e) => $e->whereIn('status', [
                   \App\Support\SiklusUjian::SELESAI,
                   \App\Support\SiklusUjian::RIWAYAT,
               ]));
+
+            // CATATAN: soal yang ujian sumbernya DIHAPUS (source_exam_id jadi NULL
+            // karena aturan SET NULL, tetapi source_exam_title masih terpotret)
+            // TIDAK ikut cabang mana pun di atas. Jadi ia tetap terbatas pada
+            // sekolahnya sendiri lewat cabang school_id.
+            //
+            // Dulu cabangnya hanya whereNull('source_exam_id'), sehingga
+            // menghapus ujian membuat soalnya mendadak terlihat oleh SEMUA
+            // sekolah — termasuk soal dari ujian yang dihapus saat masih Draft
+            // dan belum pernah dipakai.
         });
     }
 

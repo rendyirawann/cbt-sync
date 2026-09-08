@@ -18,7 +18,10 @@ class ExamController extends Controller
             // Dipakai tampilan untuk menentukan boleh-tidaknya tombol hapus. Dihitung
             // sekali lewat subquery; memanggil hasStartedAttempts() per baris akan
             // menghasilkan satu query tambahan untuk setiap ujian di daftar.
-            ->withExists(['sessions as sudah_dikerjakan' => fn ($q) => $q->whereHas('attempts')]);
+            ->withExists(['sessions as sudah_dikerjakan' => fn ($q) => $q->whereHas('attempts')])
+            // Berapa soal di Bank Soal yang lahir dari ujian ini — ditampilkan di
+            // dialog konfirmasi hapus supaya guru tahu dampaknya sebelum memilih.
+            ->withCount('bankQuestions');
 
         $sid = \App\Support\SchoolScope::id();
 
@@ -422,7 +425,7 @@ class ExamController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $exam = Exam::findOrFail($id);
         $this->authorizeExam($exam);
@@ -442,11 +445,45 @@ class ExamController extends Controller
             ? \App\Models\ExamAttempt::whereIn('exam_session_id', $exam->sessions()->select('id'))->count()
             : 0;
 
+        // Soal di Bank Soal yang lahir dari ujian ini. Bank Soal TIDAK ikut
+        // terhapus secara otomatis: isinya sengaja bertahan supaya soal tetap
+        // bisa dipakai ujian berikutnya. Penghapusannya hanya bila diminta
+        // tegas dari dialog konfirmasi (pilihan "hapus sekalian Bank Soal").
+        $bank = \App\Models\QuestionBank::where('source_exam_id', $exam->id);
+        $idBank = $bank->pluck('id');
+        $jmlBank = $idBank->count();
+
+        // Berapa entri bank sekolah LAIN yang meminjam dari soal-soal ini.
+        // Menghapusnya tidak merusak mereka — salinan itu berdiri sendiri dan
+        // hanya kehilangan tautan asalnya (source_bank_id ber-aturan SET NULL),
+        // begitu pula soal yang sudah ditarik ke ujian (tabel questions tidak
+        // punya kaitan apa pun ke Bank Soal).
+        $jmlPinjaman = $jmlBank > 0
+            ? \App\Models\QuestionBank::whereIn('source_bank_id', $idBank)->count()
+            : 0;
+
+        $hapusBank = $request->boolean('hapus_bank');
+        if ($hapusBank && $jmlBank > 0) {
+            \App\Models\QuestionBank::whereIn('id', $idBank)->get()
+                ->each(fn ($b) => $b->delete());   // opsi jawabannya ikut lewat cascade
+        }
+
         $exam->delete();
 
-        return redirect()->route('exams.index')->with('success', $jmlPercobaan > 0
-            ? 'Ujian dihapus beserta ' . $jmlPercobaan . ' pengerjaan siswa (jawaban & nilainya ikut hilang).'
-            : 'Ujian berhasil dihapus.');
+        $pesan = 'Ujian berhasil dihapus.';
+        if ($jmlPercobaan > 0) {
+            $pesan = 'Ujian dihapus beserta ' . $jmlPercobaan . ' pengerjaan siswa (jawaban & nilainya ikut hilang).';
+        }
+        if ($jmlBank > 0) {
+            $pesan .= $hapusBank
+                ? ' ' . $jmlBank . ' soal di Bank Soal dari ujian ini ikut dihapus.'
+                : ' ' . $jmlBank . ' soal tetap tersimpan di Bank Soal dan masih bisa dipakai ujian berikutnya.';
+            if ($hapusBank && $jmlPinjaman > 0) {
+                $pesan .= ' (' . $jmlPinjaman . ' salinan di sekolah lain tidak terpengaruh.)';
+            }
+        }
+
+        return redirect()->route('exams.index')->with('success', $pesan);
     }
 
     public function publish($id)

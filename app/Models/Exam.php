@@ -153,6 +153,16 @@ class Exam extends Model
         return $this->sisaBobot('essay', $kecuali);
     }
 
+    /**
+     * Entri Bank Soal yang lahir dari ujian ini (dicerminkan otomatis saat guru
+     * membuat soal — lihat App\Support\BankSoal). Dipakai untuk menghitung
+     * dampak sebelum ujian dihapus.
+     */
+    public function bankQuestions()
+    {
+        return $this->hasMany(QuestionBank::class, 'source_exam_id');
+    }
+
     public function hasMc(): bool
     {
         return in_array($this->type, ['mixed', 'mc']);

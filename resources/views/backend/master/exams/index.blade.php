@@ -75,8 +75,10 @@
                                     @endphp
                                     <form action="{{ route('exams.destroy', $exam->id) }}" method="POST" class="d-inline custom-ajax-confirm">
                                         @csrf @method('DELETE')
+                                        <input type="hidden" name="hapus_bank" value="0">
                                         <button type="submit" class="btn btn-sm btn-light-danger btn-delete"
                                             data-dikerjakan="{{ $adaPengerjaan ? '1' : '0' }}"
+                                            data-bank="{{ (int) ($exam->bank_questions_count ?? 0) }}"
                                             @disabled(!$bolehHapus)
                                             title="{{ $bolehHapus
                                                 ? ($adaPengerjaan ? 'Hapus ujian beserta jawaban & nilai siswa (Admin & Superadmin)' : 'Hapus ujian')
@@ -176,16 +178,41 @@
             // Hanya Superadmin/Developer yang bisa sampai ke titik ini (lihat
             // ExamController::destroy) — bagi Guru/Admin server menolaknya.
             var adaPengerjaan = btn.dataset.dikerjakan === '1';
+            var jmlBank = parseInt(btn.dataset.bank || '0', 10);
+            var flagBank = form.querySelector('input[name="hapus_bank"]');
+
+            var isi = adaPengerjaan
+                ? 'Ujian ini sudah dikerjakan siswa. Menghapusnya juga menghapus <b>jawaban dan nilai</b> mereka, dan tidak bisa dibatalkan.'
+                : 'Soal &amp; sesi di dalam ujian ini ikut terhapus.';
+
+            // Bank Soal dipisahkan sebagai PILIHAN, bukan ikut otomatis: isi bank
+            // sengaja bertahan agar soalnya bisa dipakai ujian berikutnya.
+            if (jmlBank > 0) {
+                isi += '<div class="text-start mt-4 fs-7">'
+                     + '<b>' + jmlBank + ' soal</b> dari ujian ini juga tersimpan di <b>Bank Soal</b>.'
+                     + '<div class="text-muted mt-2">Pilih <b>Hapus ujian saja</b> bila soalnya masih mau dipakai lagi, '
+                     + 'atau <b>Hapus + Bank Soal</b> untuk membuang sekalian. '
+                     + 'Salinan yang sudah ditarik sekolah lain maupun yang sudah masuk ke ujian lain <b>tidak akan rusak</b> — '
+                     + 'salinan itu berdiri sendiri.</div></div>';
+            }
+
             Swal.fire({
                 title: adaPengerjaan ? 'Hapus ujian yang SUDAH dikerjakan?' : 'Hapus ujian?',
-                html: adaPengerjaan
-                    ? 'Ujian ini sudah dikerjakan siswa. Menghapusnya juga menghapus <b>jawaban dan nilai</b> mereka, dan tidak bisa dibatalkan.'
-                    : 'Soal &amp; sesi terkait ikut terhapus.',
-                icon:'warning', showCancelButton:true,
-                confirmButtonText: adaPengerjaan ? 'Ya, hapus beserta nilainya' : 'Ya, hapus',
-                cancelButtonText:'Batal', confirmButtonColor:'#d33'
-            })
-              .then(r => { if(r.isConfirmed) form.submit(); });
+                html: isi,
+                icon: 'warning',
+                showCancelButton: true,
+                showDenyButton: jmlBank > 0,
+                confirmButtonText: jmlBank > 0 ? 'Hapus ujian saja' : (adaPengerjaan ? 'Ya, hapus beserta nilainya' : 'Ya, hapus'),
+                denyButtonText: 'Hapus + Bank Soal',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#d33',
+                denyButtonColor: '#7e1f2e',
+                reverseButtons: true
+            }).then(function (r) {
+                if (!r.isConfirmed && !r.isDenied) return;      // Batal / ditutup
+                if (flagBank) flagBank.value = r.isDenied ? '1' : '0';
+                form.submit();
+            });
         });
     });
 </script>
