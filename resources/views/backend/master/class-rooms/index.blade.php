@@ -1,6 +1,13 @@
 @extends('backend.layout.app')
 @section('title', 'Ruang Kelas')
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Rombel / Kelas',
+    'jejak' => [
+        ['label' => 'Data Master'],
+        ['label' => 'Rombel / Kelas', 'route' => 'class-rooms.index'],
+    ],
+])
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
         <div class="card card-flush mt-6 mt-xl-9">

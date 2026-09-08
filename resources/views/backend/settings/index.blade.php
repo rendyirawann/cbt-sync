@@ -2,6 +2,13 @@
 @section('title', 'Settings')
 @section('content')
 
+@include('partials.kop-halaman', [
+    'judul' => 'Pengaturan Aplikasi',
+    'jejak' => [
+        ['label' => 'Pengaturan'],
+        ['label' => 'Pengaturan Aplikasi', 'route' => 'settings.index'],
+    ],
+])
     <div class="mt-5 mb-10">
 
             {{-- Flash Messages --}}

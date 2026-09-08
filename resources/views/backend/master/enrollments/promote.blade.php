@@ -2,6 +2,14 @@
 @section('title', 'Naik Kelas')
 
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Naik Kelas',
+    'jejak' => [
+        ['label' => 'Data Master'],
+        ['label' => 'Rombongan Belajar', 'route' => 'enrollments.index'],
+        ['label' => 'Naik Kelas', 'route' => 'enrollments.promote.form'],
+    ],
+])
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl py-6">
 

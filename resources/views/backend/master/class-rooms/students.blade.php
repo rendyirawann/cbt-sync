@@ -2,6 +2,14 @@
 @section('title', 'Siswa Kelas ' . $classRoom->name)
 
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Siswa Kelas ' . $classRoom->name,
+    'jejak' => [
+        ['label' => 'Data Master'],
+        ['label' => 'Rombel / Kelas', 'route' => 'class-rooms.index'],
+        ['label' => 'Siswa Kelas'],
+    ],
+])
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div class="app-container container-xxl d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">

@@ -1,6 +1,13 @@
 @extends('backend.layout.app')
 @section('title', 'Data Siswa')
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Data Siswa',
+    'jejak' => [
+        ['label' => 'Data Master'],
+        ['label' => 'Data Siswa', 'route' => 'students.index'],
+    ],
+])
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
         @if(session('success'))

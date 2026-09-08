@@ -2,6 +2,14 @@
 @section('title', 'Rombongan Belajar')
 @section('content')
 
+@include('partials.kop-halaman', [
+    'judul' => 'Rombongan Belajar',
+    'jejak' => [
+        ['label' => 'Data Master'],
+        ['label' => 'Rombel / Kelas', 'route' => 'class-rooms.index'],
+        ['label' => 'Rombongan Belajar', 'route' => 'enrollments.index'],
+    ],
+])
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
         <div class="card card-flush mt-6 mt-xl-9">

@@ -2,6 +2,15 @@
 @section('title', 'Pantau: ' . $session->exam->title)
 
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Pantau: ' . $session->exam->title,
+    'jejak' => [
+        ['label' => 'Akademik'],
+        ['label' => 'Ujian / CBT', 'route' => 'exams.index'],
+        ['label' => 'Monitoring Ujian', 'route' => 'exam-monitor.index'],
+        ['label' => 'Pantau Ujian'],
+    ],
+])
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div class="app-container container-xxl d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">

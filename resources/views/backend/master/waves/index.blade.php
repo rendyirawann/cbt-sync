@@ -1,6 +1,13 @@
 @extends('backend.layout.app')
 @section('title', 'Master Gelombang')
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Master Gelombang',
+    'jejak' => [
+        ['label' => 'Data Master'],
+        ['label' => 'Master Gelombang', 'route' => 'waves.index'],
+    ],
+])
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
         @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif

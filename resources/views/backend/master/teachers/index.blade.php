@@ -1,6 +1,13 @@
 @extends('backend.layout.app')
 @section('title', 'Data Guru')
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Data Guru',
+    'jejak' => [
+        ['label' => 'Data Master'],
+        ['label' => 'Data Guru', 'route' => 'teachers.index'],
+    ],
+])
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
         @if(session('success'))

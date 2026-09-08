@@ -2,6 +2,14 @@
 @section('title', 'Monitoring Ujian')
 
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Monitoring Ujian',
+    'jejak' => [
+        ['label' => 'Akademik'],
+        ['label' => 'Ujian / CBT', 'route' => 'exams.index'],
+        ['label' => 'Monitoring Ujian', 'route' => 'exam-monitor.index'],
+    ],
+])
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div class="app-container container-xxl d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">

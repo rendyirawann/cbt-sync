@@ -2,20 +2,19 @@
 @section('title', 'Bank Soal Bersama')
 
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Bank Soal Bersama',
+    'catatan' => 'Soal reusable lintas sekolah — bisa ditarik ke ujian mana pun.',
+    'jejak' => [
+        ['label' => 'Akademik'],
+        ['label' => 'Ujian / CBT', 'route' => 'exams.index'],
+        ['label' => 'Bank Soal Bersama', 'route' => 'question-banks.index'],
+    ],
+])
 @include('partials.katex')
 @include('partials.math-editor')
 @php $isKepsek = auth()->user()->hasRole('Kepala Sekolah'); @endphp
 
-<div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div class="app-container container-xxl d-flex flex-stack">
-        <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
-            <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">Bank Soal Bersama</h1>
-            <span class="text-muted fs-7 pt-1">Soal reusable lintas sekolah — bisa ditarik ke ujian mana pun.</span>
-        </div>
-        @unless($isKepsek)
-        @endunless
-    </div>
-</div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-xxl">

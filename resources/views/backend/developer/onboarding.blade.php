@@ -2,6 +2,13 @@
 @section('title', 'Onboarding Sekolah')
 
 @section('content')
+@include('partials.kop-halaman', [
+    'judul' => 'Onboarding Sekolah',
+    'jejak' => [
+        ['label' => 'Developer'],
+        ['label' => 'Onboarding Sekolah', 'route' => 'onboarding.index'],
+    ],
+])
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <div class="app-container container-xxl">
         <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">Onboarding Sekolah</h1>
