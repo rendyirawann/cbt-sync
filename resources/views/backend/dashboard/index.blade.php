@@ -89,8 +89,18 @@
                 <div class="col-md-6 col-lg-3">
                     <div class="card card-flush h-md-100 mb-5 mb-xl-10 bg-info">
                         <div class="card-header pt-5"><div class="card-title d-flex flex-column">
-                            <span class="fs-2hx fw-bold text-white lh-1">{{ $stats['classes'] }}</span>
-                            <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Rombel Aktif</span>
+                            {{-- Angka besarnya = rombel yang BERISI siswa, bukan jumlah rombel.
+                                 Totalnya tetap disebut di bawahnya supaya tidak ada informasi
+                                 yang hilang, dan supaya rombel kosong terlihat sebagai selisih. --}}
+                            <span class="fs-2hx fw-bold text-white lh-1">{{ $stats['classes_filled'] ?? $stats['classes'] }}</span>
+                            <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Rombel Berisi Siswa</span>
+                            @if(isset($stats['classes_filled']) && $stats['classes'] > $stats['classes_filled'])
+                                <span class="text-white opacity-50 fs-8 pt-1">
+                                    dari {{ $stats['classes'] }} rombel — {{ $stats['classes'] - $stats['classes_filled'] }} masih kosong
+                                </span>
+                            @elseif(isset($stats['classes_filled']))
+                                <span class="text-white opacity-50 fs-8 pt-1">dari {{ $stats['classes'] }} rombel terdaftar</span>
+                            @endif
                         </div></div>
                     </div>
                 </div>

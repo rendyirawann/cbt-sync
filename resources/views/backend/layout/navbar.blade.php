@@ -1,7 +1,13 @@
 					<!--begin::Header-->
 					<div id="kt_header" class="header" data-kt-sticky="true" data-kt-sticky-name="header" data-kt-sticky-animation="false" data-kt-sticky-offset="{default: '200px', lg: '300px'}">
 						<!--begin::Container-->
-						<div class="container-xxl d-flex align-items-center flex-lg-stack">
+						{{-- Lebar navbar MENGIKUTI lebar isi halaman lewat @yield('lebar') yang sama.
+					     Kalau navbar dipatok container-xxl sementara isi halaman selebar layar,
+					     logo dan menu berhenti di ±1320px sedangkan kartu di bawahnya sampai ke
+					     tepi — tepinya jadi tidak sejajar. Dengan memakai section yang sama,
+					     halaman biasa tetap container-xxl dan dashboard ikut selebar layar,
+					     tanpa perlu mengatur dua tempat. --}}
+						<div class="@yield('lebar', 'container-fluid px-4 px-lg-6') d-flex align-items-center flex-lg-stack">
 							<!--begin::Brand-->
 							<div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-2 me-lg-5">
 								<!--begin::Wrapper-->

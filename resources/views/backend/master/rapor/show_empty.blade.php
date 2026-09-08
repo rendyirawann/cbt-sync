@@ -3,7 +3,7 @@
 
 @section('content')
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
+    <div id="kt_app_toolbar_container" class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
             <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">Raport Hasil Ujian</h1>
         </div>
@@ -11,7 +11,7 @@
 </div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
 
         <div class="card shadow-sm border-0">
             <div class="card-body text-center py-20">

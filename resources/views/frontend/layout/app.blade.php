@@ -33,14 +33,15 @@
 					@unless($hideChrome ?? false) @include('frontend.layout.navbar') @endunless
 
 					<!-- Content -->
-					{{-- Mode ujian (hideChrome) memakai lebar PENUH: pembungkus layout ini yang
-					     sebelumnya membatasi ±1320px, sehingga container-fluid di halaman soal
-					     tidak berpengaruh apa pun. Halaman portal lain tetap container-xxl. --}}
-					<div id="kt_content_container"
-						{{-- Halaman ujian (hideChrome) selalu selebar layar. Halaman portal lain
-						     memakai bawaan container-xxl, dan bisa meminta selebar layar lewat
-						     @section('lebar', 'container-fluid px-3 px-lg-5'). --}}
-						class="d-flex flex-column-fluid align-items-start {{ ($hideChrome ?? false) ? 'container-fluid px-3 px-lg-5' : '' }}@yield('lebar', ($hideChrome ?? false) ? '' : 'container-xxl')">
+					{{-- Lebar isi halaman. Bawaannya SELEBAR LAYAR untuk seluruh halaman
+					     portal; halaman yang butuh lebar terbatas cukup mengisi
+					     @section('lebar', 'container-xxl').
+
+					     Mode ujian (hideChrome) dipaksa selebar layar dan mengabaikan
+					     section: pembungkus inilah yang dulu membatasi ±1320px, sehingga
+					     container-fluid di halaman soal tidak berpengaruh apa pun. --}}
+					@php $lebarIsi = ($hideChrome ?? false) ? 'container-fluid px-3 px-lg-5' : trim($__env->yieldContent('lebar', 'container-fluid px-3 px-lg-5')); @endphp
+					<div id="kt_content_container" class="d-flex flex-column-fluid align-items-start {{ $lebarIsi }}">
 						<div class="content flex-row-fluid" id="kt_content">
 							@yield('content')
 						</div>

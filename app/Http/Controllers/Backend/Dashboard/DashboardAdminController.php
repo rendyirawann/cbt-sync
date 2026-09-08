@@ -39,6 +39,17 @@ class DashboardAdminController extends Controller
                 'teachers' => Teacher::when($sid, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('school_id', $sid)))->count(),
                 'students' => Student::when($sid, fn ($q) => $q->where('school_id', $sid))->count(),
                 'classes' => ClassRoom::when($sid, fn ($q) => $q->where('school_id', $sid))->count(),
+
+                // Rombel yang BENAR-BENAR berisi siswa pada tahun ajaran aktif.
+                //
+                // Kartunya dulu berlabel "Rombel Aktif" tetapi angkanya
+                // ClassRoom::count() — jumlah BARIS rombel, tanpa melihat ada
+                // siswanya atau tidak. Di smamh4babalan itu menampilkan 13
+                // padahal plotting siswanya nol, jadi angkanya terbaca sebagai
+                // "13 rombel siap dipakai" padahal tidak satu pun berisi siswa.
+                'classes_filled' => ClassRoom::when($sid, fn ($q) => $q->where('school_id', $sid))
+                    ->whereHas('classStudents', fn ($q) => $q->whereHas('academicYear', fn ($a) => $a->where('is_active', true)))
+                    ->count(),
             ];
 
             // Dulu kartu ini berisi "Penugasan Guru Terbaru" — 5 baris terakhir

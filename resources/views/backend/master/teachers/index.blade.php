@@ -9,7 +9,7 @@
     ],
 ])
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         @if(session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif

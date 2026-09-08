@@ -9,7 +9,7 @@
     $passed = $graded && (float) $attempt->final_score >= (float) $exam->pass_score;
 @endphp
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl py-10">
+    <div class="app-container container-fluid px-4 px-lg-6 py-10">
         <div class="row justify-content-center">
             <div class="col-lg-7">
                 <div class="card shadow-sm">

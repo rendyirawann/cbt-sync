@@ -11,7 +11,7 @@
     </div>
 
     <div class="post d-flex flex-column-fluid" id="kt_post">
-        <div id="kt_content_container" class="container-xxl">
+        <div id="kt_content_container" class="container-fluid px-4 px-lg-6">
             <!-- Daily Attendance Cards -->
             <div class="row g-5 g-xl-10 mb-10">
                 <!-- Arrival -->

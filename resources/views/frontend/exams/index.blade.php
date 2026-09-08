@@ -3,7 +3,7 @@
 
 @section('content')
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl py-6">
+    <div class="app-container container-fluid px-4 px-lg-6 py-6">
         <div class="mb-6">
             <h1 class="fw-bold text-gray-900 fs-2 mb-1">Ujian Online (CBT)</h1>
             <p class="text-muted fs-6 mb-0">Daftar ujian yang dijadwalkan untuk Anda.</p>

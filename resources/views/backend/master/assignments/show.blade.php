@@ -5,7 +5,7 @@
 <!--begin::Toolbar-->
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <!--begin::Toolbar container-->
-    <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
+    <div id="kt_app_toolbar_container" class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
         <!--begin::Page title-->
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
             <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">Detail Penugasan</h1>
@@ -42,7 +42,7 @@
 <!--end::Toolbar-->
 
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         <!-- Assignment Info Header -->
         <div class="card card-flush mb-10 shadow-sm border-0">
             <div class="card-header pt-7">

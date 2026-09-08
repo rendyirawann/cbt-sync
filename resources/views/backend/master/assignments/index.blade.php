@@ -5,7 +5,7 @@
 <!--begin::Toolbar-->
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
     <!--begin::Toolbar container-->
-    <div id="kt_app_toolbar_container" class="app-container container-xxl d-flex flex-stack">
+    <div id="kt_app_toolbar_container" class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
         <!--begin::Page title-->
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
             <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">Penugasan Siswa</h1>
@@ -40,7 +40,7 @@
 <!--begin::Content-->
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <!--begin::Content container-->
-    <div id="kt_app_content_container" class="app-container container-xxl">
+    <div id="kt_app_content_container" class="app-container container-fluid px-4 px-lg-6">
         <!-- Header Konten -->
         <div class="mb-10">
             <h1 class="text-gray-900 fw-bold mb-1">Daftar Penugasan Siswa</h1>

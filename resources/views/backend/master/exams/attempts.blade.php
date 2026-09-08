@@ -3,7 +3,7 @@
 
 @section('content')
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div class="app-container container-xxl d-flex flex-stack">
+    <div class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center">
             <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">{{ $session->name }}</h1>
             <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
@@ -25,7 +25,7 @@
 </div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         @if($session->exam->status === 'draft')
         <div class="alert bg-light-warning border border-warning border-dashed mb-6 p-4">
             <i class="ki-outline ki-information-5 fs-3 text-warning me-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>

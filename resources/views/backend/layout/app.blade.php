@@ -107,7 +107,7 @@ License: For each use you must have a valid license purchased only from above li
 					     mengisi @section('lebar', 'container-fluid'). Dibuat begini, bukan
 					     mengubah kelasnya langsung, supaya tidak ada halaman lain yang
 					     ikut berubah tanpa diminta. --}}
-					<div id="kt_content_container" class="d-flex flex-column-fluid align-items-start @yield('lebar', 'container-xxl')">
+					<div id="kt_content_container" class="d-flex flex-column-fluid align-items-start @yield('lebar', 'container-fluid px-4 px-lg-6')">
 						<!--begin::Post-->
 						<div class="content flex-row-fluid" id="kt_content">
 							@yield('content')

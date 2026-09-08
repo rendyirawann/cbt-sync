@@ -10,14 +10,14 @@
     ],
 ])
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">Onboarding Sekolah</h1>
         <span class="text-muted fs-7">Buat sekolah baru + akun admin sekolahnya (Superadmin per-sekolah). Tiap sekolah = satu lisensi.</span>
     </div>
 </div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         <div class="row g-6">
             {{-- Form onboarding --}}
             <div class="col-lg-5">

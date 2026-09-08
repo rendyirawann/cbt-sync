@@ -11,7 +11,7 @@
     ],
 ])
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl py-6">
+    <div class="app-container container-fluid px-4 px-lg-6 py-6">
 
         @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
         @if($errors->any())

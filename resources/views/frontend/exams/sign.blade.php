@@ -6,7 +6,7 @@
      berakhir, sehingga tidak bisa lagi membaca atau menjawab soal. Jawaban baru
      dikumpulkan dan dinilai setelah ditandatangani dari sini. --}}
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl py-6">
+    <div class="app-container container-fluid px-4 px-lg-6 py-6">
         <div class="row justify-content-center">
             <div class="col-lg-6">
 

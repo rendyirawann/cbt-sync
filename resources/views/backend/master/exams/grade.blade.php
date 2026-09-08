@@ -11,7 +11,7 @@
 
 @include('partials.katex')
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div class="app-container container-xxl d-flex flex-stack">
+    <div class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center">
             <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">Periksa Jawaban</h1>
             <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
@@ -32,7 +32,7 @@
 </div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         @if($isGraded)
             @if($locked)
             <div class="alert bg-light-success border border-success border-dashed d-flex align-items-center mb-6 p-4">

@@ -11,7 +11,7 @@
     ],
 ])
 <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div class="app-container container-xxl d-flex flex-stack">
+    <div class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
         <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
             <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">Siswa Kelas {{ $classRoom->name }}</h1>
             <span class="text-muted fs-7 pt-1">{{ $classRoom->school->name ?? '-' }}</span>
@@ -21,7 +21,7 @@
 </div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
 
         <div class="card mb-5"><div class="card-body py-4">
             <form method="GET" class="row g-3 align-items-end">

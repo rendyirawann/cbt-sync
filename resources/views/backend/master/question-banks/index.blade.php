@@ -17,7 +17,7 @@
 
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         @if($adaGerbang)
         {{-- Tanpa keterangan ini, daftar yang lebih pendek dari perkiraan akan
              terasa seperti data hilang. --}}

@@ -11,7 +11,7 @@
     ],
 ])
 <div class="app-content flex-column-fluid">
-    <div class="app-container container-xxl">
+    <div class="app-container container-fluid px-4 px-lg-6">
         <div class="card card-flush mt-6 mt-xl-9">
             <div class="card-header mt-5">
                 <div class="card-title flex-column">

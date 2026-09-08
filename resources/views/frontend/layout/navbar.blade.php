@@ -1,6 +1,8 @@
 <!-- Frontend Navbar (Portal Siswa) -->
 <div id="kt_app_header" class="app-header" data-kt-sticky="true" data-kt-sticky-activate="{default: true, lg: true}" data-kt-sticky-name="app-header-sticky">
-	<div class="app-container container-xxl d-flex align-items-stretch justify-content-between" id="kt_app_header_container">
+	{{-- Idem navbar admin: lebar header mengikuti lebar isi halaman. Pada halaman
+	     ujian (hideChrome) header ini tidak dipakai, jadi cukup section 'lebar'. --}}
+	<div class="app-container @yield('lebar', 'container-fluid px-4 px-lg-6') d-flex align-items-stretch justify-content-between" id="kt_app_header_container">
 		<!-- Logo -->
 		<div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-lg-15">
 			<button type="button" id="portalBurger" class="btn btn-icon p-0 me-3" aria-label="Buka menu"><span style="font-size:26px;line-height:1;color:#fff">&#9776;</span></button>
