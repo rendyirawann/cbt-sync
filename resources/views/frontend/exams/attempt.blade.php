@@ -324,11 +324,11 @@
         document.getElementById('qcounter').textContent = `Soal ${current + 1} / ${total}`;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    function go(i){ if (i >= 0 && i < total){ current = i; render(); } }
+    function go(i){ if (i >= 0 && i < total){ current = i; tampilkan(); } }
     document.getElementById('prevBtn').addEventListener('click', () => go(current - 1));
     document.getElementById('nextBtn').addEventListener('click', () => go(current + 1));
     navBtns.forEach((b, i) => b.addEventListener('click', () => go(i)));
-    render();
+    tampilkan();
 
     function markAnswered(qid, val){
         const b = document.querySelector(`.qnav[data-qid="${qid}"]`);
