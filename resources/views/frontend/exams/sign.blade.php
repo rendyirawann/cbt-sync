@@ -116,7 +116,28 @@
             ctx.strokeStyle = '#111827';
         }
         siapkan();
-        window.addEventListener('resize', function () { ada = false; if (petunjuk) petunjuk.style.display = ''; siapkan(); });
+        // Resize TIDAK boleh menghapus coretan. Sebelumnya handler ini menyetel
+        // ada=false lalu siapkan() mengecat ulang kanvas jadi putih — dan resize
+        // ikut terpicu oleh hal yang lumrah terjadi di tengah ujian: HP diputar,
+        // bilah URL Chrome menyusut saat digulir, jendela desktop diubah. Siswa
+        // kehilangan tanda tangannya di langkah TERAKHIR ujian, lalu submit
+        // ditolak dengan 'Tanda tangan belum ada' tanpa sebab yang terlihat.
+        var lebarTerakhir = kanvas.clientWidth;
+        window.addEventListener('resize', function () {
+            var w = kanvas.clientWidth;
+            if (w === lebarTerakhir) return;      // tinggi bilah URL berubah saja: abaikan
+            lebarTerakhir = w;
+            var cadangan = ada ? kanvas.toDataURL('image/png') : null;
+            siapkan();
+            if (!cadangan) return;
+            var img = new Image();
+            img.onload = function () {
+                // Digambar ulang menyesuaikan lebar baru; coretannya ikut melebar,
+                // dan itu jauh lebih baik daripada hilang.
+                ctx.drawImage(img, 0, 0, kanvas.clientWidth, kanvas.clientHeight);
+            };
+            img.src = cadangan;
+        });
 
         function pos(e) {
             var k = kanvas.getBoundingClientRect();

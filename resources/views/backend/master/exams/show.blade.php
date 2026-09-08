@@ -746,6 +746,7 @@
                     @endif
                 </div></div>
                 <div class="card"><div class="card-body">
+                    <div class="table-responsive">
                     <table class="table align-middle table-row-dashed fs-6 gy-4">
                         <thead><tr class="text-gray-400 fw-bold fs-7 text-uppercase"><th>Jadwal</th><th class="text-center">Mengerjakan</th><th class="text-center">Sudah Dinilai</th><th class="text-center">Perlu Periksa Essay</th><th class="text-end">Aksi</th></tr></thead>
                         <tbody>
@@ -763,6 +764,7 @@
                             @endforelse
                         </tbody>
                     </table>
+                    </div>
                 </div></div>
             </div>
             @endif  {{-- $bolehHasil: tutup bungkus tab Jadwal + Hasil --}}

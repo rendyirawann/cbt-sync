@@ -194,6 +194,42 @@ class StudentController extends Controller
      * berarti 124 form dikirim sekaligus (HTML halaman 422 KB) padahal paling
      * banyak satu yang dibuka. Sekarang diambil saat tombol Edit ditekan.
      */
+    /**
+     * Detail satu siswa, dikirim sebagai HTML untuk modal.
+     *
+     * Route::resource sudah mendaftarkan students.show sejak awal, tapi method-nya
+     * belum pernah ada — membuka /admin/students/{id} langsung berbalas 500.
+     * Method ini menutup lubang itu sekaligus: dipanggil lewat AJAX oleh tombol
+     * Detail, dan tetap masuk akal bila URL-nya dibuka biasa (dibalas HTML utuh).
+     */
+    public function show(Request $request, $id)
+    {
+        $sid = \App\Support\SchoolScope::id();
+
+        $item = Student::with(['user.roles', 'school', 'wave'])
+            ->when($sid, fn ($q) => $q->where('school_id', $sid))   // siswa sekolah lain -> 404
+            ->findOrFail($id);
+
+        // Rombel yang diikuti beserta tahun ajarannya, dimuat sekali lewat relasi
+        // supaya view tidak menembak query per baris.
+        $rombel = ClassStudent::with(['classRoom', 'academicYear'])
+            ->where('student_id', $item->id)
+            ->get();
+
+        // Riwayat ujian: 10 terakhir saja, dan tanpa menarik jawaban siswa.
+        $riwayat = \App\Models\ExamAttempt::with(['session.exam'])
+            ->where('student_id', $item->id)
+            ->latest('created_at')
+            ->limit(10)
+            ->get();
+
+        $html = view('backend.master.students._detail', compact('item', 'rombel', 'riwayat'))->render();
+
+        return $request->ajax() || $request->wantsJson()
+            ? response()->json(['html' => $html])
+            : response($html);
+    }
+
     public function edit($id)
     {
         $sid = \App\Support\SchoolScope::id();

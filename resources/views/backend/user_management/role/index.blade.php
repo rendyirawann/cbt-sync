@@ -105,6 +105,7 @@
                             </div>
                         </div>
                         <div class="card-body pt-0 pb-1">
+                            <div class="table-responsive">
                             <table class="table align-middle table-row-dashed fs-6 gy-5 chimox" id="chimox">
                                 <thead>
                                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -124,6 +125,7 @@
                                 <tbody class="text-gray-600 fw-semibold">
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     </div>
                 </div>

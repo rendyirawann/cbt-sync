@@ -81,6 +81,8 @@
                                 <td>{{ $item->user->email ?? '-' }}</td>
                                 <td>{{ $item->gender == 'L' ? 'Laki-laki' : 'Perempuan' }}</td>
                                 <td class="text-end">
+                                    <a href="#" class="btn btn-sm btn-light btn-active-light-primary btn-detail-siswa"
+                                       data-id="{{ $item->id }}">Detail</a>
                                     <a href="#" class="btn btn-sm btn-light-primary btn-active-primary btn-edit-siswa"
                                        data-id="{{ $item->id }}">Edit</a>
                                     <form action="{{ route('students.destroy', $item->id) }}" method="POST" class="d-inline">
@@ -257,6 +259,19 @@
             <div class="text-muted mt-3">Memuat data siswa…</div>
         </div>
     </div></div>
+</div>
+
+{{-- Kerangka modal detail: isinya diambil lewat AJAX dari students.show.
+     Dibuat lebar (modal-xl) karena memuat riwayat ujian, bukan drawer seperti Edit. --}}
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" id="detailModalWadah">
+            <div class="modal-body py-15 text-center">
+                <span class="spinner-border text-primary"></span>
+                <div class="text-muted mt-3">Memuat detail siswa…</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 
@@ -507,6 +522,33 @@
 
         var bs = null;
         var kosong = wadah.innerHTML;
+
+        // Detail dimuat dengan pola yang sama seperti Edit: kerangka dibuka lebih
+        // dulu agar tombolnya terasa bereaksi, isinya menyusul.
+        var mDetail = document.getElementById('detailModal');
+        var wDetail = document.getElementById('detailModalWadah');
+        var bsDetail = null;
+        var kosongDetail = wDetail ? wDetail.innerHTML : '';
+
+        $(document).on('click', '.btn-detail-siswa', function (e) {
+            e.preventDefault();
+            if (!mDetail || !wDetail) return;
+            var id = this.dataset.id;
+            wDetail.innerHTML = kosongDetail;
+            bsDetail = bsDetail || new bootstrap.Modal(mDetail);
+            bsDetail.show();
+
+            $.get('{{ url('admin/students') }}/' + id)
+                .done(function (res) {
+                    // show() membalas JSON untuk permintaan AJAX; string mentah
+                    // ditangani juga supaya tetap jalan bila header Accept hilang.
+                    wDetail.innerHTML = (res && res.html) ? res.html : (typeof res === 'string' ? res : '');
+                })
+                .fail(function (x) {
+                    wDetail.innerHTML = '<div class="modal-body py-15 text-center text-danger">'
+                        + 'Gagal memuat detail siswa (' + (x.status || 'jaringan') + ').</div>';
+                });
+        });
 
         $(document).on('click', '.btn-edit-siswa', function (e) {
             e.preventDefault();
