@@ -424,6 +424,82 @@ class StudentController extends Controller
         ];
     }
 
+    /**
+     * Hapus BANYAK siswa sekaligus, beserta akun login masing-masing.
+     *
+     * Menghapus akun user-nya memang disengaja: relasi students.user_id ber-aturan
+     * ON DELETE CASCADE, jadi menghapus akun sekaligus membersihkan profil siswa,
+     * plotting rombel, pengerjaan ujian, dan jawabannya. Menyisakan akun tanpa
+     * profil siswa justru menumpuk sampah — akun itu akan terus muncul di
+     * pemilih "Akun User" pada form Tambah Siswa.
+     *
+     * Yang TIDAK ikut terhapus: entri Bank Soal yang pernah dibuat akun itu
+     * (kolom created_by ber-aturan SET NULL), jadi soal tetap bisa dipakai.
+     */
+    public function massDelete(Request $request)
+    {
+        // Guru tidak boleh menghapus data siswa secara massal — sekali jalan bisa
+        // melenyapkan seluruh kelas. Sama seperti aturan hapus ujian.
+        if (!\App\Support\SiklusUjian::bolehHapusUjianDikerjakan()) {
+            return redirect()->back()->with('error',
+                'Hanya Admin atau Superadmin yang boleh menghapus data siswa secara massal.');
+        }
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'uuid',
+        ], [], ['ids' => 'siswa yang dipilih']);
+
+        $sid = \App\Support\SchoolScope::id();
+
+        // Disaring ULANG di server: id dikirim dari peramban, jadi siswa sekolah
+        // lain tidak boleh ikut terhapus walau id-nya diselipkan.
+        $siswa = Student::with('user')
+            ->whereIn('id', $request->ids)
+            ->when($sid, fn ($q) => $q->where('school_id', $sid))
+            ->get();
+
+        $idSaya = auth()->id();
+        $terhapus = 0;
+        $dilewati = [];
+
+        try {
+            DB::beginTransaction();
+
+            foreach ($siswa as $s) {
+                // Jangan sampai yang sedang login menghapus akunnya sendiri.
+                if ($s->user_id === $idSaya) {
+                    $dilewati[] = ($s->user->name ?? 'akun sendiri') . ' (akun Anda sendiri)';
+                    continue;
+                }
+
+                if ($s->user) {
+                    $s->user->delete();   // cascade: profil siswa & data turunannya
+                } else {
+                    $s->delete();
+                }
+                $terhapus++;
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+        }
+
+        $tidakDitemukan = count($request->ids) - $siswa->count();
+        $pesan = $terhapus . ' data siswa beserta akun loginnya berhasil dihapus.';
+        if ($dilewati) {
+            $pesan .= ' Dilewati: ' . implode(', ', $dilewati) . '.';
+        }
+        if ($tidakDitemukan > 0) {
+            $pesan .= ' ' . $tidakDitemukan . ' pilihan diabaikan (bukan siswa di sekolah ini).';
+        }
+
+        return redirect()->back()->with($terhapus > 0 ? 'success' : 'error', $pesan);
+    }
+
     public function destroy($id)
     {
         $student = Student::findOrFail($id);

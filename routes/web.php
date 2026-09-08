@@ -147,6 +147,9 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::post('/admin/teachers/import', [\App\Http\Controllers\Backend\Master\TeacherController::class, 'import'])->name('teachers.import');
     Route::get('/admin/students/template', [\App\Http\Controllers\Backend\Master\StudentController::class, 'template'])->name('students.template');
     Route::post('/admin/students/import', [\App\Http\Controllers\Backend\Master\StudentController::class, 'import'])->name('students.import');
+    // WAJIB didaftarkan SEBELUM Route::resource di bawah: kalau tidak, /admin/students/mass-delete
+    // akan ditangkap route students.show sebagai {student} = "mass-delete".
+    Route::post('/admin/students/mass-delete', [\App\Http\Controllers\Backend\Master\StudentController::class, 'massDelete'])->name('students.mass-delete');
     Route::get('/admin/teaching-assignments/template', [\App\Http\Controllers\Backend\Master\TeachingAssignmentController::class, 'template'])->name('teaching-assignments.template');
     Route::post('/admin/teaching-assignments/import', [\App\Http\Controllers\Backend\Master\TeachingAssignmentController::class, 'import'])->name('teaching-assignments.import');
 

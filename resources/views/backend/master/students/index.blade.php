@@ -15,6 +15,12 @@
                     <h3 class="fw-bold mb-1">Manajemen Siswa</h3>
                 </div>
                 <div class="card-toolbar">
+                    {{-- Muncul hanya saat ada baris tercentang; jumlahnya ikut di label. --}}
+                    @if(\App\Support\SiklusUjian::bolehHapusUjianDikerjakan())
+                        <button type="button" class="btn btn-sm btn-light-danger me-2 d-none" id="btnHapusTerpilih">
+                            <i class="ki-outline ki-trash fs-5"></i> Hapus Terpilih (<span id="jmlTerpilih">0</span>)
+                        </button>
+                    @endif
                     @include('backend.master._import_tools', ['templateRoute' => 'students.template', 'importRoute' => 'students.import', 'label' => 'Siswa'])
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Tambah Siswa</button>
                 </div>
@@ -24,6 +30,9 @@
                     <table class="table table-row-bordered table-row-dashed gy-4 align-middle fw-bold">
                         <thead class="fs-7 text-gray-400 text-uppercase">
                             <tr>
+                                @if(\App\Support\SiklusUjian::bolehHapusUjianDikerjakan())
+                                    <th class="w-30px"><input class="form-check-input" type="checkbox" id="centangSemua" title="Pilih semua"></th>
+                                @endif
                                 <th>NISN</th>
                                 <th>Nama Lengkap</th>
                                 <th>Username</th>
@@ -39,6 +48,10 @@
                         <tbody class="fs-6">
                             @forelse($students as $item)
                             <tr>
+                                @if(\App\Support\SiklusUjian::bolehHapusUjianDikerjakan())
+                                    <td><input class="form-check-input centang-siswa" type="checkbox"
+                                               value="{{ $item->id }}" data-nama="{{ $item->user->name ?? $item->nisn }}"></td>
+                                @endif
                                 <td>{{ $item->nisn }}</td>
                                 <td>{{ $item->user->name ?? '-' }}</td>
                                 <td>{{ $item->user->username ?? '-' }}</td>
@@ -70,7 +83,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="10">
+                                <td colspan="{{ \App\Support\SiklusUjian::bolehHapusUjianDikerjakan() ? 11 : 10 }}">
                                     <div class="text-center px-4 py-15">
                                         <img src="{{ asset('assets/media/illustrations/sigma-1/5.png') }}" alt="" class="mw-100 mh-200px mb-7">
                                         <h3 class="fw-bold text-gray-900 mb-2">Belum ada data siswa</h3>
@@ -412,3 +425,87 @@
     })();
 </script>
 @endpush
+
+@if(\App\Support\SiklusUjian::bolehHapusUjianDikerjakan())
+{{-- Form pengirim penghapusan massal. Id-nya disuntikkan saat konfirmasi disetujui,
+     dan tetap disaring ulang di server (StudentController::massDelete) — id dari
+     peramban tidak dipercaya. --}}
+<form action="{{ route('students.mass-delete') }}" method="POST" id="formHapusMassal" class="d-none">
+    @csrf
+    <div id="wadahIdTerpilih"></div>
+</form>
+
+@push('scripts')
+<script>
+    (function () {
+        var semua = document.getElementById('centangSemua');
+        var tombol = document.getElementById('btnHapusTerpilih');
+        var badge = document.getElementById('jmlTerpilih');
+        var form = document.getElementById('formHapusMassal');
+        var wadah = document.getElementById('wadahIdTerpilih');
+        if (!tombol || !form) return;
+
+        function kotak() { return Array.prototype.slice.call(document.querySelectorAll('.centang-siswa')); }
+        function terpilih() { return kotak().filter(function (c) { return c.checked; }); }
+
+        function segarkan() {
+            var n = terpilih().length;
+            badge.textContent = n;
+            tombol.classList.toggle('d-none', n === 0);
+            if (semua) {
+                var total = kotak().length;
+                semua.checked = total > 0 && n === total;
+                // Sebagian tercentang -> keadaan setengah, bukan kosong.
+                semua.indeterminate = n > 0 && n < total;
+            }
+        }
+
+        if (semua) {
+            semua.addEventListener('change', function () {
+                kotak().forEach(function (c) { c.checked = semua.checked; });
+                segarkan();
+            });
+        }
+        document.addEventListener('change', function (e) {
+            if (e.target && e.target.classList.contains('centang-siswa')) segarkan();
+        });
+
+        tombol.addEventListener('click', function () {
+            var pilih = terpilih();
+            if (!pilih.length) return;
+
+            var nama = pilih.slice(0, 5).map(function (c) { return c.dataset.nama; });
+            var sisa = pilih.length - nama.length;
+
+            Swal.fire({
+                title: 'Hapus ' + pilih.length + ' data siswa?',
+                html: '<div class="text-start fs-7">'
+                    + '<div class="mb-3">' + nama.map(function (n) { return '&bull; ' + n; }).join('<br>')
+                    + (sisa > 0 ? '<br>&bull; <i>dan ' + sisa + ' siswa lainnya</i>' : '') + '</div>'
+                    + '<b>Akun login mereka ikut terhapus</b>, beserta plotting rombel, pengerjaan ujian, '
+                    + 'dan nilainya. Tindakan ini tidak bisa dibatalkan.'
+                    + '<div class="text-muted mt-2">Soal di Bank Soal yang pernah mereka buat tidak terpengaruh.</div>'
+                    + '</div>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, hapus ' + pilih.length + ' siswa',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then(function (r) {
+                if (!r.isConfirmed) return;
+                wadah.innerHTML = '';
+                pilih.forEach(function (c) {
+                    var i = document.createElement('input');
+                    i.type = 'hidden'; i.name = 'ids[]'; i.value = c.value;
+                    wadah.appendChild(i);
+                });
+                form.submit();
+            });
+        });
+
+        segarkan();
+    })();
+</script>
+@endpush
+@endif
