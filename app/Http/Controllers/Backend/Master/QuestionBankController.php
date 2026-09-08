@@ -102,6 +102,56 @@ class QuestionBankController extends Controller
         }
     }
 
+    /**
+     * Pratinjau satu soal bank (baca saja) untuk modal.
+     *
+     * Terbuka untuk semua peran yang boleh membuka Bank Soal — termasuk Kepala
+     * Sekolah yang tidak boleh mengubah — tetapi tetap melewati gerbang
+     * keterlihatan yang sama, jadi soal sekolah lain yang belum boleh dilihat
+     * tidak bisa dibaca dengan menebak id.
+     */
+    public function pratinjau($id)
+    {
+        $bank = QuestionBank::with('options')
+            ->terlihatOleh(\App\Support\SchoolScope::id())
+            ->whereKey($id)
+            ->firstOrFail();
+
+        return response()->json([
+            'html' => view('backend.master.question-banks._pratinjau', ['bank' => $bank])->render(),
+        ]);
+    }
+
+    /**
+     * Form ubah satu soal bank, dikirim sebagai HTML untuk modal.
+     *
+     * Dulu form ini dirender untuk SETIAP soal di halaman daftar; dengan 19 soal
+     * HTML halamannya 761 KB, padahal paling banyak satu yang dibuka.
+     *
+     * Gerbang keterlihatan ditegakkan ULANG di sini (terlihatOleh): id soal bisa
+     * dipanggil langsung, jadi tanpa ini soal sekolah lain yang belum boleh
+     * dilihat bisa dibaca hanya dengan menebak id.
+     */
+    public function edit($id)
+    {
+        $sekolahSaya = \App\Support\SchoolScope::id();
+
+        $bank = QuestionBank::with('options')
+            ->terlihatOleh($sekolahSaya)
+            ->whereKey($id)
+            ->firstOrFail();
+
+        $subjects = Subject::orderBy('name')->get();
+
+        return response()->json([
+            'html' => view('backend.master.question-banks._form', [
+                'mode' => 'edit',
+                'bank' => $bank,
+                'subjects' => $subjects,
+            ])->render(),
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $bank = QuestionBank::findOrFail($id);
