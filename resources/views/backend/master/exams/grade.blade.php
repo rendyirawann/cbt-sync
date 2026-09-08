@@ -100,6 +100,37 @@
                             @if($opt->is_correct)<i class="ki-outline ki-check-circle fs-5 text-success ms-2"></i>@endif
                         </div>
                         @endforeach
+                        @php
+                            $wqPg = (float) $weights[$q->id];
+                            $wqPgTxt = rtrim(rtrim(number_format($wqPg, 2, '.', ''), '0'), '.');
+                            $benarPg = $ans && $ans->selected_option_id
+                                && optional($q->options->firstWhere('id', $ans->selected_option_id))->is_correct;
+                        @endphp
+                        @if($exam->points_mode === 'auto')
+                            <div class="mt-3"><span class="badge badge-light-primary fs-7">Bobot soal ini: {{ $wqPgTxt }} poin</span>
+                                <span class="text-muted fs-8 ms-1">dibagi rata sistem</span></div>
+                        @else
+                            {{-- Mode manual: bobot PG ditentukan/diubah guru DI SINI, saat memeriksa —
+                                 sama seperti essay. Jawabannya sendiri sudah dikoreksi sistem
+                                 (benar/salah dari kunci), jadi yang diisi guru hanya bobotnya. --}}
+                            <div class="row mt-3">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label required">Bobot soal ini</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" min="0.01" max="100" name="bobot[{{ $q->id }}]"
+                                               class="form-control bobot-soal" data-tipe="mc"
+                                               data-benar="{{ $benarPg ? 1 : 0 }}" data-penalti="{{ (float) $q->penalty }}"
+                                               value="{{ $wqPgTxt }}" @disabled($locked)>
+                                        <span class="input-group-text">poin</span>
+                                    </div>
+                                    <div class="form-text">
+                                        Jawaban siswa
+                                        <b class="{{ $benarPg ? 'text-success' : 'text-danger' }}">{{ $benarPg ? 'BENAR' : 'SALAH' }}</b>
+                                        — {{ $benarPg ? 'dapat bobot penuh' : 'dapat 0' }}. Total bobot seluruh soal PG wajib tepat 100.
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     @else
                         <div class="bg-light rounded p-4 mb-3">
                             <div class="text-muted fs-8 text-uppercase fw-bold mb-1">Jawaban Siswa</div>
@@ -163,21 +194,25 @@
                                          Kolom input yang dulu ada di sini juga menyesatkan: nilainya
                                          dikirim sebagai field alloc tetapi storeGrade tidak pernah
                                          membacanya, jadi bobot selalu jatuh ke bagi rata. --}}
-                                    <label class="form-label">Bobot soal ini</label>
-                                    <div class="mb-3">
-                                        <span class="badge badge-light-info fs-7">maksimal {{ $allocTxt }} poin</span>
-                                        <span class="text-muted fs-8 d-block mt-1">Ditetapkan guru saat membuat soal (tab <b>Soal</b>).</span>
+                                    <label class="form-label required">Bobot soal ini</label>
+                                    <div class="input-group mb-2">
+                                        <input type="number" step="0.01" min="0.01" max="100" name="bobot[{{ $q->id }}]"
+                                               class="form-control bobot-soal" data-tipe="essay"
+                                               value="{{ $allocTxt }}" @disabled($locked)>
+                                        <span class="input-group-text">poin</span>
                                     </div>
+                                    <div class="form-text mb-3">Nilai awal diambil dari bobot yang diisi saat membuat soal;
+                                        mengubahnya di sini ikut memperbarui bobot soal itu.</div>
                                     <label class="form-label required">Jawaban Essay</label>
                                     <div class="d-flex flex-wrap gap-4 pt-1">
                                         <label class="form-check form-check-custom form-check-solid mb-0">
                                             <input class="form-check-input essay-flag" type="radio" name="essay_correct[{{ $q->id }}]" value="1"
-                                                   data-weight="{{ $alloc }}" @checked($sudahDinilai && $nilaiKini > 0) @disabled($locked)>
-                                            <span class="form-check-label fw-bold text-success">Benar (+{{ $allocTxt }})</span>
+                                                   data-qid="{{ $q->id }}" data-weight="{{ $alloc }}" @checked($sudahDinilai && $nilaiKini > 0) @disabled($locked)>
+                                            <span class="form-check-label fw-bold text-success">Benar (dapat bobot penuh)</span>
                                         </label>
                                         <label class="form-check form-check-custom form-check-solid mb-0">
                                             <input class="form-check-input essay-flag" type="radio" name="essay_correct[{{ $q->id }}]" value="0"
-                                                   data-weight="{{ $alloc }}" @checked($sudahDinilai && $nilaiKini <= 0) @disabled($locked)>
+                                                   data-qid="{{ $q->id }}" data-weight="{{ $alloc }}" @checked($sudahDinilai && $nilaiKini <= 0) @disabled($locked)>
                                             <span class="form-check-label fw-bold text-danger">Salah (0)</span>
                                         </label>
                                     </div>
@@ -218,10 +253,17 @@
                             @endif
                             → <b class="text-primary">Nilai Akhir <span id="calcFinal">0</span></b>
                         </div>
-                        @if($hasEsQ && $exam->points_mode !== 'auto')
-                        <div class="fs-7 mb-1">Total bobot essay: <b id="essayTotal" class="text-primary">0</b> / 100
-                            <span id="essayTotalWarn" class="text-danger fw-bold ms-2" style="display:none">harus tepat 100</span>
-                        </div>
+                        @if($exam->points_mode !== 'auto')
+                            @if($hasMcQ)
+                            <div class="fs-7 mb-1">Total bobot PG: <b id="pgTotal" class="text-primary">0</b> / 100
+                                <span id="pgTotalWarn" class="text-danger fw-bold ms-2" style="display:none">harus tepat 100</span>
+                            </div>
+                            @endif
+                            @if($hasEsQ)
+                            <div class="fs-7 mb-1">Total bobot essay: <b id="essayTotal" class="text-primary">0</b> / 100
+                                <span id="essayTotalWarn" class="text-danger fw-bold ms-2" style="display:none">harus tepat 100</span>
+                            </div>
+                            @endif
                         @endif
                         <div class="text-muted fs-8">
                             Mode <b>{{ $exam->points_mode === 'auto' ? 'Otomatis' : 'Manual' }}</b> —
@@ -293,54 +335,79 @@
         var ES_MAX = {{ (float) $exam->essayMaxPoints() }};
         var W_MC = {{ (float) $sw['mc'] }};
         var W_ES = {{ (float) $sw['essay'] }};
-        var inputs = document.querySelectorAll('input[name^="scores["]');
-        var flags  = document.querySelectorAll('input.essay-flag');   // mode auto: Benar/Salah
+        // Kolom bobot per soal (mode manual). Nilai PG ikut berubah begitu bobotnya
+        // diubah, jadi pratinjau nilai TIDAK boleh memakai mc_score yang tersimpan.
+        var bobots = document.querySelectorAll('input.bobot-soal');
+        var flags  = document.querySelectorAll('input.essay-flag');
+        var MANUAL = bobots.length > 0;
         var fmt = function(n){ return (Math.round(n * 100) / 100).toString(); };
         var set = function(id, val, suffix){ var el = document.getElementById(id); if (el) el.textContent = fmt(val) + (suffix || ''); };
+        function bobotDari(qid, cadangan){
+            var i = document.querySelector('input.bobot-soal[name="bobot[' + qid + ']"]');
+            if (!i) return cadangan;
+            var v = parseFloat(i.value);
+            return isNaN(v) ? 0 : v;
+        }
+        function tandaiTotal(idAngka, idPeringatan, nilai){
+            var el = document.getElementById(idAngka);
+            if (!el) return;
+            el.textContent = fmt(nilai);
+            var salah = Math.abs(nilai - 100) > 0.01;
+            var w = document.getElementById(idPeringatan);
+            if (w) w.style.display = salah ? 'inline' : 'none';
+            el.classList.toggle('text-danger', salah);
+            el.classList.toggle('text-primary', !salah);
+        }
         function recalc(){
-            var essay = 0;
-            inputs.forEach(function(i){
-                var v = parseFloat(i.value);
-                if (isNaN(v)) return;
-                var max = parseFloat(i.getAttribute('max'));
-                if (!isNaN(max) && v > max) v = max;      // clamp seperti server
-                if (v < 0) v = 0;
-                essay += v;
-            });
-            var totalBobot = 0;
-            flags.forEach(function(r){
-                // Bobot selalu dari data-weight: mode auto dibagi rata sistem, mode
-                // manual dari kolom points soal yang diisi guru saat membuatnya.
-                var w = parseFloat(r.dataset.weight) || 0;
-                if (r.value === '1'){                       // hitung bobot sekali per soal
-                    totalBobot += w;
-                    if (r.checked) essay += w;              // Benar → dapat bobot penuh
-                }
-            });
-            var totEl = document.getElementById('essayTotal');
-            if (totEl){                                    // mode manual: total bobot wajib tepat 100
-                totEl.textContent = fmt(totalBobot);
-                var warn = document.getElementById('essayTotalWarn');
-                var salah = Math.abs(totalBobot - 100) > 0.01;
-                if (warn) warn.style.display = salah ? 'inline' : 'none';
-                totEl.classList.toggle('text-danger', salah);
-                totEl.classList.toggle('text-primary', !salah);
+            var essay = 0, totPg = 0, totEs = 0;
+            var mc = MC;                                  // mode auto: nilai PG tetap
+
+            if (MANUAL){
+                mc = 0;
+                bobots.forEach(function(i){
+                    var w = parseFloat(i.value) || 0;
+                    if (i.dataset.tipe === 'mc'){
+                        totPg += w;
+                        // Benar -> bobot penuh; salah -> dikurangi penalti (bila diatur).
+                        mc += (i.dataset.benar === '1') ? w : -(parseFloat(i.dataset.penalti) || 0);
+                    } else {
+                        totEs += w;
+                    }
+                });
+                if (mc < 0) mc = 0;
             }
+
+            flags.forEach(function(r){
+                if (r.value !== '1') return;               // hitung sekali per soal
+                var w = bobotDari(r.dataset.qid, parseFloat(r.dataset.weight) || 0);
+                if (r.checked) essay += w;                 // Benar -> dapat bobot penuh
+            });
+
+            tandaiTotal('pgTotal', 'pgTotalWarn', totPg);
+            tandaiTotal('essayTotal', 'essayTotalWarn', totEs);
+
+            // Pembagi tiap bagian = TOTAL bobot bagian itu (sama seperti server),
+            // supaya persentase tetap benar walau totalnya belum pas 100.
+            var mcMax = MANUAL ? totPg : MC_MAX;
+            var esMax = MANUAL ? totEs : ES_MAX;
+
             if (IS_SECTION){
-                var mcPct = MC_MAX > 0 ? Math.max(0, MC) / MC_MAX * 100 : 0;
-                var esPct = ES_MAX > 0 ? essay / ES_MAX * 100 : 0;
+                var mcPct = mcMax > 0 ? Math.max(0, mc) / mcMax * 100 : 0;
+                var esPct = esMax > 0 ? essay / esMax * 100 : 0;
+                set('calcMc', mc);
                 set('calcEssay', essay);
                 set('calcMcPct', mcPct, '%');
                 set('calcEsPct', esPct, '%');
                 set('calcFinal', mcPct * W_MC / 100 + esPct * W_ES / 100);
             } else {
-                var total = MC + essay; if (total < 0) total = 0;
+                var total = mc + essay; if (total < 0) total = 0;
+                set('calcMc', mc);
                 set('calcEssay', essay);
                 set('calcTotal', total);
                 set('calcFinal', NORMALIZE ? (MAXP > 0 ? total / MAXP * 100 : 0) : total);
             }
         }
-        inputs.forEach(function(i){ i.addEventListener('input', recalc); });
+        bobots.forEach(function(i){ i.addEventListener('input', recalc); });
         flags.forEach(function(r){ r.addEventListener('change', recalc); });
         recalc();
     })();

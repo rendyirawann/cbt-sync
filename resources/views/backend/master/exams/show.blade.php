@@ -466,35 +466,17 @@
                                         <div class="math-preview" id="prev_edit_{{ $q->id }}"></div>
                                     </div>
                                     @php $fB = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.'); @endphp
-                                    @if($exam->points_mode !== 'auto')
-                                        {{-- Mode Manual: bobot soal (PG maupun Essay) milik guru dan bisa
-                                             diubah di sini. Sisa jatah sudah TIDAK memasukkan bobot soal ini
-                                             sendiri, kalau tidak nilai yang sama pun akan tertolak. --}}
-                                        @php
-                                            $sisaB = $exam->sisaBobot($q->type, $q->id);
-                                            $bagian = $q->type === 'mc' ? 'Pilihan Ganda' : 'Essay';
-                                            // Soal yang bobotnya belum pernah diatur guru diberi nilai awal
-                                            // dari sisa jatah, bukan angka bawaan 1 yang menyesatkan.
-                                            $nilaiBobot = $q->points_set ? (float) $q->points : max($sisaB, 0);
-                                        @endphp
-                                        <div class="mb-4">
-                                            <label class="form-label required">Bobot / Nilai maksimal soal ini</label>
-                                            <div class="input-group">
-                                                <input type="number" name="points" class="form-control" step="0.01" min="0.01" max="100"
-                                                       value="{{ $fB($nilaiBobot) }}" required>
-                                                <span class="input-group-text">poin</span>
-                                            </div>
-                                            <div class="form-text">Total bobot bagian <b>{{ $bagian }}</b> 100 poin. Selain soal ini sudah terpakai
-                                                <b>{{ $fB($exam->totalBobot($q->type, $q->id)) }}</b>, jadi bobot soal ini maksimal <b>{{ $fB($sisaB) }}</b>.</div>
-                                        </div>
-                                    @else
-                                        <div class="row">
-                                            <div class="col-12 mb-4"><div class="alert alert-light-primary py-2 mb-0 fs-8">
-                                                <i class="ki-outline ki-information-5 fs-5 text-primary me-1"></i>
-                                                Bobot soal ini dihitung sistem: <b>{{ $fB(\App\Services\CbtScoringService::questionWeight($exam,$q)) }} poin</b>
-                                            </div></div>
-                                        </div>
-                                    @endif
+                                    <div class="row">
+                                        <div class="col-12 mb-4"><div class="alert alert-light-primary py-2 mb-0 fs-8">
+                                            <i class="ki-outline ki-information-5 fs-5 text-primary me-1"></i>
+                                            @if($exam->points_mode === 'auto')
+                                                Bobot soal ini dihitung sistem: <b>{{ $fB(\App\Services\CbtScoringService::questionWeight($exam,$q)) }} poin</b> (dibagi rata).
+                                            @else
+                                                Mode <b>Manual</b>: bobot soal ini ditentukan guru saat <b>memeriksa</b> di menu Hasil &amp; Nilai.
+                                                Nilai yang berlaku sekarang: <b>{{ $fB(\App\Services\CbtScoringService::questionWeight($exam,$q)) }} poin</b>.
+                                            @endif
+                                        </div></div>
+                                    </div>
                                     @if($q->image_path)<div class="mb-2"><img src="{{ asset('storage/'.$q->image_path) }}" class="zoomable rounded mh-100px" alt="Gambar soal"></div>@endif
                                     <div class="mb-4"><label class="form-label">Ganti Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB.</div></div>
                                     @if($q->type === 'mc')
