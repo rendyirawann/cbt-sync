@@ -18,6 +18,15 @@
 
                 <div class="d-flex flex-center flex-column flex-column-fluid pb-15 pb-lg-20 my-12">
 
+                    {{-- Halaman ini sebelumnya tidak menampilkan pesan flash apa pun,
+                         jadi pemberitahuan sesi kedaluwarsa dari penangan 419 tidak
+                         akan pernah terlihat. --}}
+                    @if(session('error'))
+                        <div class="alert alert-warning d-flex align-items-center p-4 mb-6">
+                            <i class="ki-outline ki-information-5 fs-2 text-warning me-3"></i>
+                            <span class="fw-semibold fs-7">{{ session('error') }}</span>
+                        </div>
+                    @endif
                     <form class="form w-100" id="kt_sign_in_form" method="POST" action="{{ route('login') }}">
                         @csrf
 

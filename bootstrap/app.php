@@ -42,5 +42,26 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Token CSRF kedaluwarsa (419). Paling sering di halaman login yang
+        // dibiarkan terbuka lama: sesi tamu habis, lalu tombol Masuk membalas
+        // halaman galat 419 yang membingungkan — pengguna harus menekan Kembali
+        // dan memuat ulang sendiri. Sekarang dialihkan kembali, sehingga token
+        // barunya langsung terpasang dan bisa dicoba lagi seketika.
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            $pesan = 'Sesi keamanan kedaluwarsa karena halaman dibiarkan terbuka terlalu lama. '
+                . 'Halaman sudah dimuat ulang — silakan coba lagi.';
+
+            // Pemanggil AJAX (mis. form login siswa) menangani sendiri: kode 419
+            // dipakai di sisi JS untuk memuat ulang halaman.
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $pesan], 419);
+            }
+
+            // back() dipakai, BUKAN redirect ke URL permintaan: POST ke alamat
+            // yang tidak punya route GET akan berbalas 404. Kata sandi tidak
+            // pernah ikut dikembalikan.
+            return redirect()->back()
+                ->withInput($request->except(['password', 'password_confirmation', '_token']))
+                ->with('error', $pesan);
+        });
     })->create();

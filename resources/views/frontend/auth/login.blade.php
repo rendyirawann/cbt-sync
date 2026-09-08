@@ -199,6 +199,22 @@
                     },
                     error: function(xhr) {
                         btn.removeAttr('data-kt-indicator').prop('disabled', false);
+
+                        // 419 = token CSRF kedaluwarsa, bukan salah sandi. Menampilkan
+                        // "Email/password salah" di sini menyesatkan, dan mencoba lagi
+                        // tidak akan pernah berhasil karena tokennya tetap basi.
+                        // Halamannya dimuat ulang supaya token baru terpasang.
+                        if (xhr.status === 419) {
+                            Swal.fire({
+                                text: "Sesi keamanan kedaluwarsa karena halaman dibiarkan terbuka terlalu lama. Halaman akan dimuat ulang.",
+                                icon: "info",
+                                buttonsStyling: false,
+                                confirmButtonText: "Muat Ulang",
+                                customClass: { confirmButton: "btn btn-primary" }
+                            }).then(function () { window.location.reload(); });
+                            return;
+                        }
+
                         Swal.fire({
                             text: xhr.responseJSON?.message || "Email/Username/NISN atau password salah!",
                             icon: "error",

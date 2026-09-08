@@ -56,11 +56,13 @@
 						</a>
 					</div>
 @endif
+					@if(false) {{-- CBT-SYNC: Raport disembunyikan --}}
 					<div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.rapor.index') }}" class="menu-link {{ request()->routeIs('student.rapor.*') ? 'active' : '' }}">
 							<span class="menu-title">Raport Hasil Ujian</span>
 						</a>
 					</div>
+					@endif
 					@if(false) {{-- CBT-SYNC: non-CBT --}}
 <div class="menu-item me-0 me-lg-2">
 						<a href="{{ route('student.library.index') }}" class="menu-link {{ request()->routeIs('student.library.*') ? 'active' : '' }}">
