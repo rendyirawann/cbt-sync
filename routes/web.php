@@ -195,9 +195,6 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     // Bank Soal tidak lagi punya form tambah sendiri: isinya tumbuh otomatis dari
     // soal yang dibuat saat menyusun ujian (lihat App\Support\BankSoal).
     Route::get('/admin/question-banks/{id}/pratinjau', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'pratinjau'])->name('question-banks.pratinjau');
-    Route::get('/admin/question-banks/{id}/edit', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'edit'])->name('question-banks.edit');
-    Route::put('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'update'])->name('question-banks.update');
-    Route::delete('/admin/question-banks/{id}', [\App\Http\Controllers\Backend\Master\QuestionBankController::class, 'destroy'])->name('question-banks.destroy');
     // Pengaturan pemilihan soal (semua / manual / acak sebagian per siswa).
     // Daftar Hadir Peserta (PDF) per gelombang — hanya membaca, jadi GET.
     Route::get('/admin/exams/{id}/attendance', [\App\Http\Controllers\Backend\Master\ExamController::class, 'attendance'])->name('exams.attendance');

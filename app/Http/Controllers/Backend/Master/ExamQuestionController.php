@@ -122,6 +122,12 @@ class ExamQuestionController extends Controller
                 if ($question->type === 'mc') {
                     $this->syncOptionsUpdate($question, $request);
                 }
+
+                // Cerminan Bank Soal ikut disegarkan. Tanpa ini, opsi jawaban yang
+                // baru ditambahkan atau diperbaiki di soal ujian tidak pernah sampai
+                // ke bank, dan entri bank bisa tertinggal sebagai soal pilihan ganda
+                // TANPA pilihan — lalu soal cacat itulah yang ditarik guru lain.
+                \App\Support\BankSoal::cerminkan($question->fresh('options'), $question->exam);
             });
 
             return redirect()->back()->with('success', 'Soal berhasil diperbarui.');

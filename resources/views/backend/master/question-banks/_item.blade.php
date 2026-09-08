@@ -19,13 +19,13 @@
                         {{-- Pratinjau: baca saja, jadi tersedia untuk semua peran. --}}
                         <button type="button" class="btn btn-sm btn-light-secondary btn-lihat-bank"
                             data-id="{{ $bank->id }}"><i class="ki-outline ki-eye fs-5 me-1"></i>Lihat</button>
-                    @unless($isKepsek)
-                        <button class="btn btn-sm btn-icon btn-light-primary btn-ubah-bank" data-id="{{ $bank->id }}"
-                                title="Ubah soal"><i class="ki-outline ki-pencil fs-5"></i></button>
-                        <form action="{{ route('question-banks.destroy', $bank->id) }}" method="POST" class="d-inline custom-ajax-confirm">@csrf @method('DELETE')
-                            <button class="btn btn-sm btn-icon btn-light-danger btn-delete"><i class="ki-outline ki-trash fs-5"></i></button>
-                        </form>
-                    @endunless
+                        {{-- Ubah & Hapus dibuang: sumber kebenaran soal adalah soal
+                             ujiannya, bukan cerminan di bank ini. Menyunting di sini
+                             tidak mengubah ujian mana pun dan akan tertimpa sendiri
+                             saat soal ujian disimpan lagi; menghapus bisa mencabut
+                             soal yang sekolah lain sudah pakai. Penghapusan tetap
+                             ada di jalur hapus ujian, yang punya konfirmasi dan
+                             hitungan dampak lintas sekolah. --}}
                     </div>
                 </div>
                 <div class="fw-semibold text-gray-900 mb-1">{!! nl2br(e($bank->question_text)) !!}</div>

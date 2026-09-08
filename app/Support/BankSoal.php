@@ -37,6 +37,18 @@ class BankSoal
             ->first();
 
         if ($ada) {
+            // JANGAN pulang begitu saja. Entri bank dibuat pada saat soal ujian
+            // dibuat, dan opsi jawaban bisa datang SETELAH itu (log aktivitas
+            // membuktikan jarak 17 detik pada satu kasus nyata). Kalau entri
+            // lama tidak pernah disegarkan, ia bisa selamanya berupa soal
+            // pilihan ganda TANPA pilihan — dan itulah yang ditarik guru lain
+            // ke ujiannya.
+            //
+            // Yang disegarkan hanya entri milik SEKOLAH INI (school_id sudah
+            // ikut jadi kunci pencarian di atas), jadi soal sekolah lain tidak
+            // pernah tertimpa.
+            self::segarkan($ada, $question, $exam);
+
             return $ada;
         }
 
@@ -71,6 +83,54 @@ class BankSoal
         }
 
         return $bank;
+    }
+
+    /**
+     * Selaraskan isi entri bank dengan soal ujian sumbernya.
+     *
+     * Teks soal TIDAK diubah: ia bagian dari kunci anti-ganda, jadi teks yang
+     * berubah memang seharusnya melahirkan entri baru. Yang diselaraskan adalah
+     * hal yang bisa menyusul atau berubah: poin, pengurang, gambar, tingkat, dan
+     * OPSI JAWABAN.
+     *
+     * Opsi hanya ditulis ulang bila memang berbeda, supaya menyimpan soal
+     * berulang kali tidak menghasilkan riwayat hapus-buat yang sia-sia di log.
+     */
+    private static function segarkan(QuestionBank $bank, Question $question, Exam $exam): void
+    {
+        $bank->update([
+            'level'      => self::tingkat($exam) ?? $bank->level,
+            'image_path' => $question->image_path ?: $bank->image_path,
+            'points'     => $question->points,
+            'penalty'    => $question->penalty,
+        ]);
+
+        $sumber = $question->options->sortBy('order')->values();
+        $tujuan = $bank->options()->orderBy('order')->get();
+
+        $sama = $sumber->count() === $tujuan->count()
+            && $sumber->every(function ($o, $i) use ($tujuan) {
+                $t = $tujuan[$i];
+
+                return (string) $t->label === (string) $o->label
+                    && (string) $t->option_text === (string) $o->option_text
+                    && (bool) $t->is_correct === (bool) $o->is_correct;
+            });
+
+        if ($sama) {
+            return;
+        }
+
+        $bank->options()->delete();
+        foreach ($sumber as $opsi) {
+            $bank->options()->create([
+                'label'       => $opsi->label,
+                'option_text' => $opsi->option_text,
+                'image_path'  => $opsi->image_path,
+                'is_correct'  => $opsi->is_correct,
+                'order'       => $opsi->order,
+            ]);
+        }
     }
 
     /** Tingkat kelas (VII..XII) ditebak dari nama ruang kelas ujian; null bila tak terbaca. */
