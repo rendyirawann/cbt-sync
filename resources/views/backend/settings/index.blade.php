@@ -1,9 +1,10 @@
 @extends('backend.layout.app')
-@section('title', 'Settings')
+@section('title', 'Pengaturan Aplikasi')
 @section('content')
 
 @include('partials.kop-halaman', [
     'judul' => 'Pengaturan Aplikasi',
+    'catatan' => 'Kelola konfigurasi aplikasi',
     'jejak' => [
         ['label' => 'Pengaturan'],
         ['label' => 'Pengaturan Aplikasi', 'route' => 'settings.index'],
@@ -22,14 +23,6 @@
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                 </div>
             @endif
-
-            {{-- Page Header --}}
-            <div class="d-flex flex-column flex-lg-row mb-8">
-                <div class="flex-lg-row-fluid">
-                    <h1 class="fw-bold fs-2x mb-2">Settings</h1>
-                    <div class="text-muted fw-semibold fs-6">Manage your application configuration</div>
-                </div>
-            </div>
 
             <form method="POST" action="{{ route('settings.update') }}" enctype="multipart/form-data" id="settingsForm">
                 @csrf

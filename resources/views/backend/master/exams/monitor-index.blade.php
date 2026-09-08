@@ -2,28 +2,22 @@
 @section('title', 'Monitoring Ujian')
 
 @section('content')
+@php
+    // Subtitle bergantung peran, jadi dihitung dulu di sini: parameter 'catatan'
+    // milik kop-halaman menerima string, bukan blok Blade.
+    $catatan = auth()->user()->hasRole('Guru')
+        ? 'Sesi dari ujian yang Anda ampu.'
+        : 'Seluruh sesi ujian di sekolah Anda.';
+@endphp
 @include('partials.kop-halaman', [
     'judul' => 'Monitoring Ujian',
+    'catatan' => $catatan,
     'jejak' => [
         ['label' => 'Akademik'],
         ['label' => 'Ujian / CBT', 'route' => 'exams.index'],
         ['label' => 'Monitoring Ujian', 'route' => 'exam-monitor.index'],
     ],
 ])
-<div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
-        <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
-            <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">Monitoring Ujian</h1>
-            <span class="text-muted fs-7 pt-1">
-                @if(auth()->user()->hasRole('Guru'))
-                    Sesi dari ujian yang Anda ampu.
-                @else
-                    Seluruh sesi ujian di sekolah Anda.
-                @endif
-            </span>
-        </div>
-    </div>
-</div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-fluid px-4 px-lg-6">

@@ -1,9 +1,27 @@
 @extends('backend.layout.app')
-@section('title', 'Pantau: ' . $session->exam->title)
+@section('title', $session->exam->title)
 
 @section('content')
+@php
+    // Prefiks 'Pantau: ' dilepas dari judul: breadcrumb di bawahnya sudah
+    // menulis 'Pantau Ujian', jadi kata itu terbaca dua kali.
+    //
+    // Penebalan pada nama jadwal juga dilepas. Parameter 'catatan' dirender
+    // ESCAPED, dan teks ini memuat nama sesi/kelas yang diisi guru — memberi
+    // slot HTML mentah untuk data seperti itu berarti membuka jalan XSS.
+    //
+    // Catatan: komentar TIDAK boleh ditulis di dalam argumen array @include.
+    // Blade merapatkan ekspresi direktif, jadi '//' ikut memakan ']' penutup
+    // dan halamannya gagal dikompilasi.
+    $catatan = 'Jadwal ' . $session->name . ' · '
+        . ($session->classRoom->name ?? 'peserta pilihan') . ' · '
+        . \Carbon\Carbon::parse($session->starts_at)->translatedFormat('d M Y') . ' – '
+        . \Carbon\Carbon::parse($session->ends_at)->translatedFormat('d M Y');
+@endphp
 @include('partials.kop-halaman', [
-    'judul' => 'Pantau: ' . $session->exam->title,
+    'judul' => $session->exam->title,
+    'catatan' => $catatan,
+    'aksi' => '<a href="' . route('exam-monitor.index') . '" class="btn btn-sm btn-light">Kembali</a>',
     'jejak' => [
         ['label' => 'Akademik'],
         ['label' => 'Ujian / CBT', 'route' => 'exams.index'],
@@ -11,19 +29,6 @@
         ['label' => 'Pantau Ujian'],
     ],
 ])
-<div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
-        <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
-            <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">{{ $session->exam->title }}</h1>
-            <span class="text-muted fs-7 pt-1">
-                Jadwal <b>{{ $session->name }}</b> ·
-                {{ $session->classRoom->name ?? 'peserta pilihan' }} ·
-                {{ \Carbon\Carbon::parse($session->starts_at)->translatedFormat('d M Y') }} – {{ \Carbon\Carbon::parse($session->ends_at)->translatedFormat('d M Y') }}
-            </span>
-        </div>
-        <a href="{{ route('exam-monitor.index') }}" class="btn btn-sm btn-light">Kembali</a>
-    </div>
-</div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-fluid px-4 px-lg-6">

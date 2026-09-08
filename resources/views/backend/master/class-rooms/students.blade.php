@@ -2,23 +2,18 @@
 @section('title', 'Siswa Kelas ' . $classRoom->name)
 
 @section('content')
+{{-- Parameter aksi dirender kop sebagai HTML mentah, jadi stringnya dirakit
+     dari route() saja: jangan pernah menyisipkan data yang diisi pengguna. --}}
 @include('partials.kop-halaman', [
     'judul' => 'Siswa Kelas ' . $classRoom->name,
+    'catatan' => $classRoom->school->name ?? '-',
+    'aksi' => '<a href="' . route('class-rooms.index') . '" class="btn btn-sm btn-light">Kembali</a>',
     'jejak' => [
         ['label' => 'Data Master'],
         ['label' => 'Rombel / Kelas', 'route' => 'class-rooms.index'],
         ['label' => 'Siswa Kelas'],
     ],
 ])
-<div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-    <div class="app-container container-fluid px-4 px-lg-6 d-flex flex-stack">
-        <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
-            <h1 class="page-heading text-gray-900 fw-bold fs-3 my-0">Siswa Kelas {{ $classRoom->name }}</h1>
-            <span class="text-muted fs-7 pt-1">{{ $classRoom->school->name ?? '-' }}</span>
-        </div>
-        <a href="{{ route('class-rooms.index') }}" class="btn btn-sm btn-light">Kembali</a>
-    </div>
-</div>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-fluid px-4 px-lg-6">
