@@ -85,6 +85,14 @@ class DashboardAdminController extends Controller
             })->with(['teachingAssignment.teacher.user', 'teachingAssignment.subject'])->latest()->take(5)->get();
         }
 
-        return view('backend.dashboard.index', compact('stats', 'recentData'));
+        // Ringkasan khusus CBT — angka dari database, dibatasi ke sekolah
+        // pengguna (dan untuk Guru, ke ujian yang ia ampu). Lihat RingkasanCbt.
+        $cbt = null;
+        if ($user->hasRole(['Developer', 'Superadmin', 'superadmin', 'Admin', 'admin', 'Kepala Sekolah', 'Guru'])) {
+            $cbt = app(\App\Services\RingkasanCbt::class)
+                ->untukPengelola($user, \App\Support\SchoolScope::id());
+        }
+
+        return view('backend.dashboard.index', compact('stats', 'recentData', 'cbt'));
     }
 }

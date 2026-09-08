@@ -35,6 +35,14 @@
 </div>
 <!--end::Toolbar-->
 
+
+{{-- Ringkasan CBT diletakkan paling atas: itu inti aplikasi ini, dan yang
+     dicari orang saat membuka dashboard. --}}
+<div id="kt_app_content" class="app-content flex-column-fluid">
+    <div class="app-container container-xxl">
+        @include('backend.dashboard._cbt')
+    </div>
+</div>
 <div class="app-content flex-column-fluid">
     <div class="app-container container-xxl">
         <!-- Dashboard Header -->

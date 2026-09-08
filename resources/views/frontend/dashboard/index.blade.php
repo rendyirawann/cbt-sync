@@ -2,6 +2,11 @@
 @section('title', 'Portal Siswa - Dashboard')
 
 @section('content')
+
+{{-- Ringkasan CBT di paling atas — bagian yang paling dicari siswa. --}}
+<div class="container-xxl pt-5">
+    @include('frontend.dashboard._cbt')
+</div>
 <style>
     /* Custom Styling for Student Portal */
     .student-welcome-card {

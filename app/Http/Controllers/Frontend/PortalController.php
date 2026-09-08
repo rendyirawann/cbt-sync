@@ -214,6 +214,10 @@ class PortalController extends Controller
             ->with(['teachingAssignment.subject', 'teachingAssignment.teacher.user'])
             ->first();
 
-        return view('frontend.dashboard.index', compact('stats', 'recentModules', 'announcements', 'activeLiveClass'));
+        // Ringkasan CBT siswa: yang siap dikerjakan, sedang dikerjakan, jadwal
+        // berikutnya, dan nilai yang sudah keluar.
+        $cbt = $student ? app(\App\Services\RingkasanCbt::class)->untukSiswa($student) : null;
+
+        return view('frontend.dashboard.index', compact('stats', 'recentModules', 'announcements', 'activeLiveClass', 'cbt'));
     }
 }

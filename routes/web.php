@@ -271,6 +271,7 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::middleware('can:view_help')->group(function () {
         // Didaftarkan SEBELUM resource: kalau tidak, /admin/log-activity/{id}/detail
     // tetap jalan, tapi menempatkannya di sini membuat urutannya jelas.
+    Route::post('/admin/log-activity/bersihkan', [\App\Http\Controllers\Backend\Help\LogActivityController::class, 'bersihkan'])->name('log-activity.bersihkan');
     Route::get('/admin/log-activity/{id}/detail', [\App\Http\Controllers\Backend\Help\LogActivityController::class, 'detail'])->name('log-activity.detail');
     Route::resource('/admin/log-activity', LogActivityController::class);
         Route::get('/admin/get-datalogactivity', [LogActivityController::class, 'getDataLogActivity'])->name('get-datalogactivity');

@@ -126,6 +126,50 @@ class LogActivityController extends Controller implements HasMiddleware
     }
 
     /**
+     * Kosongkan seluruh Log Aktivitas.
+     *
+     * Catatan login/logout TIDAK berada di tabel terpisah — "My Login Session"
+     * membaca activity_log yang sama dengan log_name 'login'/'logout'. Jadi satu
+     * pembersihan ini mencakup keduanya, dan tidak ada yang tertinggal.
+     *
+     * Dibatasi ke PENGAWAS (Superadmin & Developer): isi log ini adalah jejak
+     * audit, dan kemampuan menghapusnya sendiri termasuk kemampuan menutupi
+     * jejak. Dihapus dengan truncate karena jumlahnya bisa ratusan ribu baris
+     * dan DELETE baris-per-baris akan lama sekali; tabelnya tidak dirujuk
+     * foreign key mana pun sehingga truncate aman.
+     */
+    public function bersihkan(Request $request)
+    {
+        if (! \App\Support\SiklusUjian::pengawas()) {
+            return redirect()->back()->with('error',
+                'Hanya Superadmin atau Developer yang boleh membersihkan Log Aktivitas.');
+        }
+
+        $jumlah = Activity::count();
+        $rincian = Activity::query()
+            ->selectRaw('log_name, count(*) as n')
+            ->groupBy('log_name')
+            ->pluck('n', 'log_name');
+
+        \Illuminate\Support\Facades\DB::table('activity_log')->truncate();
+
+        // Dicatat SESUDAH truncate supaya jejak pembersihannya sendiri tidak
+        // ikut terhapus — kalau tidak, tidak ada bukti siapa yang mengosongkan.
+        activity('logactivity')
+            ->causedBy($request->user())
+            ->withProperties([
+                'jumlah_dihapus' => $jumlah,
+                'rincian' => $rincian,
+                'ip' => $request->ip(),
+            ])
+            ->log('Log Aktivitas dibersihkan');
+
+        return redirect()->route('log-activity.index')->with('success',
+            'Log Aktivitas dibersihkan: ' . number_format($jumlah)
+            . ' catatan dihapus (termasuk riwayat login/logout).');
+    }
+
+    /**
      * Rincian satu log untuk modal: menyandingkan nilai SEBELUM & SESUDAH dan
      * menandai kolom yang berubah.
      *

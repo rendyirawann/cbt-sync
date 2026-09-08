@@ -89,6 +89,17 @@
                                 <!--begin::Toolbar-->
                                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                                     <!--begin::Reload Data-->
+                                    @if(\App\Support\SiklusUjian::pengawas())
+                                        {{-- Khusus Superadmin & Developer: mengosongkan jejak audit
+                                             termasuk kemampuan menutupi jejak, jadi tidak dibuka
+                                             untuk Admin/Guru. --}}
+                                        <form action="{{ route('log-activity.bersihkan') }}" method="POST" class="d-inline" id="formBersihkanLog">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-light-danger me-3" id="btnBersihkanLog">
+                                                <i class="ki-outline ki-trash fs-5"></i> Bersihkan Log
+                                            </button>
+                                        </form>
+                                    @endif
                                     <button type="button" class="btn btn-sm btn-primary me-3" id="refresh-table-btn">
                                         <span class="indicator-label">
                                             <i class="ki-outline ki-arrows-loop  me-2"></i> Refresh Table
@@ -312,6 +323,36 @@
                             : 'Gagal memuat rincian (' + (x.status || 'jaringan') + ').')
                         + '</div>';
                 });
+        });
+    });
+</script>
+@endpush
+
+@push('scripts')
+<script>
+    // Konfirmasi pembersihan log: tindakan ini tidak bisa dibatalkan dan
+    // menghapus jejak SELURUH pengguna, jadi jumlahnya disebut lebih dulu.
+    $(function () {
+        $('#btnBersihkanLog').on('click', function (e) {
+            e.preventDefault();
+            var form = document.getElementById('formBersihkanLog');
+
+            Swal.fire({
+                title: 'Bersihkan seluruh Log Aktivitas?',
+                html: '<div class="text-start fs-7">'
+                    + 'Seluruh catatan aktivitas <b>semua pengguna</b> akan dihapus, '
+                    + 'termasuk riwayat <b>login/logout</b> yang tampil di My Login Session — '
+                    + 'keduanya tersimpan di tabel yang sama.'
+                    + '<div class="text-muted mt-2">Tindakan ini tidak bisa dibatalkan. '
+                    + 'Pembersihannya sendiri tetap dicatat sebagai satu entri baru.</div>'
+                    + '</div>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, bersihkan',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then(function (r) { if (r.isConfirmed) form.submit(); });
         });
     });
 </script>
