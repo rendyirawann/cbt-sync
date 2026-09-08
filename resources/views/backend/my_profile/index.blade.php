@@ -385,7 +385,12 @@
 
                     $.ajax({
                         url: "{{ url('admin') }}/my-profile/" + id,
-                        type: "POST", // Menggunakan POST tapi @method('PUT') dari form
+                        // Tanda at pada nama direktif Blade DIHILANGKAN dengan sengaja:
+                        // komentar JS bukan komentar bagi Blade, jadi "@ method('PUT')"
+                        // yang ditulis utuh akan ikut dikompilasi menjadi
+                        // method_field('PUT') dan menyuntikkan <input hidden> ke dalam
+                        // blok script ini.
+                        type: "POST", // POST, sementara method PUT dikirim dari form
                         data: $(this).serialize(),
                         success: function(res) {
                             submitBtn.removeAttribute("data-kt-indicator");

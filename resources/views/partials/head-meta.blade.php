@@ -88,8 +88,10 @@
      "Unclosed '[' ... does not match ')'".
 
      Perhatikan juga: nama direktif Blade JANGAN ditulis lengkap dengan tanda
-     at di dalam komentar seperti ini — Blade tetap mengompilasinya walau ada
-     di dalam {{-- --}}, dan berkas ini pernah gagal parse karena itu. --}}
+     at di dalam komentar mana pun — Blade tetap mengompilasinya, dan berkas
+     ini pernah gagal parse karena itu. Penanda pembuka/penutup komentar Blade
+     juga jangan ditulis literal di dalam komentar: penutupnya akan menutup
+     komentar lebih awal dan sisa kalimatnya bocor terlihat di halaman. --}}
 @if($terindeks)
     @php
         $ldJson = json_encode([
