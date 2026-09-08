@@ -74,7 +74,10 @@
                             </div>
                             <div class="collapse mt-4" id="grupRombel{{ $loop->index }}">
                                 <div class="table-responsive">
-                                    <table class="table table-row-dashed align-middle gy-2">
+                                    {{-- Satu tabel per rombel; DataTables dipasang ke semuanya
+                                         lewat kelas .tabel-rombel. Kolom nomor & Aksi tidak
+                                         diurutkan/dicari. --}}
+                                    <table class="table table-row-dashed align-middle gy-2 tabel-rombel">
                                         <thead>
                                             <tr class="fw-bold text-muted fs-8 text-uppercase">
                                                 <th style="width:46px">#</th><th>Siswa</th><th>NISN</th>
@@ -171,6 +174,45 @@
 
 
 @push('scripts')
+{{-- Bundel DataTables TIDAK ada di plugins.bundle.js; halaman yang memakainya
+     harus memuatnya sendiri. Tanpa ini $().DataTable undefined, pemanggilannya
+     melempar galat, dan SELURUH skrip di bawahnya berhenti jalan. --}}
+<script src="{{ URL::to('assets/plugins/custom/datatables/datatables.bundle.js') }}"></script>
+<script>
+    $(function () {
+        // Daftar anggota rombel bisa puluhan siswa per kelas dan halaman ini
+        // memuat SEMUA rombel sekaligus, jadi tanpa paging halamannya memanjang.
+        $('.tabel-rombel').each(function () {
+            var t = $(this);
+            if (t.find('tbody tr').length < 8) return;   // rombel kecil tidak perlu paging
+            t.DataTable({
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Semua']],
+                order: [[1, 'asc']],
+                columnDefs: [{ orderable: false, searchable: false, targets: [0, -1] }],
+                language: {
+                    search: 'Cari:',
+                    searchPlaceholder: 'nama / NISN',
+                    lengthMenu: 'Tampilkan _MENU_',
+                    info: '_START_–_END_ dari _TOTAL_ siswa',
+                    infoEmpty: 'Tidak ada siswa',
+                    infoFiltered: '(disaring dari _MAX_)',
+                    zeroRecords: 'Tidak ada siswa yang cocok',
+                    paginate: { first: 'Awal', last: 'Akhir', next: 'Berikutnya', previous: 'Sebelumnya' }
+                },
+                // Nomor urut dijaga tetap 1..n mengikuti halaman yang tampil,
+                // bukan angka asli baris — kalau tidak, urutannya membingungkan
+                // setelah pencarian.
+                drawCallback: function () {
+                    var mulai = this.api().page.info().start;
+                    this.api().column(0, { page: 'current' }).nodes().each(function (sel, i) {
+                        sel.innerHTML = mulai + i + 1;
+                    });
+                }
+            });
+        });
+    });
+</script>
 <script>
     // Kartu ujian: jelaskan efek penerbitan password sebelum mencetak.
     document.querySelectorAll('.confirm-kartu').forEach(function (b) {

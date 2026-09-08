@@ -344,6 +344,14 @@
 </form>
 
 @push('scripts')
+{{-- DataTables TIDAK ikut di plugins.bundle.js (sudah diperiksa: 0 kemunculan),
+     jadi halaman yang memakainya harus memuat bundelnya sendiri — pola yang
+     sama dipakai User Management, Role, dan Log Aktivitas.
+
+     Tanpa baris ini, $().DataTable bernilai undefined, pemanggilannya melempar
+     galat, dan SELURUH skrip di bawahnya mati — itulah sebabnya tabel tampil
+     memanjang tanpa halaman DAN centang "pilih semua" tidak bereaksi. --}}
+<script src="{{ URL::to('assets/plugins/custom/datatables/datatables.bundle.js') }}"></script>
 <script>
     $(function () {
         var bolehHapus = @json(\App\Support\SiklusUjian::bolehHapusUjianDikerjakan());

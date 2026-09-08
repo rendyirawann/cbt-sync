@@ -210,6 +210,10 @@
 </div>
 
 @push('scripts')
+{{-- Bundel DataTables TIDAK ada di plugins.bundle.js; halaman yang memakainya
+     harus memuatnya sendiri. Tanpa ini $().DataTable undefined, pemanggilannya
+     melempar galat, dan SELURUH skrip di bawahnya berhenti jalan. --}}
+<script src="{{ URL::to('assets/plugins/custom/datatables/datatables.bundle.js') }}"></script>
 <script>
     // DataTable Initialization
     $('#kt_attendance_history_table').DataTable({
