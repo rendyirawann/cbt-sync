@@ -51,13 +51,35 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($identitas . '|' . $request->ip());
         });
 
-        // Share settings globally to all views
-        View::composer('*', function ($view) {
+        // Setting dibagikan ke SEMUA view.
+        //
+        // Composer '*' berjalan untuk setiap view yang dirender — satu halaman
+        // backend merender belasan partial. Dulu Schema::hasTable('settings')
+        // ikut dipanggil setiap kali, dan itu BUKAN pemeriksaan gratis: tiap
+        // panggilan menembak katalog PostgreSQL (pg_class/pg_namespace).
+        // Terukur 10 query katalog per halaman, hanya untuk menanyakan hal yang
+        // jawabannya tidak mungkin berubah di tengah permintaan.
+        //
+        // Sekarang jawabannya diingat dalam satu variabel per proses. Di Octane
+        // proses hidup lama, jadi pemeriksaan itu praktis hanya sekali seumur
+        // worker. Nilai settingnya sendiri sudah di-cache oleh Setting::allCached().
+        $adaTabelSetting = null;
+        $isiSetting = null;
+
+        View::composer('*', function ($view) use (&$adaTabelSetting, &$isiSetting) {
             try {
-                if (Schema::hasTable('settings')) {
-                    $appSettings = \App\Models\Setting::allCached();
-                    $view->with('appSettings', $appSettings);
+                if ($adaTabelSetting === null) {
+                    $adaTabelSetting = Schema::hasTable('settings');
                 }
+                if (! $adaTabelSetting) {
+                    $view->with('appSettings', []);
+
+                    return;
+                }
+                if ($isiSetting === null) {
+                    $isiSetting = \App\Models\Setting::allCached();
+                }
+                $view->with('appSettings', $isiSetting);
             } catch (\Exception $e) {
                 $view->with('appSettings', []);
             }

@@ -34,7 +34,7 @@
             </div>
             <div class="card-body pt-0">
                 <div class="table-responsive">
-                    <table class="table table-row-bordered table-row-dashed gy-4 align-middle fw-bold">
+                    <table id="tabelSiswa" class="table table-row-bordered table-row-dashed gy-4 align-middle fw-bold">
                         <thead class="fs-7 text-gray-400 text-uppercase">
                             <tr>
                                 @if(\App\Support\SiklusUjian::bolehHapusUjianDikerjakan())
@@ -444,7 +444,36 @@
 
 @push('scripts')
 <script>
-    (function () {
+    $(function () {
+        var bolehHapus = @json(\App\Support\SiklusUjian::bolehHapusUjianDikerjakan());
+
+        // Kolom yang TIDAK boleh diurutkan: kolom centang (bila ada) dan kolom Aksi.
+        var takUrut = bolehHapus ? [0, -1] : [-1];
+
+        var tabel = $('#tabelSiswa').DataTable({
+            // Sisi-klien: seluruh baris sudah ada di halaman, jadi pencarian dan
+            // pindah halaman terjadi tanpa permintaan ke server. Cukup untuk
+            // ukuran satu sekolah; kalau nanti datanya sampai puluhan ribu,
+            // barulah pindah ke serverSide seperti User Management.
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+            order: bolehHapus ? [[2, 'asc']] : [[1, 'asc']],   // urut nama
+            columnDefs: [{ orderable: false, searchable: false, targets: takUrut }],
+            language: {
+                search: 'Cari siswa:',
+                searchPlaceholder: 'nama / NISN / username / email',
+                lengthMenu: 'Tampilkan _MENU_ baris',
+                info: 'Menampilkan _START_–_END_ dari _TOTAL_ siswa',
+                infoEmpty: 'Tidak ada siswa',
+                infoFiltered: '(disaring dari _MAX_ total)',
+                zeroRecords: 'Tidak ada siswa yang cocok dengan pencarian',
+                emptyTable: 'Belum ada data siswa',
+                paginate: { first: 'Awal', last: 'Akhir', next: 'Berikutnya', previous: 'Sebelumnya' }
+            }
+        });
+
+        if (!bolehHapus) return;
+
         var semua = document.getElementById('centangSemua');
         var tombol = document.getElementById('btnHapusTerpilih');
         var badge = document.getElementById('jmlTerpilih');
@@ -452,40 +481,69 @@
         var wadah = document.getElementById('wadahIdTerpilih');
         if (!tombol || !form) return;
 
-        function kotak() { return Array.prototype.slice.call(document.querySelectorAll('.centang-siswa')); }
-        function terpilih() { return kotak().filter(function (c) { return c.checked; }); }
+        // Pilihan disimpan di Set, BUKAN dibaca dari DOM.
+        //
+        // DataTables mengeluarkan baris halaman lain dari DOM, jadi
+        // querySelectorAll('.centang-siswa') hanya melihat baris yang sedang
+        // tampil — mencentang 30 siswa lalu pindah halaman akan menghapus
+        // pilihannya tanpa terlihat. Set ini membuat pilihan bertahan.
+        var dipilih = new Set();
+        var namaDipilih = new Map();
+
+        function barisTersaring() {
+            // nodes() memuat SELURUH baris yang cocok dengan pencarian, termasuk
+            // yang tidak sedang tampil di halaman aktif.
+            return $(tabel.rows({ search: 'applied' }).nodes()).find('.centang-siswa').toArray();
+        }
 
         function segarkan() {
-            var n = terpilih().length;
-            badge.textContent = n;
-            tombol.classList.toggle('d-none', n === 0);
+            badge.textContent = dipilih.size;
+            tombol.classList.toggle('d-none', dipilih.size === 0);
+
+            var kotak = barisTersaring();
+            var tercentang = kotak.filter(function (c) { return dipilih.has(c.value); }).length;
             if (semua) {
-                var total = kotak().length;
-                semua.checked = total > 0 && n === total;
-                // Sebagian tercentang -> keadaan setengah, bukan kosong.
-                semua.indeterminate = n > 0 && n < total;
+                semua.checked = kotak.length > 0 && tercentang === kotak.length;
+                semua.indeterminate = tercentang > 0 && tercentang < kotak.length;
             }
         }
 
+        // Setiap kali tabel digambar ulang (cari / pindah halaman / urut),
+        // keadaan centang baris yang muncul dipulihkan dari Set.
+        tabel.on('draw', function () {
+            document.querySelectorAll('.centang-siswa').forEach(function (c) {
+                c.checked = dipilih.has(c.value);
+            });
+            segarkan();
+        });
+
+        document.addEventListener('change', function (e) {
+            var c = e.target;
+            if (!c || !c.classList || !c.classList.contains('centang-siswa')) return;
+            if (c.checked) { dipilih.add(c.value); namaDipilih.set(c.value, c.dataset.nama); }
+            else { dipilih.delete(c.value); }
+            segarkan();
+        });
+
         if (semua) {
             semua.addEventListener('change', function () {
-                kotak().forEach(function (c) { c.checked = semua.checked; });
+                barisTersaring().forEach(function (c) {
+                    if (semua.checked) { dipilih.add(c.value); namaDipilih.set(c.value, c.dataset.nama); }
+                    else { dipilih.delete(c.value); }
+                    c.checked = semua.checked;
+                });
                 segarkan();
             });
         }
-        document.addEventListener('change', function (e) {
-            if (e.target && e.target.classList.contains('centang-siswa')) segarkan();
-        });
 
         tombol.addEventListener('click', function () {
-            var pilih = terpilih();
-            if (!pilih.length) return;
-
-            var nama = pilih.slice(0, 5).map(function (c) { return c.dataset.nama; });
-            var sisa = pilih.length - nama.length;
+            if (!dipilih.size) return;
+            var ids = Array.from(dipilih);
+            var nama = ids.slice(0, 5).map(function (id) { return namaDipilih.get(id) || id; });
+            var sisa = ids.length - nama.length;
 
             Swal.fire({
-                title: 'Hapus ' + pilih.length + ' data siswa?',
+                title: 'Hapus ' + ids.length + ' data siswa?',
                 html: '<div class="text-start fs-7">'
                     + '<div class="mb-3">' + nama.map(function (n) { return '&bull; ' + n; }).join('<br>')
                     + (sisa > 0 ? '<br>&bull; <i>dan ' + sisa + ' siswa lainnya</i>' : '') + '</div>'
@@ -495,16 +553,16 @@
                     + '</div>',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'Ya, hapus ' + pilih.length + ' siswa',
+                confirmButtonText: 'Ya, hapus ' + ids.length + ' siswa',
                 cancelButtonText: 'Batal',
                 confirmButtonColor: '#d33',
                 reverseButtons: true
             }).then(function (r) {
                 if (!r.isConfirmed) return;
                 wadah.innerHTML = '';
-                pilih.forEach(function (c) {
+                ids.forEach(function (id) {
                     var i = document.createElement('input');
-                    i.type = 'hidden'; i.name = 'ids[]'; i.value = c.value;
+                    i.type = 'hidden'; i.name = 'ids[]'; i.value = id;
                     wadah.appendChild(i);
                 });
                 form.submit();
@@ -512,7 +570,7 @@
         });
 
         segarkan();
-    })();
+    });
 </script>
 @endpush
 @endif

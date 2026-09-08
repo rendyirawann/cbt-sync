@@ -68,14 +68,47 @@ trait ExcelMasterTemplate
             throw new \RuntimeException('Judul kolom tidak ditemukan pada lembar "Data".');
         }
 
-        // Peta: key kolom → indeks kolom di file (cocokkan berdasarkan label yang ternormalisasi).
+        // Peta: key kolom → indeks kolom di file.
+        //
+        // DUA TAHAP, dan urutannya penting. Dulu hanya str_contains, sehingga
+        // label pendek bisa menyambar kolom lain: "Nama" cocok dengan "Nama Ortu",
+        // "Email" cocok dengan "Email Ortu". Selama urutan kolomnya persis seperti
+        // template hal itu tidak terasa, tapi begitu pengguna memindah/menambah
+        // kolom, isi kolom bisa masuk ke field yang salah — dan itu muncul sebagai
+        // "data kosong" atau tertukar tanpa pesan galat apa pun.
         $header = $grid[$headerIdx];
         $map = [];
+        $terpakai = [];
+
+        // Tahap 1: kecocokan PENUH.
         foreach ($columns as $col) {
             $label = $norm($col['label']);
             foreach ($header as $j => $h) {
-                if (is_string($h) && str_contains($norm($h), $label)) {
+                if (isset($terpakai[$j]) || !is_string($h)) {
+                    continue;
+                }
+                if ($norm($h) === $label) {
                     $map[$col['key']] = $j;
+                    $terpakai[$j] = true;
+                    break;
+                }
+            }
+        }
+
+        // Tahap 2: sisanya baru dicocokkan sebagian, dan hanya ke kolom yang
+        // belum terpakai — supaya tidak merebut kolom milik label lain.
+        foreach ($columns as $col) {
+            if (isset($map[$col['key']])) {
+                continue;
+            }
+            $label = $norm($col['label']);
+            foreach ($header as $j => $h) {
+                if (isset($terpakai[$j]) || !is_string($h) || $norm($h) === '') {
+                    continue;
+                }
+                if (str_contains($norm($h), $label)) {
+                    $map[$col['key']] = $j;
+                    $terpakai[$j] = true;
                     break;
                 }
             }
@@ -99,7 +132,12 @@ trait ExcelMasterTemplate
         return $rows;
     }
 
-    protected function importSummary(int $imported, int $skipped, array $errors): \Illuminate\Http\RedirectResponse
+    /**
+     * $catatan: peringatan LUNAK — barisnya tetap masuk, tetapi ada kolom penting
+     * yang dibiarkan kosong. Ini yang membuat data terasa "kosong" setelah impor
+     * padahal tidak ada galat; sebelumnya sama sekali tidak dilaporkan.
+     */
+    protected function importSummary(int $imported, int $skipped, array $errors, array $catatan = []): \Illuminate\Http\RedirectResponse
     {
         if ($imported === 0 && $skipped === 0 && empty($errors)) {
             return back()->with('error', 'Tidak ada data pada lembar "Data" yang bisa diimpor.');
@@ -107,7 +145,15 @@ trait ExcelMasterTemplate
         $msg = "$imported data berhasil diimpor.";
         if ($skipped) $msg .= " $skipped dilewati (sudah ada).";
         if ($errors) $msg .= ' Gagal: ' . implode('; ', array_slice($errors, 0, 5)) . (count($errors) > 5 ? ' …' : '');
-        return back()->with($errors ? 'error' : 'success', $msg);
+
+        $r = back()->with($errors ? 'error' : 'success', $msg);
+
+        if ($catatan) {
+            $r = $r->with('warning', 'Perlu dilengkapi: ' . implode('; ', array_slice($catatan, 0, 6))
+                . (count($catatan) > 6 ? ' … (' . count($catatan) . ' baris)' : ''));
+        }
+
+        return $r;
     }
 
     /* ----------------------------- builder ----------------------------- */
@@ -124,18 +170,56 @@ trait ExcelMasterTemplate
         $s->getStyle('A1')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $s->getRowDimension(1)->setRowHeight(26);
 
+        // Petunjuk dipisah menjadi bagian-bagian. Bentuk lama berupa satu daftar
+        // bernomor panjang: kolom wajib dan opsional bercampur, sehingga orang
+        // tidak tahu mana yang benar-benar harus diisi dan mana yang boleh
+        // dilewati — itulah yang berujung pada data masuk tapi banyak kosong.
+        $wajib = array_values(array_filter($spec['columns'], fn ($c) => !empty($c['required'])));
+        $opsional = array_values(array_filter($spec['columns'], fn ($c) => empty($c['required'])));
+
+        $baris = function (array $col): string {
+            $opt = !empty($col['options']) ? '  [pilihan: ' . implode(' / ', $col['options']) . ']' : '';
+            $hint = !empty($col['hint']) ? '  — ' . $col['hint'] : '';
+
+            return $col['label'] . $opt . $hint;
+        };
+
         $lines = [['', '']];
-        $lines[] = ['1', 'Isi data pada lembar "Data". Lihat lembar "Contoh" sebagai panduan.'];
-        $lines[] = ['2', 'Yang diimpor HANYA lembar "Data". Baris kosong dilewati.'];
-        $n = 3;
-        foreach ($spec['columns'] as $col) {
-            $req = !empty($col['required']) ? ' (WAJIB)' : ' (opsional)';
-            $opt = !empty($col['options']) ? ' — pilihan: ' . implode('/', $col['options']) : '';
-            $hint = !empty($col['hint']) ? ' — ' . $col['hint'] : '';
-            $lines[] = [(string) $n++, $col['label'] . $req . $opt . $hint];
+        $lines[] = ['1', 'Isi data pada lembar "Data" saja. Lembar "Contoh" hanya panduan dan TIDAK diimpor.'];
+        $lines[] = ['2', 'Jangan mengubah/menghapus/memindahkan baris judul kolom. Menambah kolom sendiri tidak apa-apa, kolom itu diabaikan.'];
+        $lines[] = ['3', 'Baris yang seluruh selnya kosong dilewati. Isi mulai baris ke-3.'];
+        $lines[] = ['4', 'Sel bertanda * dan berwarna ungu = WAJIB. Baris yang kolom wajibnya kosong akan GAGAL dan dilaporkan nomor barisnya.'];
+
+        $lines[] = ['', ''];
+        $lines[] = ['A.', 'KOLOM WAJIB — baris ditolak bila ini kosong'];
+        foreach ($wajib as $col) {
+            $lines[] = ['*', $baris($col)];
         }
-        foreach (($spec['guide'] ?? []) as $g) {
-            $lines[] = ['•', $g];
+
+        $lines[] = ['', ''];
+        $lines[] = ['B.', 'KOLOM OPSIONAL — baris tetap masuk, tetapi datanya jadi kosong di aplikasi'];
+        foreach ($opsional as $col) {
+            $lines[] = ['-', $baris($col)];
+        }
+
+        if (!empty($spec['guide'])) {
+            $lines[] = ['', ''];
+            $lines[] = ['C.', 'CATATAN PENTING'];
+            foreach ($spec['guide'] as $gitem) {
+                $lines[] = ['•', $gitem];
+            }
+        }
+
+        $lines[] = ['', ''];
+        $lines[] = ['D.', 'YANG SERING BIKIN DATA KOSONG / GAGAL'];
+        foreach ([
+            'Angka berawalan 0 (NISN, No. HP) — kolomnya sudah diatur bertipe TEKS. Jangan ubah formatnya, kalau tidak angka 0 di depan hilang.',
+            'Tanggal — tulis persis dd/mm/yyyy, mis. 17/08/2010. Bila Excel mengubahnya jadi tanggal berformat lain, kolomnya jadi tidak terbaca dan berakhir kosong.',
+            'Kolom berdropdown — pilih dari daftar, jangan diketik manual. Nama yang tidak sama persis akan diabaikan tanpa peringatan.',
+            'Menyalin-tempel dari Word/web sering menyertakan spasi tersembunyi. Tempel dengan Paste Special > Values.',
+            'Satu baris = satu data. Jangan menggabungkan sel (merge) di lembar "Data".',
+        ] as $tips) {
+            $lines[] = ['!', $tips];
         }
 
         $r = 3;
@@ -166,6 +250,13 @@ trait ExcelMasterTemplate
             $label = $col['label'] . (!empty($col['required']) ? ' *' : '');
             $s->setCellValue("{$letter}2", $label);
             $s->getColumnDimension($letter)->setWidth($col['width'] ?? 20);
+
+            // Kolom WAJIB diberi warna berbeda supaya terlihat sekali lihat,
+            // tidak hanya bergantung pada tanda bintang.
+            if (!empty($col['required'])) {
+                $s->getStyle("{$letter}2")->getFill()->setFillType(Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FF7E22CE');
+            }
         }
         $s->getStyle("A2:{$lastCol}2")->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
         $s->getStyle("A2:{$lastCol}2")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF1E293B');
@@ -188,11 +279,33 @@ trait ExcelMasterTemplate
             ->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FFCBD5E1');
         $s->getStyle("A2:{$lastCol}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
 
+        // Kolom yang ditandai 'format' => 'text' dipaksa bertipe TEKS.
+        //
+        // Tanpa ini Excel "membetulkan" isinya sendiri: NISN 0012345678 kehilangan
+        // angka 0 di depan, nomor HP 081... jadi 8,1E+10, dan tanggal 17/08/2010
+        // diubah ke format tanggal lokal komputer (mis. 08/17/2010) sehingga
+        // terbaca sebagai bulan ke-17 lalu ditolak dan berakhir KOSONG.
+        foreach ($cols as $i => $col) {
+            if (($col['format'] ?? null) !== 'text') {
+                continue;
+            }
+            $letter = Coordinate::stringFromColumnIndex($i + 1);
+            $s->getStyle("{$letter}3:{$letter}{$lastRow}")
+                ->getNumberFormat()->setFormatCode('@');
+        }
+
         if ($isData) {
             foreach ($cols as $i => $col) {
                 if (!empty($col['options'])) {
                     $letter = Coordinate::stringFromColumnIndex($i + 1);
-                    $this->applyDropdown($s, $letter, $lastRow, '"' . implode(',', $col['options']) . '"');
+                    // Daftar pilihan panjang (mis. nama gelombang/kelas) tidak
+                    // dimasukkan sebagai rumus literal karena Excel membatasi
+                    // panjangnya; di atas 240 karakter dropdown-nya dilewati saja
+                    // agar berkasnya tidak rusak.
+                    $isiDaftar = implode(',', $col['options']);
+                    if (mb_strlen($isiDaftar) <= 240) {
+                        $this->applyDropdown($s, $letter, $lastRow, '"' . $isiDaftar . '"');
+                    }
                 }
             }
             $s->setSelectedCell('A3');

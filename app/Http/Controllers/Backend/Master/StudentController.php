@@ -297,11 +297,28 @@ class StudentController extends Controller
         // Kolom Gelombang di Excel diisi NAMA gelombang; dipetakan ke id di sini.
         $gelombang = \App\Models\Wave::pluck('id', 'name')
             ->mapWithKeys(fn ($id, $nama) => [strtolower(trim($nama)) => $id])->all();
-        $imported = 0; $skipped = 0; $errors = [];
+        $imported = 0; $skipped = 0; $errors = []; $catatan = [];
+
+        // Kolom yang tidak wajib tapi berdampak nyata bila kosong: tanpa ini,
+        // barisnya tetap masuk dan pengguna baru sadar ada yang kosong setelah
+        // melihat tabel atau mencetak kartu ujian.
+        $penting = [
+            'nisn' => 'NISN', 'birth_place' => 'Tempat Lahir', 'birth_date' => 'Tanggal Lahir',
+            'gender' => 'Gender', 'proctor_id' => 'ID Proktor', 'room' => 'Ruang', 'wave' => 'Gelombang',
+        ];
+
         foreach ($rows as $row) {
             $line = $row['_row']; unset($row['_row']);
             $v = Validator::make($row, $rules, $this->idMessages(), $labels);
             if ($v->fails()) { $errors[] = "Baris $line: " . $v->errors()->first(); continue; }
+
+            $kosong = [];
+            foreach ($penting as $key => $label) {
+                if (trim((string) ($row[$key] ?? '')) === '') { $kosong[] = $label; }
+            }
+            if ($kosong) {
+                $catatan[] = "baris $line (" . implode(', ', $kosong) . ')';
+            }
             if (User::where('email', $row['email'])->exists()) { $skipped++; continue; }
             $school = $sid ? School::find($sid) : School::where('name', $row['school'])->first();
             if (!$school) { $errors[] = "Baris $line: Sekolah \"{$row['school']}\" tidak ditemukan."; continue; }
@@ -360,7 +377,7 @@ class StudentController extends Controller
                 $imported++;
             } catch (\Throwable $e) { $errors[] = "Baris $line: gagal disimpan."; }
         }
-        return $this->importSummary($imported, $skipped, $errors);
+        return $this->importSummary($imported, $skipped, $errors, $catatan);
     }
 
     /**
@@ -385,37 +402,47 @@ class StudentController extends Controller
 
     private function spec(): array
     {
+        // Dropdown diisi dari data yang BENAR-BENAR ada, supaya pengguna tidak
+        // perlu mengingat/menebak ejaannya. Nama yang tidak sama persis diabaikan
+        // oleh importer, dan itulah salah satu sebab kolom berakhir kosong.
+        $sid = \App\Support\SchoolScope::id();
+        $pilihanSekolah = School::when($sid, fn ($q) => $q->where('id', $sid))
+            ->orderBy('name')->pluck('name')->all();
+        $pilihanKelas = ClassRoom::when($sid, fn ($q) => $q->where('school_id', $sid))
+            ->orderBy('name')->pluck('name')->unique()->values()->all();
+        $pilihanGelombang = \App\Models\Wave::where('is_active', true)->terurut()->pluck('name')->all();
+
         return [
             'title' => 'DATA SISWA',
             'file' => 'Template_Data_Siswa.xlsx',
             'guide' => [
-                'Email harus unik (jadi akun login siswa). Email yang sudah ada dilewati.',
-                'Password kosong = dibuatkan ACAK bergaya ANBK (mis. 892777*) dan tercetak di Kartu Ujian.',
-                'Nama Sekolah harus sudah terdaftar. Kolom Kelas opsional (isi nama kelas untuk langsung memasukkan siswa ke rombel tahun ajaran aktif).',
-                'Gender diisi L atau P.',
-                'Username kosong = otomatis memakai NISN (atau email bila NISN kosong). Username harus unik.',
-                'Tanggal Lahir format dd/mm/yyyy, mis. 17/08/2010.',
-                'Gelombang diisi NAMA gelombang yang sudah ada di Master Gelombang, mis. "Gelombang 1". Nama yang tidak dikenali diabaikan.',
+                'Email jadi akun login siswa dan harus unik. Baris dengan email yang sudah terdaftar DILEWATI (tidak menimpa data lama).',
+                'Password boleh dikosongkan — sistem membuat sandi ACAK bergaya ANBK (mis. 892777*), dan sandi itulah yang tercetak di Kartu Ujian serta dipakai siswa untuk login.',
+                'Username kosong = otomatis memakai NISN (atau email bila NISN juga kosong). Harus unik antar seluruh akun.',
+                'Nama Sekolah harus sudah terdaftar lebih dulu di Data Master > Data Sekolah. Untuk Admin sekolah, kolom ini boleh dikosongkan — otomatis memakai sekolahnya sendiri.',
+                'Kelas: isi nama rombel yang sudah ada untuk langsung memasukkan siswa ke rombel tahun ajaran aktif. Nama yang tidak dikenali membuat siswa masuk TANPA rombel.',
+                'ID Proktor & Ruang dipakai pada Kartu Ujian dan Daftar Hadir. Kosong berarti kolom itu ikut kosong di lembar cetak.',
+                'Gelombang harus SAMA PERSIS dengan nama di Master Gelombang — pakai dropdown yang tersedia. Nama yang tidak dikenali diabaikan (siswa masuk tanpa gelombang).',
             ],
             'columns' => [
                 ['key' => 'name', 'label' => 'Nama', 'required' => true, 'width' => 28],
                 ['key' => 'email', 'label' => 'Email', 'required' => true, 'width' => 26, 'hint' => 'untuk login'],
-                ['key' => 'password', 'label' => 'Password', 'width' => 16, 'hint' => 'kosong = siswa12345'],
-                ['key' => 'username', 'label' => 'Username', 'width' => 18, 'hint' => 'kosong = NISN'],
-                ['key' => 'nisn', 'label' => 'NISN', 'width' => 18],
-                ['key' => 'school', 'label' => 'Nama Sekolah', 'required' => true, 'width' => 30, 'hint' => 'harus sudah ada'],
-                ['key' => 'class', 'label' => 'Kelas', 'width' => 16, 'hint' => 'opsional (nama kelas)'],
+                ['key' => 'password', 'label' => 'Password', 'width' => 16, 'format' => 'text', 'hint' => 'kosongkan = acak bergaya ANBK'],
+                ['key' => 'username', 'label' => 'Username', 'width' => 18, 'format' => 'text', 'hint' => 'kosongkan = memakai NISN'],
+                ['key' => 'nisn', 'label' => 'NISN', 'width' => 18, 'format' => 'text', 'hint' => 'angka 0 di depan dipertahankan'],
+                ['key' => 'school', 'label' => 'Nama Sekolah', 'required' => true, 'width' => 30, 'options' => $pilihanSekolah, 'hint' => 'harus sudah terdaftar'],
+                ['key' => 'class', 'label' => 'Kelas', 'width' => 16, 'options' => $pilihanKelas, 'hint' => 'nama rombel yang sudah ada'],
                 ['key' => 'gender', 'label' => 'Gender', 'width' => 10, 'options' => ['L', 'P']],
-                ['key' => 'birth_place', 'label' => 'Tempat Lahir', 'width' => 20],
-                ['key' => 'birth_date', 'label' => 'Tanggal Lahir', 'width' => 16, 'hint' => 'dd/mm/yyyy'],
-                ['key' => 'proctor_id', 'label' => 'ID Proktor', 'width' => 18],
-                ['key' => 'room', 'label' => 'Ruang', 'width' => 18],
-                ['key' => 'wave', 'label' => 'Gelombang', 'width' => 16, 'hint' => 'nama gelombang'],
-                ['key' => 'phone', 'label' => 'No. HP/WA', 'width' => 16],
+                ['key' => 'birth_place', 'label' => 'Tempat Lahir', 'width' => 20, 'hint' => 'kota/kabupaten kelahiran'],
+                ['key' => 'birth_date', 'label' => 'Tanggal Lahir', 'width' => 16, 'format' => 'text', 'hint' => 'tulis dd/mm/yyyy, mis. 17/08/2010'],
+                ['key' => 'proctor_id', 'label' => 'ID Proktor', 'width' => 18, 'format' => 'text', 'hint' => 'tercetak di kartu ujian & daftar hadir'],
+                ['key' => 'room', 'label' => 'Ruang', 'width' => 18, 'hint' => 'tercetak di kartu ujian & daftar hadir'],
+                ['key' => 'wave', 'label' => 'Gelombang', 'width' => 16, 'options' => $pilihanGelombang, 'hint' => 'pilih dari dropdown'],
+                ['key' => 'phone', 'label' => 'No. HP/WA', 'width' => 16, 'format' => 'text'],
                 ['key' => 'address', 'label' => 'Alamat', 'width' => 26],
                 ['key' => 'parent_name', 'label' => 'Nama Ortu', 'width' => 24],
                 ['key' => 'parent_email', 'label' => 'Email Ortu', 'width' => 24],
-                ['key' => 'parent_phone', 'label' => 'No. HP Ortu', 'width' => 18],
+                ['key' => 'parent_phone', 'label' => 'No. HP Ortu', 'width' => 18, 'format' => 'text'],
             ],
             'examples' => [
                 ['name' => 'Andi Pratama', 'email' => 'andi@siswa.id', 'password' => '', 'username' => 'andi.pratama', 'nisn' => '0012345678', 'school' => 'SMA Negeri 1 Medan', 'class' => 'X-IPA 1', 'gender' => 'L', 'birth_place' => 'Medan', 'birth_date' => '17/08/2010',
