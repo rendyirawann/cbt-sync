@@ -15,7 +15,6 @@
 @include('partials.math-editor')
 @php $isKepsek = auth()->user()->hasRole('Kepala Sekolah'); @endphp
 
-
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-fluid px-4 px-lg-6">
         @if($adaGerbang)
@@ -199,46 +198,3 @@
 </script>
 @endpush
 
-@unless($isKepsek)
-<div class="modal fade drawer-modal drawer-wide" id="modalUbahBank" tabindex="-1" data-bs-focus="false" aria-hidden="true">
-    <div class="modal-dialog"><div class="modal-content" id="wadahUbahBank">
-        <div class="modal-body py-15 text-center">
-            <span class="spinner-border text-primary"></span>
-            <div class="text-muted mt-3">Memuat soal…</div>
-        </div>
-    </div></div>
-</div>
-
-@push('scripts')
-<script>
-    $(function () {
-        var el = document.getElementById('modalUbahBank');
-        var wadah = document.getElementById('wadahUbahBank');
-        if (!el || !wadah) return;
-
-        var bs = null;
-        var kosong = wadah.innerHTML;
-
-        $(document).on('click', '.btn-ubah-bank', function () {
-            var id = this.dataset.id;
-            wadah.innerHTML = kosong;
-            bs = bs || new bootstrap.Modal(el);
-            bs.show();
-
-            $.get('{{ url('admin/question-banks') }}/' + id + '/edit')
-                .done(function (res) {
-                    wadah.innerHTML = res.html || '';
-                    // Pratinjau rumus KaTeX dipasang ulang untuk isi yang baru datang.
-                    if (window.rdevMathRefresh) { window.rdevMathRefresh(wadah); }
-                })
-                .fail(function (x) {
-                    wadah.innerHTML = '<div class="modal-body py-15 text-center text-danger">'
-                        + (x.status === 404 ? 'Soal ini tidak tersedia untuk Anda.'
-                                            : 'Gagal memuat soal (' + (x.status || 'jaringan') + ').')
-                        + '</div>';
-                });
-        });
-    });
-</script>
-@endpush
-@endunless

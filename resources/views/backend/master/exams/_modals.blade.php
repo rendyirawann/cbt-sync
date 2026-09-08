@@ -210,13 +210,17 @@
 
                 <div class="d-flex flex-column gap-2">
                     @foreach($targetPenugasan as $t)
-                        <label class="form-check form-check-custom {{ $t->sudah_ada ? 'opacity-50' : '' }}">
+                        {{-- opacity-50 dulu dipasang pada SELURUH label, jadi badge
+                             keterangannya ikut pudar dan hampir tak terbaca. Sekarang
+                             yang diredupkan hanya nama kelasnya; badge-nya dibuat
+                             pekat (badge-warning) supaya alasannya jelas terbaca. --}}
+                        <label class="form-check form-check-custom">
                             <input class="form-check-input" type="checkbox" name="assignment_ids[]"
                                    value="{{ $t->id }}" @disabled($t->sudah_ada)>
                             <span class="form-check-label ms-2">
-                                <b>{{ $t->classRoom->name ?? '-' }}</b>
+                                <b class="{{ $t->sudah_ada ? 'text-muted' : 'text-gray-900' }}">{{ $t->classRoom->name ?? '-' }}</b>
                                 @if($t->sudah_ada)
-                                    <span class="badge badge-light-warning ms-2">sudah ada ujian berjudul sama</span>
+                                    <span class="badge badge-warning fw-bold ms-2">sudah ada ujian berjudul sama</span>
                                 @endif
                             </span>
                         </label>
