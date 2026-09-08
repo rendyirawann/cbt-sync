@@ -81,7 +81,8 @@
                                 <td>{{ $item->user->email ?? '-' }}</td>
                                 <td>{{ $item->gender == 'L' ? 'Laki-laki' : 'Perempuan' }}</td>
                                 <td class="text-end">
-                                    <a href="#" class="btn btn-sm btn-light-primary btn-active-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</a>
+                                    <a href="#" class="btn btn-sm btn-light-primary btn-active-primary btn-edit-siswa"
+                                       data-id="{{ $item->id }}">Edit</a>
                                     <form action="{{ route('students.destroy', $item->id) }}" method="POST" class="d-inline">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-light-danger btn-active-danger confirm-delete" >Hapus</button>
@@ -247,116 +248,16 @@
     </div>
 </div>
 
-@foreach($students as $item)
-
-<!-- Edit Modal -->
-<div class="modal fade drawer-modal" id="editModal{{ $item->id }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ route('students.update', $item->id) }}" method="POST">
-                @csrf @method('PUT')
-                <div class="modal-header">
-                    <h2 class="fw-bold">Edit Siswa</h2>
-                    <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
-                        <i class="ki-outline ki-cross fs-1 text-dark"></i>
-                    </div>
-                </div>
-                <div class="modal-body">
-                    <h5 class="mb-4 text-primary">Informasi Akun (Login)</h5>
-                    <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Nama Lengkap</label><input type="text" name="name" class="form-control form-control-solid" value="{{ $item->user->name ?? '' }}" required></div>
-                    <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Email</label><input type="email" name="email" class="form-control form-control-solid" value="{{ $item->user->email ?? '' }}" required></div>
-                    <div class="fv-row mb-5">
-                        <label class="fs-6 fw-semibold mb-2">Username</label>
-                        <input type="text" name="username" class="form-control form-control-solid" value="{{ $item->user->username ?? '' }}" placeholder="kosongkan = otomatis memakai NISN">
-                        <div class="text-muted fs-7 mt-2">Huruf, angka, titik, garis bawah, dan tanda hubung. Harus unik antar seluruh akun.</div>
-                    </div>
-                    <div class="fv-row mb-7">
-                        <label class="fs-6 fw-semibold mb-2">Password (Kosongkan jika tidak diubah)</label>
-                        <input type="text" name="password" class="form-control form-control-solid" autocomplete="off">
-                        <div class="text-muted fs-7 mt-2">Mengisi kolom ini juga mengubah password pada <b>Kartu Ujian</b> siswa ini.</div>
-                    </div>
-                    
-                    <h5 class="mb-4 text-primary border-top pt-4">Profil Siswa</h5>
-                    <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Sekolah Asal</label>
-                        <select name="school_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal{{ $item->id }}" required>
-                            @foreach($schools as $s)
-                                <option value="{{ $s->id }}" {{ $item->school_id == $s->id ? 'selected' : '' }}>{{ $s->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="fv-row mb-5">
-                        <label class="required fs-6 fw-semibold mb-2">NISN</label>
-                        <input type="text" name="nisn" class="form-control form-control-solid" value="{{ $item->nisn }}" required>
-                    </div>
-                    <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Telepon</label><input type="text" name="phone" class="form-control form-control-solid" value="{{ $item->phone }}"></div>
-                    <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Jenis Kelamin</label>
-                        <select name="gender" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal{{ $item->id }}">
-                            <option value="L" {{ $item->gender == 'L' ? 'selected' : '' }}>Laki-laki</option>
-                            <option value="P" {{ $item->gender == 'P' ? 'selected' : '' }}>Perempuan</option>
-                        </select>
-                    </div>
-                    <div class="row mb-5">
-                        <div class="col-md-6">
-                            <label class="fs-6 fw-semibold mb-2">Tempat Lahir</label>
-                            <input type="text" name="birth_place" class="form-control form-control-solid" value="{{ $item->birth_place }}" placeholder="cth: Medan">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="fs-6 fw-semibold mb-2">Tanggal Lahir</label>
-                            <input type="date" name="birth_date" class="form-control form-control-solid" value="{{ $item->birth_date?->format('Y-m-d') }}" max="{{ now()->subDay()->format('Y-m-d') }}">
-                        </div>
-                    </div>
-                    <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Alamat</label><textarea name="address" class="form-control form-control-solid">{{ $item->address }}</textarea></div>
-
-                    <h5 class="mb-4 text-primary border-top pt-4">Pelaksanaan Ujian</h5>
-                    <div class="row mb-5">
-                        <div class="col-md-6">
-                            <label class="fs-6 fw-semibold mb-2">ID Proktor</label>
-                            <input type="text" name="proctor_id" class="form-control form-control-solid" value="{{ $item->proctor_id }}" placeholder="cth: U07030017-AY8U" maxlength="50">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="fs-6 fw-semibold mb-2">Ruang</label>
-                            <input type="text" name="room" class="form-control form-control-solid" value="{{ $item->room }}" placeholder="cth: ANBK-SMA-1" maxlength="100">
-                        </div>
-                    </div>
-                    <div class="fv-row mb-5">
-                        <label class="fs-6 fw-semibold mb-2">Gelombang</label>
-                        <select name="wave_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal{{ $item->id }}">
-                            <option value="">Belum ditentukan</option>
-                            @foreach($waves as $w)
-                                <option value="{{ $w->id }}" @selected($item->wave_id === $w->id)>{{ $w->name }}</option>
-                            @endforeach
-                            {{-- Gelombang yang sudah dinonaktifkan tetap ditampilkan bila siswa ini memakainya,
-                                 supaya menyimpan form tidak diam-diam menghapus gelombangnya. --}}
-                            @if($item->wave && !$waves->contains('id', $item->wave_id))
-                                <option value="{{ $item->wave_id }}" selected>{{ $item->wave->name }} (nonaktif)</option>
-                            @endif
-                        </select>
-                        <div class="text-muted fs-7 mt-2">Dicetak pada kartu login peserta.</div>
-                    </div>
-
-                    <h5 class="mb-4 text-primary border-top pt-4">Data Orang Tua / Wali</h5>
-                    <div class="fv-row mb-5"><label class="fs-6 fw-semibold mb-2">Nama Orang Tua</label><input type="text" name="parent_name" class="form-control form-control-solid" value="{{ $item->parent_name }}"></div>
-                    <div class="row mb-5">
-                        <div class="col-md-6">
-                            <label class="fs-6 fw-semibold mb-2">Email Orang Tua</label>
-                            <input type="email" name="parent_email" class="form-control form-control-solid" value="{{ $item->parent_email }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="fs-6 fw-semibold mb-2">No. WA Orang Tua</label>
-                            <input type="text" name="parent_phone" class="form-control form-control-solid" value="{{ $item->parent_phone }}">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer flex-center">
-                    <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
-                </div>
-            </form>
+{{-- Kerangka modal edit: isinya diambil lewat AJAX dari students.edit.
+     Satu kerangka untuk semua baris, bukan satu modal per siswa. --}}
+<div class="modal fade drawer-modal" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content" id="editModalWadah">
+        <div class="modal-body py-15 text-center">
+            <span class="spinner-border text-primary"></span>
+            <div class="text-muted mt-3">Memuat data siswa…</div>
         </div>
-    </div>
+    </div></div>
 </div>
-
-@endforeach
 
 
 @push('scripts')
@@ -574,3 +475,37 @@
 </script>
 @endpush
 @endif
+
+@push('scripts')
+<script>
+    // Isi form edit diambil saat dibutuhkan. Kerangka modalnya dibuka dulu supaya
+    // pengguna melihat pemuatan berjalan, bukan tombol yang seolah tidak bereaksi.
+    $(function () {
+        var modal = document.getElementById('editModal');
+        var wadah = document.getElementById('editModalWadah');
+        if (!modal || !wadah) return;
+
+        var bs = null;
+        var kosong = wadah.innerHTML;
+
+        $(document).on('click', '.btn-edit-siswa', function (e) {
+            e.preventDefault();
+            var id = this.dataset.id;
+            wadah.innerHTML = kosong;
+            bs = bs || new bootstrap.Modal(modal);
+            bs.show();
+
+            $.get('{{ url('admin/students') }}/' + id + '/edit')
+                .done(function (res) {
+                    wadah.innerHTML = res.html || '';
+                    // Modal ini juga memuat kolom sandi; alat "lihat sandi" dipasang
+                    // ulang oleh MutationObserver di partials/sandi-tools.
+                })
+                .fail(function (x) {
+                    wadah.innerHTML = '<div class="modal-body py-15 text-center text-danger">'
+                        + 'Gagal memuat data siswa (' + (x.status || 'jaringan') + ').</div>';
+                });
+        });
+    });
+</script>
+@endpush

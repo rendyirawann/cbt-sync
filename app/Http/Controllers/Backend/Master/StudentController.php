@@ -187,6 +187,29 @@ class StudentController extends Controller
     }
 
     
+    /**
+     * Form edit satu siswa, dikirim sebagai HTML untuk modal.
+     *
+     * Dulu form ini dirender untuk SETIAP siswa di halaman daftar — 124 siswa
+     * berarti 124 form dikirim sekaligus (HTML halaman 422 KB) padahal paling
+     * banyak satu yang dibuka. Sekarang diambil saat tombol Edit ditekan.
+     */
+    public function edit($id)
+    {
+        $sid = \App\Support\SchoolScope::id();
+
+        $item = Student::with(['user', 'school', 'wave'])
+            ->when($sid, fn ($q) => $q->where('school_id', $sid))   // siswa sekolah lain -> 404
+            ->findOrFail($id);
+
+        $schools = $sid ? School::where('id', $sid)->get() : School::all();
+        $waves = \App\Models\Wave::where('is_active', true)->terurut()->get();
+
+        return response()->json([
+            'html' => view('backend.master.students._form-edit', compact('item', 'schools', 'waves'))->render(),
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $student = Student::findOrFail($id);
