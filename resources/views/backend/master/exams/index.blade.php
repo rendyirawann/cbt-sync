@@ -66,12 +66,12 @@
                                         <i class="ki-outline ki-setting-3 fs-5"></i> Kelola
                                     </a>
                                     @php
-                                        // Ujian yang sudah dikerjakan hanya boleh dihapus Superadmin/Developer,
-                                        // karena jawaban & nilai siswa ikut terhapus. Bagi Guru/Admin tombolnya
-                                        // dinonaktifkan sekalian — dulu tombolnya aktif lalu menampilkan dialog
-                                        // penolakan, yang membingungkan.
+                                        // Ujian yang sudah dikerjakan hanya boleh dihapus Admin, Superadmin,
+                                        // atau Developer, karena jawaban & nilai siswa ikut terhapus. Bagi Guru
+                                        // tombolnya dinonaktifkan sekalian — dulu tombolnya aktif lalu
+                                        // menampilkan dialog penolakan, yang membingungkan.
                                         $adaPengerjaan = (bool) ($exam->sudah_dikerjakan ?? false);
-                                        $bolehHapus = !$adaPengerjaan || \App\Support\SiklusUjian::pengawas();
+                                        $bolehHapus = !$adaPengerjaan || \App\Support\SiklusUjian::bolehHapusUjianDikerjakan();
                                     @endphp
                                     <form action="{{ route('exams.destroy', $exam->id) }}" method="POST" class="d-inline custom-ajax-confirm">
                                         @csrf @method('DELETE')
@@ -79,8 +79,8 @@
                                             data-dikerjakan="{{ $adaPengerjaan ? '1' : '0' }}"
                                             @disabled(!$bolehHapus)
                                             title="{{ $bolehHapus
-                                                ? ($adaPengerjaan ? 'Hapus ujian beserta jawaban & nilai siswa (khusus Superadmin)' : 'Hapus ujian')
-                                                : 'Sudah dikerjakan siswa — hanya Superadmin yang boleh menghapus' }}"><i class="ki-outline ki-trash fs-5"></i></button>
+                                                ? ($adaPengerjaan ? 'Hapus ujian beserta jawaban & nilai siswa (Admin & Superadmin)' : 'Hapus ujian')
+                                                : 'Sudah dikerjakan siswa — hanya Admin atau Superadmin yang boleh menghapus' }}"><i class="ki-outline ki-trash fs-5"></i></button>
                                     </form>
                                 </td>
                             </tr>

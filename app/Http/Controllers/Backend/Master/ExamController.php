@@ -427,14 +427,14 @@ class ExamController extends Controller
         $exam = Exam::findOrFail($id);
         $this->authorizeExam($exam);
 
-        // Guru & Admin tetap dilarang menghapus ujian yang sudah dikerjakan —
-        // itu menghapus jawaban & nilai siswa. Superadmin/Developer dikecualikan
-        // karena merekalah yang membereskan ujian percobaan atau salah buat.
+        // GURU tetap dilarang menghapus ujian yang sudah dikerjakan — itu
+        // menghapus jawaban & nilai siswa. Admin, Superadmin, dan Developer
+        // boleh (lihat SiklusUjian::bolehHapusUjianDikerjakan).
         $sudahDikerjakan = $exam->hasStartedAttempts();
-        if ($sudahDikerjakan && !\App\Support\SiklusUjian::pengawas()) {
+        if ($sudahDikerjakan && !\App\Support\SiklusUjian::bolehHapusUjianDikerjakan()) {
             return redirect()->back()->with('error',
                 'Ujian tidak bisa dihapus karena sudah ada siswa yang memulai/mengerjakan. '
-                . 'Hubungi Superadmin bila ujian ini memang perlu dihapus.');
+                . 'Hubungi Admin atau Superadmin bila ujian ini memang perlu dihapus.');
         }
 
         // Dihitung SEBELUM dihapus, untuk dilaporkan ke penghapusnya.

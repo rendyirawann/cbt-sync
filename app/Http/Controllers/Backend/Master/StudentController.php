@@ -31,27 +31,54 @@ class StudentController extends Controller
         // Hanya gelombang aktif yang ditawarkan; gelombang lama yang sudah
         // dinonaktifkan tetap terbaca pada data siswa yang memakainya.
         $waves = \App\Models\Wave::where('is_active', true)->terurut()->get();
-        return view('backend.master.students.index', compact('students', 'schools', 'waves'));
+
+        // Akun yang BISA dipakai untuk siswa baru: belum punya profil siswa,
+        // masih di sekolah yang sama (atau belum bersekolah), dan bukan akun
+        // pengelola/tersembunyi. Dipakai bila operator sudah membuat data user
+        // lebih dulu, baru kemudian mengisi data siswanya.
+        $akunTersedia = \App\Models\User::doesntHave('student')
+            ->when($sid, fn ($q) => $q->where(fn ($w) => $w->where('school_id', $sid)->orWhereNull('school_id')))
+            ->whereDoesntHave('roles', fn ($q) => $q->whereIn('name', ['Superadmin', 'superadmin', 'Developer', 'Guru', 'Kepala Sekolah']))
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'username']);
+
+        return view('backend.master.students.index', compact('students', 'schools', 'waves', 'akunTersedia'));
     }
 
     public function store(Request $request)
     {
-        // Username kosong = pakai NISN (perilaku lama), tapi kini boleh ditentukan sendiri.
-        $request->merge(['username' => $this->rapikanUsername($request->username, $request->nisn)]);
+        // Dua cara menambah siswa:
+        //  (a) MEMAKAI AKUN YANG SUDAH ADA — dipilih di kolom "Akun User". Nama,
+        //      email, dan username diambil dari akun itu, jadi tidak diminta lagi.
+        //  (b) TANPA memilih akun — akun user baru dibuat seperti sebelumnya.
+        $pakaiAkun = $request->filled('user_id');
 
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:users,email',
-            'username' => 'required|string|max:50|regex:/^[A-Za-z0-9._-]+$/|unique:users,username',
-            'password' => 'nullable|min:6',
+        if (!$pakaiAkun) {
+            // Username kosong = pakai NISN (perilaku lama), tapi boleh ditentukan sendiri.
+            $request->merge(['username' => $this->rapikanUsername($request->username, $request->nisn)]);
+        }
+
+        $aturan = [
+            'user_id' => 'nullable|uuid|exists:users,id',
             'nisn' => 'required|unique:students,nisn',
             'birth_place' => 'nullable|string|max:100',
             'birth_date' => 'nullable|date|before:today',
             'proctor_id' => 'nullable|string|max:50',
             'room' => 'nullable|string|max:100',
             'wave_id' => 'nullable|uuid|exists:waves,id',
-            'school_id' => 'required'
-        ], $this->pesanUsername(), $this->labelSiswa());
+            'school_id' => 'required',
+        ];
+
+        if (!$pakaiAkun) {
+            $aturan += [
+                'name' => 'required',
+                'email' => 'required|email|unique:users,email',
+                'username' => 'required|string|max:50|regex:/^[A-Za-z0-9._-]+$/|unique:users,username',
+                'password' => 'nullable|min:6',
+            ];
+        }
+
+        $request->validate($aturan, $this->pesanUsername(), $this->labelSiswa());
 
         // Admin sekolah dipaksa ke sekolahnya sendiri (tidak bisa buat data sekolah lain).
         $schoolId = \App\Support\SchoolScope::id() ?: $request->school_id;
@@ -64,20 +91,45 @@ class StudentController extends Controller
         try {
             DB::beginTransaction();
 
-            // Buat User
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'username' => $request->username,
-                'no_wa' => $request->phone,
-                'phone' => $request->phone,
-                'school_id' => $schoolId,
-                'email_verified_at' => now(),
-                'is_active' => 1,
-                'password' => Hash::make($sandi),
-            ]);
+            if ($pakaiAkun) {
+                $user = User::findOrFail($request->user_id);
 
-            // Set Role
+                // Dijaga di server, bukan hanya di daftar pilihan: id bisa dikirim langsung.
+                if ($user->student) {
+                    DB::rollBack();
+
+                    return redirect()->back()->withInput()
+                        ->with('error', 'Akun "' . $user->name . '" sudah dipakai oleh data siswa lain.');
+                }
+                $sekolahAkun = $user->school_id;
+                if ($sekolahAkun && $schoolId && $sekolahAkun !== $schoolId) {
+                    DB::rollBack();
+
+                    return redirect()->back()->withInput()
+                        ->with('error', 'Akun "' . $user->name . '" terdaftar di sekolah lain, tidak bisa dipakai di sini.');
+                }
+
+                // Akun yang belum punya sekolah diikutkan ke sekolah data siswa ini.
+                if (!$sekolahAkun) {
+                    $user->school_id = $schoolId;
+                }
+                $user->save();
+            } else {
+                // Buat User
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'username' => $request->username,
+                    'no_wa' => $request->phone,
+                    'phone' => $request->phone,
+                    'school_id' => $schoolId,
+                    'email_verified_at' => now(),
+                    'is_active' => 1,
+                    'password' => Hash::make($sandi),
+                ]);
+            }
+
+            // Set Role — akun lama pun dipastikan punya role Siswa.
             $role = Role::firstOrCreate(['name' => 'Siswa', 'guard_name' => 'web']);
             $user->assignRole($role);
 
@@ -102,9 +154,12 @@ class StudentController extends Controller
             \App\Support\KartuUjian::terbitkan($student, $sandi);
 
             DB::commit();
+
             return redirect()->back()->with('success',
-                'Siswa berhasil ditambahkan. Password kartu: ' . $sandi
-                . ' — password ini juga yang dipakai siswa untuk login, dan tercetak di Kartu Ujian.');
+                ($pakaiAkun ? 'Siswa ditambahkan memakai akun "' . $user->name . '". ' : 'Siswa berhasil ditambahkan. ')
+                . 'Password kartu: ' . $sandi
+                . ' — password ini juga yang dipakai siswa untuk login, dan tercetak di Kartu Ujian.'
+                . ($pakaiAkun ? ' Sandi lama akun itu digantikan oleh password kartu ini.' : ''));
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());

@@ -86,6 +86,21 @@ class SiklusUjian
         return self::pengawas($user);
     }
 
+    /**
+     * Bolehkah menghapus ujian yang SUDAH dikerjakan siswa?
+     *
+     * Menghapusnya ikut menghapus jawaban & nilai siswa, jadi bukan tindakan
+     * biasa. Superadmin, Developer, dan Admin sekolah boleh — merekalah yang
+     * membereskan ujian percobaan atau salah buat. GURU tetap tidak boleh,
+     * supaya hasil kelas tidak hilang karena kekeliruan satu orang.
+     */
+    public static function bolehHapusUjianDikerjakan($user = null): bool
+    {
+        $user = $user ?: auth()->user();
+
+        return self::pengawas($user) || (bool) $user?->hasRole(['Admin', 'admin']);
+    }
+
     /** Alasan singkat kenapa Pengaturan terkunci — dipakai sebagai judul tombol. */
     public static function alasanPengaturanTerkunci($exam, $user = null): ?string
     {

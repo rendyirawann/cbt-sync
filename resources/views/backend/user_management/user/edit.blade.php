@@ -87,7 +87,7 @@
     <!--end::Label-->
     <!--begin::Input-->
     <input type="password" name="password" id="Editpassword" class="form-control form-control-solid mb-3 mb-lg-0"
-        placeholder="Password" />
+        placeholder="Password" data-sandi="kuat" autocomplete="new-password" />
     <span class="text-danger error-text password_error_edit"></span> <!--end::Input-->
 </div>
 <!--end::Input group-->
@@ -97,7 +97,7 @@
     <label for="Editpassword_confirmation" class="required fw-semibold fs-6 mb-2">Confirm Password</label>
     <!--end::Label-->
     <!--begin::Input-->
-    <input type="password" name="password_confirmation" id="Editpassword_confirmation" autocomplete="new-password"
+    <input type="password" name="password_confirmation" id="Editpassword_confirmation" data-sandi autocomplete="new-password"
         class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Confirm Password" />
     <span class="text-danger error-text password_confirmation_error_edit"></span> <!--end::Input-->
 </div>

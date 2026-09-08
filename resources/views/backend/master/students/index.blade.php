@@ -98,9 +98,32 @@
                         <i class="ki-outline ki-cross fs-1 text-dark"></i>
                     </div>
                 </div>
-                <div class="modal-body">
-                    <h5 class="mb-4 text-primary">Informasi Akun (Login)</h5>
-                    <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Nama Lengkap</label><input type="text" name="name" class="form-control form-control-solid" required></div>
+                    <div class="modal-body">
+                        <h5 class="mb-4 text-primary">Informasi Akun (Login)</h5>
+
+                        {{-- Bila akun user-nya sudah dibuat lebih dulu, cukup pilih di sini —
+                             nama, email, dan username diambil dari akun itu. Dikosongkan =
+                             akun baru dibuat seperti biasa. --}}
+                        <div class="fv-row mb-5">
+                            <label class="fs-6 fw-semibold mb-2">Akun User <span class="text-muted fs-7">(opsional)</span></label>
+                            <select name="user_id" id="pilihAkun" class="form-select form-select-solid">
+                                <option value="">— Buat akun baru —</option>
+                                @foreach($akunTersedia as $ak)
+                                    <option value="{{ $ak->id }}"
+                                        data-nama="{{ $ak->name }}" data-email="{{ $ak->email }}" data-username="{{ $ak->username }}">
+                                        {{ $ak->name }} — {{ $ak->username ?: $ak->email }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="text-muted fs-7 mt-2">
+                                Pilih bila akun user siswa ini <b>sudah dibuat lebih dulu</b> di User Management.
+                                Yang muncul hanya akun yang belum dipakai data siswa lain.
+                                @if($akunTersedia->isEmpty())<span class="text-warning d-block mt-1">Belum ada akun yang bisa dipakai — biarkan kosong agar akun baru dibuat.</span>@endif
+                            </div>
+                        </div>
+
+                        <div id="kolomAkunBaru">
+                        <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Nama Lengkap</label><input type="text" name="name" class="form-control form-control-solid" required></div>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Email</label><input type="email" name="email" class="form-control form-control-solid" required></div>
                     <div class="fv-row mb-5">
                         <label class="fs-6 fw-semibold mb-2">Username</label>
@@ -116,7 +139,15 @@
                         <div class="text-muted fs-7 mt-2">Kosongkan saja: sistem membuat password acak bergaya ANBK (mis. <b>892777*</b>).
                             Password ini yang dipakai siswa untuk login dan yang tercetak di <b>Kartu Ujian</b>.</div>
                     </div>
-                    
+                    </div>{{-- /kolomAkunBaru --}}
+
+                        <div id="ringkasAkun" class="alert alert-light-primary d-none">
+                            <div class="fw-bold mb-1">Memakai akun yang sudah ada</div>
+                            <div class="fs-7">Nama: <b id="raNama">-</b> &nbsp;•&nbsp; Email: <b id="raEmail">-</b> &nbsp;•&nbsp; Username: <b id="raUsername">-</b></div>
+                            <div class="fs-8 text-muted mt-2">Kartu ujian tetap diterbitkan, dan <b>sandi akun ini digantikan</b> oleh
+                                password kartu supaya siswa bisa masuk memakai kartunya.</div>
+                        </div>
+                        
                     <h5 class="mb-4 text-primary border-top pt-4">Profil Siswa</h5>
                     <div class="fv-row mb-5"><label class="required fs-6 fw-semibold mb-2">Sekolah Asal</label>
                         <select name="school_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#addModal" required>
@@ -344,3 +375,39 @@
 @endpush
 
 @endsection
+
+@push('scripts')
+<script>
+    // Memilih akun yang sudah ada menyembunyikan kolom Nama/Email/Username/Password
+    // dan MELEPAS atribut required-nya — kalau tidak, peramban menolak submit pada
+    // kolom tersembunyi ("An invalid form control is not focusable").
+    (function () {
+        var sel = document.getElementById('pilihAkun');
+        if (!sel) return;
+        var kolom = document.getElementById('kolomAkunBaru');
+        var ringkas = document.getElementById('ringkasAkun');
+        var wajib = kolom ? kolom.querySelectorAll('[required]') : [];
+        var daftarWajib = Array.prototype.slice.call(wajib);
+
+        function terapkan() {
+            var o = sel.options[sel.selectedIndex];
+            var pakai = !!sel.value;
+
+            if (kolom) kolom.classList.toggle('d-none', pakai);
+            if (ringkas) ringkas.classList.toggle('d-none', !pakai);
+            daftarWajib.forEach(function (el) {
+                if (pakai) { el.removeAttribute('required'); } else { el.setAttribute('required', 'required'); }
+            });
+
+            if (pakai && o) {
+                document.getElementById('raNama').textContent = o.dataset.nama || '-';
+                document.getElementById('raEmail').textContent = o.dataset.email || '-';
+                document.getElementById('raUsername').textContent = o.dataset.username || '-';
+            }
+        }
+
+        sel.addEventListener('change', terapkan);
+        terapkan();
+    })();
+</script>
+@endpush

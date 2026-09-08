@@ -254,15 +254,18 @@
                                 </div>
                                 <div class="fv-row mb-7">
                                     <label for="password" class="required fw-semibold fs-6 mb-2">Password</label>
+                                    {{-- data-sandi="kuat": tombol lihat sandi + indikator kekuatan
+                                         (dipasang oleh partials/sandi-tools). --}}
                                     <input type="password" name="password" id="password" class="form-control  mb-3 mb-lg-0"
-                                        placeholder="Password" />
+                                        placeholder="Password" data-sandi="kuat" autocomplete="new-password" />
                                     <span class="text-danger error-text password_error_add"></span>
                                 </div>
                                 <div class="fv-row mb-7">
                                     <label for="password_confirmation" class="required fw-semibold fs-6 mb-2">Confirm
                                         Password</label>
                                     <input type="password" name="password_confirmation" id="password_confirmation"
-                                        class="form-control  mb-3 mb-lg-0" placeholder="Confirm Password" />
+                                        class="form-control  mb-3 mb-lg-0" placeholder="Confirm Password"
+                                        data-sandi autocomplete="new-password" />
                                     <span class="text-danger error-text password_confirmation_error_add"></span>
                                 </div>
                                 <div class="mb-5">
@@ -1129,3 +1132,7 @@
         </script>
     @endpush
 @endsection
+
+{{-- Dipasang di halaman induk, bukan di dalam modal: form Edit User disuntikkan
+     lewat innerHTML sehingga <script> di dalamnya tidak akan dijalankan. --}}
+@include('partials.sandi-tools')
