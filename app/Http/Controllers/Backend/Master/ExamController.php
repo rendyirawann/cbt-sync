@@ -316,6 +316,13 @@ class ExamController extends Controller
         $exam = Exam::with('sessions.students')->findOrFail($id);
         $this->authorizeExam($exam);
 
+        // Penjaga SEBENARNYA. Sebelumnya hanya tombolnya yang dinonaktifkan di
+        // tampilan, sementara judul/mode nilai/KKM tetap bisa diubah lewat POST
+        // langsung — termasuk saat ujian sudah berjalan.
+        if (!\App\Support\SiklusUjian::bolehUbahPengaturan($exam)) {
+            return back()->with('error', \App\Support\SiklusUjian::alasanPengaturanTerkunci($exam));
+        }
+
         $request->validate([
             'title' => 'required|string|max:255',
             'type' => 'required|in:mixed,mc,essay',

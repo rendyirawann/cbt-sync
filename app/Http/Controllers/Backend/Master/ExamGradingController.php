@@ -76,16 +76,59 @@ class ExamGradingController extends Controller
         }
 
         $exam = $attempt->session->exam;
-        $scores = $request->input('scores', []);     // [question_id => nilai]
-        $feedbacks = $request->input('feedback', []); // [question_id => catatan]
+        $feedbacks = $request->input('feedback', []);      // [question_id => catatan]
+        $flags = $request->input('essay_correct', []);      // [question_id => '1'|'0']
 
-        // Sama seperti halaman koreksi: hanya essay dalam paket siswa ini, dengan
-        // batas nilai maksimal yang dihitung di dalam paket tersebut.
+        // Hanya essay dalam paket siswa ini (pemilihan soal acak membuat tiap siswa
+        // bisa menerima soal berbeda), dengan bobot yang dihitung di dalam paket itu.
         $paket = CbtScoringService::paketSoal($attempt);
-        foreach ($paket->where('type', 'essay') as $q) {
-            $weight = CbtScoringService::bobotDalamPaket($paket, $exam, $q);
-            $val = isset($scores[$q->id]) ? (float) $scores[$q->id] : 0;
-            $val = max(0, min($val, $weight)); // clamp 0..maks
+        $essay = $paket->where('type', 'essay');
+
+        $nomor = [];
+        foreach ($paket->values() as $i => $q) {
+            $nomor[$q->id] = $i + 1;
+        }
+
+        $bobot = [];
+        $belumDitandai = [];
+        $totalBobot = 0.0;
+        foreach ($essay as $q) {
+            // Mode auto  : 100 / jumlah essay dalam paket.
+            // Mode manual: kolom points soal, yang diisi guru SAAT MEMBUAT soal.
+            $bobot[$q->id] = CbtScoringService::bobotDalamPaket($paket, $exam, $q);
+            $totalBobot += $bobot[$q->id];
+
+            if (!isset($flags[$q->id]) || $flags[$q->id] === '') {
+                $belumDitandai[] = 'Soal ' . ($nomor[$q->id] ?? '?');
+            }
+        }
+
+        // Menyimpan dengan sebagian essay belum ditandai dulu membuat nilainya
+        // difinalkan dengan essay dihitung 0 — nilai akhir jadi jauh lebih kecil
+        // tanpa guru menyadarinya. Karena itu ditolak, bukan diasumsikan salah.
+        if ($belumDitandai) {
+            return redirect()->back()->withInput()->with('error',
+                'Masih ada soal essay yang belum ditandai Benar/Salah: ' . implode(', ', $belumDitandai) . '.');
+        }
+
+        // Mode manual: bagian Essay berskala 0–100, jadi total bobot seluruh essay
+        // harus tepat 100. Diperiksa hanya bila siswa menerima SELURUH soal; pada
+        // pemilihan acak, paket tiap siswa memang tidak mungkin berjumlah 100 dan
+        // penyekalaan ditangani CbtScoringService.
+        $seluruhSoal = ($exam->question_selection ?? 'all') === 'all';
+        if ($exam->points_mode !== 'auto' && $essay->isNotEmpty() && $seluruhSoal
+            && abs($totalBobot - 100) > 0.01) {
+            $f = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+
+            return redirect()->back()->with('error',
+                'Total bobot soal essay = ' . $f($totalBobot) . ', seharusnya tepat 100. '
+                . 'Perbaiki bobot tiap soal essay di tab Soal ('
+                . ($totalBobot < 100 ? 'tambah' : 'kurangi') . ' ' . $f(abs($totalBobot - 100)) . ' poin).');
+        }
+
+        foreach ($essay as $q) {
+            // Benar → dapat bobot penuh, Salah → 0. Sama seperti di LMS.
+            $val = (($flags[$q->id] ?? '0') == '1') ? $bobot[$q->id] : 0.0;
 
             ExamAnswer::updateOrCreate(
                 ['exam_attempt_id' => $attempt->id, 'question_id' => $q->id],
@@ -93,20 +136,12 @@ class ExamGradingController extends Controller
             );
         }
 
-        if ($exam->points_mode === 'manual') {
-            $request->validate(['final_score' => 'required|numeric|min:0']);
-            $essayScore = (float) $attempt->answers()
-                ->whereHas('question', fn ($x) => $x->where('type', 'essay'))->sum('earned_score');
-            $attempt->update([
-                'essay_score' => round($essayScore, 2),
-                'total_score' => round((float) $attempt->mc_score + $essayScore, 2),
-                'final_score' => round((float) $request->final_score, 2),
-                'essay_graded' => true,
-                'status' => 'graded',
-            ]);
-        } else {
-            CbtScoringService::recomputeAfterEssayGrading($attempt);
-        }
+        // Nilai akhir SELALU dihitung sistem, untuk kedua mode:
+        // (Nilai PG 0–100 + Nilai Essay 0–100) / 2 — sesuai keterangan di layar.
+        // Sebelumnya mode manual mewajibkan field final_score, padahal form koreksi
+        // tidak pernah mengirimnya: menyimpan nilai di mode manual selalu gagal
+        // validasi. Guru cukup menilai essay; angka akhir bukan lagi ketikan manual.
+        CbtScoringService::recomputeAfterEssayGrading($attempt);
 
         $attempt->refresh();
         $this->notifyResult($attempt);

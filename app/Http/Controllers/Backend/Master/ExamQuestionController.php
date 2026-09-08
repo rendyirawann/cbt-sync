@@ -18,7 +18,7 @@ class ExamQuestionController extends Controller
             'exam_id' => 'required|uuid|exists:exams,id',
             'type' => 'required|in:mc,essay',
             'question_text' => 'required|string',
-            'points' => 'nullable|numeric|min:0',   // tidak lagi diisi guru; bobot dihitung sistem
+            'points' => 'nullable|numeric|min:0',
             'penalty' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
             'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
@@ -29,6 +29,13 @@ class ExamQuestionController extends Controller
 
         if ($exam->hasStartedAttempts()) {
             return redirect()->back()->with('error', 'Soal tidak bisa ditambah karena sudah ada siswa yang memulai ujian.');
+        }
+
+        // Bobot essay mode MANUAL diisi guru di sini, saat membuat soal — permintaan
+        // sekolah: waktu mengoreksi, nilai maksimal tiap soal sudah tertera. Pada mode
+        // otomatis kolom ini tidak ada di form dan bobot dibagi rata oleh sistem.
+        if ($galat = $this->periksaBobotEssay($request, $exam)) {
+            return $galat;
         }
 
         if ($request->type === 'mc') {
@@ -44,7 +51,7 @@ class ExamQuestionController extends Controller
                     'exam_id' => $exam->id,
                     'type' => $request->type,
                     'question_text' => $request->question_text,
-                    'points' => $request->points ?: 1,
+                    'points' => $this->bobotDisimpan($request, $exam),
                     'penalty' => $request->penalty ?: 0,
                     'order' => ($exam->questions()->max('order') ?? 0) + 1,
                 ];
@@ -81,11 +88,17 @@ class ExamQuestionController extends Controller
 
         $request->validate([
             'question_text' => 'required|string',
-            'points' => 'nullable|numeric|min:0',   // tidak lagi diisi guru; bobot dihitung sistem
+            'points' => 'nullable|numeric|min:0',
             'penalty' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
             'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
         ], $this->imageMessages());
+
+        // Bobot soal yang sedang diedit dikecualikan dari total, kalau tidak nilai
+        // yang sama pun akan tertolak karena dihitung dua kali.
+        if ($galat = $this->periksaBobotEssay($request, $question->exam, $question)) {
+            return $galat;
+        }
 
         if ($question->type === 'mc') {
             $request->validate([
@@ -98,7 +111,7 @@ class ExamQuestionController extends Controller
             DB::transaction(function () use ($request, $question) {
                 $data = [
                     'question_text' => $request->question_text,
-                    'points' => $request->points ?: 1,
+                    'points' => $this->bobotDisimpan($request, $question->exam, $question),
                     'penalty' => $request->penalty ?: 0,
                 ];
 
@@ -337,6 +350,64 @@ class ExamQuestionController extends Controller
                 // abaikan — file mungkin sudah tidak ada
             }
         }
+    }
+
+    /**
+     * Apakah soal ini memakai bobot yang diisi guru? Hanya essay pada ujian
+     * bermode manual. Di luar itu bobot dihitung sistem (bagi rata) dan kolom
+     * bobot tidak ditampilkan di form.
+     */
+    private function bobotDiisiGuru(Request $request, Exam $exam, ?Question $question = null): bool
+    {
+        $tipe = $question->type ?? $request->type;
+
+        return $tipe === 'essay' && $exam->points_mode !== 'auto';
+    }
+
+    /**
+     * Periksa bobot essay yang dikirim guru. Mengembalikan RedirectResponse bila
+     * tidak sah, atau null bila lolos.
+     *
+     * Aturannya sama seperti yang sudah dipakai saat memeriksa jawaban: total
+     * bobot seluruh soal essay tidak boleh melewati 100, karena nilai bagian
+     * Essay memang berskala 0–100 (lihat Exam::essayMaxPoints()). Batas ini
+     * ditegakkan di sini supaya guru tahu sisa jatahnya SAAT membuat soal,
+     * bukan baru ketahuan waktu mengoreksi.
+     */
+    private function periksaBobotEssay(Request $request, Exam $exam, ?Question $question = null)
+    {
+        if (!$this->bobotDiisiGuru($request, $exam, $question)) {
+            return null;
+        }
+
+        $bobot = (float) $request->input('points');
+        if ($bobot <= 0) {
+            return redirect()->back()->withInput()
+                ->with('error', 'Bobot (nilai maksimal) soal essay wajib diisi dan harus lebih dari 0.');
+        }
+        if ($bobot > 100) {
+            return redirect()->back()->withInput()
+                ->with('error', 'Bobot satu soal essay tidak boleh lebih dari 100.');
+        }
+
+        $sisa = $exam->sisaBobotEssay($question->id ?? null);
+        if ($bobot > $sisa + 0.01) {
+            $f = fn ($v) => rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
+
+            return redirect()->back()->withInput()->with('error',
+                'Bobot ' . $f($bobot) . ' melebihi sisa jatah bobot essay yang tersedia (' . $f($sisa) . ' dari total 100). '
+                . 'Kurangi bobot soal ini atau ubah bobot soal essay lain lebih dulu.');
+        }
+
+        return null;
+    }
+
+    /** Nilai yang benar-benar disimpan ke kolom points. */
+    private function bobotDisimpan(Request $request, Exam $exam, ?Question $question = null): float
+    {
+        return $this->bobotDiisiGuru($request, $exam, $question)
+            ? round((float) $request->input('points'), 2)
+            : 1.0;   // tidak dipakai pada mode otomatis / soal PG
     }
 
     private function imageMessages(): array

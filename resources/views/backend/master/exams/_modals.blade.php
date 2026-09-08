@@ -1,4 +1,13 @@
-{{-- ===== Edit Pengaturan Ujian ===== --}}
+{{-- ===== Edit Pengaturan Ujian =====
+     Hak ubah dihitung di App\Support\SiklusUjian::bolehUbahPengaturan():
+     terkunci total begitu ada yang memulai, dan sesudah ujian terbit hanya
+     Superadmin/Developer. Tombol simpan di bawah ikut dinonaktifkan, TAPI yang
+     benar-benar menjaga adalah pemeriksaan di ExamController::update() —
+     tombol nonaktif saja bisa dilewati dengan mengirim POST langsung. --}}
+@php
+    $bolehUbahSet = \App\Support\SiklusUjian::bolehUbahPengaturan($exam);
+    $alasanSet = \App\Support\SiklusUjian::alasanPengaturanTerkunci($exam);
+@endphp
 <div class="modal fade drawer-modal" id="editExamModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <form action="{{ route('exams.update', $exam->id) }}" method="POST" id="editExamForm">
@@ -39,7 +48,10 @@
                 </div>
                 <div class="text-muted fs-7"><i class="ki-outline ki-information-5 fs-6 text-primary me-1"></i> Nilai akhir selalu berskala 0–100 (rata-rata nilai PG dan nilai Essay).</div>
             </div>
-            <div class="modal-footer"><button type="submit" class="btn btn-primary">Simpan</button></div>
+            <div class="modal-footer">
+                @if($alasanSet)<div class="text-danger fs-8 me-auto">{{ $alasanSet }}</div>@endif
+                <button type="submit" class="btn btn-primary" @disabled(!$bolehUbahSet)>Simpan</button>
+            </div>
         </form>
     </div></div>
 </div>
@@ -105,11 +117,31 @@
                     <textarea name="question_text" class="form-control math-input" data-preview="#prev_addessay" rows="4" required></textarea>
                     <div class="math-preview" id="prev_addessay"></div>
                 </div>
-                <div class="alert alert-light-info py-3 mb-4 fs-7">
-                    <i class="ki-outline ki-information-5 fs-4 text-info me-1"></i>
-                    Skor tidak perlu diisi. Mode <b>Otomatis</b>: 100 ÷ jumlah soal essay, guru cukup menandai
-                    Benar/Salah. Mode <b>Manual</b>: guru menentukan nilai tiap essay saat memeriksa (total maksimal 100).
-                </div>
+                @if($exam->points_mode === 'auto')
+                    <div class="alert alert-light-info py-3 mb-4 fs-7">
+                        <i class="ki-outline ki-information-5 fs-4 text-info me-1"></i>
+                        Mode <b>Otomatis</b>: bobot dihitung sistem, <b>100 ÷ jumlah soal essay</b>.
+                        Saat memeriksa, guru cukup menandai Benar/Salah.
+                    </div>
+                @else
+                    {{-- Mode MANUAL: bobot diisi di sini, saat soal dibuat. Permintaan sekolah —
+                         waktu guru mengoreksi, nilai maksimal tiap soal sudah tertera dan tidak
+                         perlu ditentukan ulang. Sisa jatah ditampilkan supaya total tetap 100. --}}
+                    @php $sisaBobot = $exam->sisaBobotEssay(); $fB = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.'); @endphp
+                    <div class="mb-4">
+                        <label class="form-label required">Bobot / Nilai maksimal soal ini</label>
+                        <div class="input-group">
+                            <input type="number" name="points" class="form-control" step="0.01" min="0.01" max="100"
+                                   value="{{ $fB(max($sisaBobot, 0)) }}" required>
+                            <span class="input-group-text">poin</span>
+                        </div>
+                        <div class="form-text">
+                            Mode <b>Manual</b>: total bobot seluruh soal essay <b>100 poin</b>.
+                            Terpakai <b>{{ $fB($exam->totalBobotEssay()) }}</b>, sisa <b class="{{ $sisaBobot > 0 ? 'text-primary' : 'text-danger' }}">{{ $fB($sisaBobot) }}</b> poin.
+                            Nilai ini yang muncul sebagai batas maksimal saat memeriksa jawaban.
+                        </div>
+                    </div>
+                @endif
 
                 <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
                 <div class="alert alert-light-info fs-7">Jawaban essay dinilai manual oleh guru di menu "Peserta & Nilai".</div>

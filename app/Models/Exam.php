@@ -113,6 +113,28 @@ class Exam extends Model
         return ExamAttempt::whereIn('exam_session_id', $this->sessions()->select('id'))->exists();
     }
 
+    /**
+     * Total bobot seluruh soal essay yang SUDAH diisi guru (mode manual).
+     * Dipakai untuk menjaga agar totalnya tidak melewati 100 saat menambah soal,
+     * dan untuk menampilkan sisa jatah di form.
+     *
+     * $kecuali dipakai saat MENGEDIT satu soal: bobot lama soal itu tidak ikut
+     * dihitung, kalau tidak guru tidak akan pernah bisa menyimpan nilai yang sama.
+     */
+    public function totalBobotEssay(?string $kecuali = null): float
+    {
+        return (float) $this->questions()
+            ->where('type', 'essay')
+            ->when($kecuali, fn ($q) => $q->where('id', '!=', $kecuali))
+            ->sum('points');
+    }
+
+    /** Sisa jatah bobot essay (100 - yang sudah terpakai). */
+    public function sisaBobotEssay(?string $kecuali = null): float
+    {
+        return round(100 - $this->totalBobotEssay($kecuali), 2);
+    }
+
     public function hasMc(): bool
     {
         return in_array($this->type, ['mixed', 'mc']);

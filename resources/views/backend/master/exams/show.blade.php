@@ -11,6 +11,10 @@
     // berstatus History (lihat App\Support\SiklusUjian).
     $pengawasUjian = \App\Support\SiklusUjian::pengawas();
     $bolehHasil = \App\Support\SiklusUjian::bolehLihatHasil($exam);
+    // Pengaturan: masih terbuka selama belum ada yang memulai, tetapi begitu ujian
+    // TERBIT hanya Superadmin/Developer yang boleh mengubahnya.
+    $bolehUbahPengaturan = \App\Support\SiklusUjian::bolehUbahPengaturan($exam);
+    $alasanPengaturan = \App\Support\SiklusUjian::alasanPengaturanTerkunci($exam);
 @endphp
 
 @include('partials.katex')
@@ -37,7 +41,8 @@
         </div>
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('exams.index') }}" class="btn btn-sm btn-light"><i class="ki-outline ki-arrow-left fs-4"></i> Kembali</a>
-            <button class="btn btn-sm btn-light-primary" data-bs-toggle="modal" data-bs-target="#editExamModal" @disabled($locked)><i class="ki-outline ki-setting-2 fs-5"></i> Pengaturan</button>
+            <button class="btn btn-sm btn-light-primary" data-bs-toggle="modal" data-bs-target="#editExamModal"
+                @disabled(!$bolehUbahPengaturan) @if($alasanPengaturan) title="{{ $alasanPengaturan }}" @endif><i class="ki-outline ki-setting-2 fs-5"></i> Pengaturan</button>
             @if($pengawasUjian && $exam->isTersedia() && $exam->sessions->isNotEmpty())
                 {{-- Penutupan manual: jalan keluar bila ada peserta yang tidak akan
                      pernah mengerjakan, sehingga penutupan otomatis tak pernah tercapai. --}}
@@ -438,13 +443,29 @@
                                         <textarea name="question_text" class="form-control math-input" data-preview="#prev_edit_{{ $q->id }}" rows="3" required>{{ $q->question_text }}</textarea>
                                         <div class="math-preview" id="prev_edit_{{ $q->id }}"></div>
                                     </div>
-                                    <div class="row">
-                                        <div class="col-12 mb-4"><div class="alert alert-light-primary py-2 mb-0 fs-8">
-                                            <i class="ki-outline ki-information-5 fs-5 text-primary me-1"></i>
-                                            Bobot soal ini dihitung sistem: <b>{{ rtrim(rtrim(number_format((float)\App\Services\CbtScoringService::questionWeight($exam,$q),2,'.',''),'0'),'.') }} poin</b>
-                                            @if($q->type === 'essay' && $exam->points_mode !== 'auto') (mode Manual: nilai essay ditentukan guru saat memeriksa, total maksimal 100) @endif
-                                        </div></div>
-                                    </div>
+                                    @php $fB = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.'); @endphp
+                                    @if($q->type === 'essay' && $exam->points_mode !== 'auto')
+                                        {{-- Mode Manual: bobot essay milik guru, bisa diubah di sini.
+                                             Sisa jatah sudah TIDAK memasukkan bobot soal ini sendiri. --}}
+                                        @php $sisaB = $exam->sisaBobotEssay($q->id); @endphp
+                                        <div class="mb-4">
+                                            <label class="form-label required">Bobot / Nilai maksimal soal ini</label>
+                                            <div class="input-group">
+                                                <input type="number" name="points" class="form-control" step="0.01" min="0.01" max="100"
+                                                       value="{{ $fB($q->points) }}" required>
+                                                <span class="input-group-text">poin</span>
+                                            </div>
+                                            <div class="form-text">Total bobot essay 100 poin. Selain soal ini sudah terpakai
+                                                <b>{{ $fB($exam->totalBobotEssay($q->id)) }}</b>, jadi bobot soal ini maksimal <b>{{ $fB($sisaB) }}</b>.</div>
+                                        </div>
+                                    @else
+                                        <div class="row">
+                                            <div class="col-12 mb-4"><div class="alert alert-light-primary py-2 mb-0 fs-8">
+                                                <i class="ki-outline ki-information-5 fs-5 text-primary me-1"></i>
+                                                Bobot soal ini dihitung sistem: <b>{{ $fB(\App\Services\CbtScoringService::questionWeight($exam,$q)) }} poin</b>
+                                            </div></div>
+                                        </div>
+                                    @endif
                                     @if($q->image_path)<div class="mb-2"><img src="{{ asset('storage/'.$q->image_path) }}" class="zoomable rounded mh-100px" alt="Gambar soal"></div>@endif
                                     <div class="mb-4"><label class="form-label">Ganti Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB.</div></div>
                                     @if($q->type === 'mc')

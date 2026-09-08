@@ -198,9 +198,21 @@ class CbtScoringService
         }
 
         // Skala tiap bagian ditentukan paket siswa, bukan seluruh soal ujian.
+        //
+        // Pembaginya adalah JUMLAH bobot soal di paket itu, bukan angka 100 yang
+        // dipatok. Untuk bagi rata hasilnya sama saja (100/n dikali n = 100),
+        // tetapi pada mode manual dengan pemilihan soal ACAK paket seorang siswa
+        // memang tidak berjumlah 100 — dulu nilainya jadi melenceng karena tetap
+        // dibagi 100.
         $paket = self::paketSoal($attempt);
-        $mcMax = $paket->where('type', 'mc')->isNotEmpty() ? 100.0 : 0.0;
-        $esMax = $paket->where('type', 'essay')->isNotEmpty() ? 100.0 : 0.0;
+        $jumlahBobot = function (string $tipe) use ($paket, $attempt) {
+            $exam = $attempt->session->exam;
+
+            return (float) $paket->where('type', $tipe)
+                ->sum(fn ($q) => self::bobotDalamPaket($paket, $exam, $q));
+        };
+        $mcMax = $jumlahBobot('mc');
+        $esMax = $jumlahBobot('essay');
         $mcPct = $mcMax > 0 ? max(0, (float) $attempt->mc_score) / $mcMax * 100 : 0;
         $esPct = $esMax > 0 ? max(0, $essayScore) / $esMax * 100 : 0;
         $w = self::bobotBagian($paket);

@@ -59,6 +59,45 @@ class SiklusUjian
         return (bool) $user?->hasRole(self::PENGAWAS);
     }
 
+    /**
+     * Bolehkah Pengaturan Ujian masih diubah?
+     *
+     * Tiga keadaan, sengaja dipisah:
+     *  - Sudah ada siswa yang MEMULAI  -> tidak boleh oleh siapa pun. Mengubah
+     *    kategori/mode nilai di tengah ujian akan mengacaukan nilai yang sudah
+     *    terkumpul.
+     *  - Masih DRAFT                   -> boleh oleh guru/admin pemilik ujian
+     *    (kepemilikan tetap dijaga authorizeExam() di controller).
+     *  - Sudah TERBIT tapi belum ada yang memulai -> hanya PENGAWAS
+     *    (Superadmin & Developer). Ujian yang sudah tayang di portal siswa
+     *    seharusnya tidak lagi diubah sembarang orang, tetapi selama belum ada
+     *    yang masuk, perbaikan masih aman dan kadang perlu.
+     */
+    public static function bolehUbahPengaturan($exam, $user = null): bool
+    {
+        if ($exam->hasStartedAttempts()) {
+            return false;
+        }
+
+        if ($exam->status === self::DRAFT) {
+            return true;
+        }
+
+        return self::pengawas($user);
+    }
+
+    /** Alasan singkat kenapa Pengaturan terkunci — dipakai sebagai judul tombol. */
+    public static function alasanPengaturanTerkunci($exam, $user = null): ?string
+    {
+        if (self::bolehUbahPengaturan($exam, $user)) {
+            return null;
+        }
+
+        return $exam->hasStartedAttempts()
+            ? 'Terkunci: sudah ada siswa yang memulai ujian ini.'
+            : 'Ujian sudah terbit — hanya Superadmin yang boleh mengubah pengaturannya.';
+    }
+
     /** Status yang boleh dilihat peran user ini pada daftar & halaman ujian. */
     public static function statusTerlihat($user = null): array
     {

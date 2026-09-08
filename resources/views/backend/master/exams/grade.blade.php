@@ -156,25 +156,32 @@
                                 @else
                                     {{-- Mode Manual: guru menentukan BOBOT soal essay ini (total seluruh essay wajib
                                          tepat 100), lalu menandai Benar/Salah. Benar = dapat bobot penuh, Salah = 0. --}}
-                                    <label class="form-label required">Bobot soal ini</label>
-                                    <div class="input-group mb-2">
-                                        <input type="number" step="0.01" min="0.01" max="100" name="alloc[{{ $q->id }}]" class="form-control essay-alloc" value="{{ $allocTxt }}" @disabled($locked)>
-                                        <span class="input-group-text">poin</span>
+                                    {{-- Bobot TIDAK diisi di sini lagi. Ditetapkan guru saat MEMBUAT
+                                         soal (tab Soal), sesuai permintaan sekolah: waktu mengoreksi,
+                                         nilai maksimal tiap soal sudah tertera.
+
+                                         Kolom input yang dulu ada di sini juga menyesatkan: nilainya
+                                         dikirim sebagai field alloc tetapi storeGrade tidak pernah
+                                         membacanya, jadi bobot selalu jatuh ke bagi rata. --}}
+                                    <label class="form-label">Bobot soal ini</label>
+                                    <div class="mb-3">
+                                        <span class="badge badge-light-info fs-7">maksimal {{ $allocTxt }} poin</span>
+                                        <span class="text-muted fs-8 d-block mt-1">Ditetapkan guru saat membuat soal (tab <b>Soal</b>).</span>
                                     </div>
                                     <label class="form-label required">Jawaban Essay</label>
                                     <div class="d-flex flex-wrap gap-4 pt-1">
                                         <label class="form-check form-check-custom form-check-solid mb-0">
                                             <input class="form-check-input essay-flag" type="radio" name="essay_correct[{{ $q->id }}]" value="1"
-                                                   data-qid="{{ $q->id }}" @checked($sudahDinilai && $nilaiKini > 0) @disabled($locked)>
-                                            <span class="form-check-label fw-bold text-success">Benar (dapat bobot penuh)</span>
+                                                   data-weight="{{ $alloc }}" @checked($sudahDinilai && $nilaiKini > 0) @disabled($locked)>
+                                            <span class="form-check-label fw-bold text-success">Benar (+{{ $allocTxt }})</span>
                                         </label>
                                         <label class="form-check form-check-custom form-check-solid mb-0">
                                             <input class="form-check-input essay-flag" type="radio" name="essay_correct[{{ $q->id }}]" value="0"
-                                                   data-qid="{{ $q->id }}" @checked($sudahDinilai && $nilaiKini <= 0) @disabled($locked)>
+                                                   data-weight="{{ $alloc }}" @checked($sudahDinilai && $nilaiKini <= 0) @disabled($locked)>
                                             <span class="form-check-label fw-bold text-danger">Salah (0)</span>
                                         </label>
                                     </div>
-                                    <div class="form-text">Total bobot seluruh soal essay <b>wajib tepat 100</b>.</div>
+                                    <div class="form-text">Total bobot seluruh soal essay <b>wajib tepat 100</b>. Ubah di tab <b>Soal</b> bila belum pas.</div>
                                 @endif
                             </div>
                             <div class="col-md-8 mb-3">
@@ -302,14 +309,9 @@
             });
             var totalBobot = 0;
             flags.forEach(function(r){
-                // Bobot soal: mode auto dari data-weight (tetap), mode manual dari input bobot.
-                var w;
-                if (r.dataset.weight !== undefined) {
-                    w = parseFloat(r.dataset.weight) || 0;
-                } else {
-                    var inp = document.querySelector('input.essay-alloc[name="alloc[' + r.dataset.qid + ']"]');
-                    w = inp ? (parseFloat(inp.value) || 0) : 0;
-                }
+                // Bobot selalu dari data-weight: mode auto dibagi rata sistem, mode
+                // manual dari kolom points soal yang diisi guru saat membuatnya.
+                var w = parseFloat(r.dataset.weight) || 0;
                 if (r.value === '1'){                       // hitung bobot sekali per soal
                     totalBobot += w;
                     if (r.checked) essay += w;              // Benar → dapat bobot penuh
@@ -340,7 +342,6 @@
         }
         inputs.forEach(function(i){ i.addEventListener('input', recalc); });
         flags.forEach(function(r){ r.addEventListener('change', recalc); });
-        document.querySelectorAll('input.essay-alloc').forEach(function(i){ i.addEventListener('input', recalc); });
         recalc();
     })();
 </script>
