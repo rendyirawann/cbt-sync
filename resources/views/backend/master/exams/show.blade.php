@@ -224,12 +224,27 @@
                                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-1"></i></div>
                             </div>
                             <div class="modal-body px-8 py-6">
-                                @php $aktifCount = $exam->questions->where('is_active', true)->count(); @endphp
+                                @php
+                                    // Pengaturan ini hanya menyangkut PG; essay tidak dihitung
+                                    // di sini karena semuanya selalu diberikan.
+                                    $soalPg = $exam->questions->where('type', 'mc');
+                                    $soalEssay = $exam->questions->where('type', 'essay');
+                                    $aktifCount = $soalPg->where('is_active', true)->count();
+                                @endphp
                                 <div class="alert alert-light-primary fs-8 py-2 mb-5">
-                                    Ujian ini punya <b>{{ $exam->questions->count() }}</b> soal
+                                    Ujian ini punya <b>{{ $soalPg->count() }}</b> soal pilihan ganda
                                     (<b>{{ $aktifCount }}</b> ditandai aktif).
                                     Pengaturan hanya bisa diubah selama belum ada siswa yang memulai ujian.
                                 </div>
+                                @if($soalEssay->isNotEmpty())
+                                    <div class="alert alert-light-info d-flex align-items-center fs-8 py-3 mb-5">
+                                        <i class="ki-outline ki-information-5 fs-3 text-info me-3"></i>
+                                        <div>Pengaturan di bawah <b>hanya untuk soal pilihan ganda</b>.
+                                            Seluruh <b>{{ $soalEssay->count() }} soal essay</b> selalu diberikan ke
+                                            <b>semua</b> siswa dan tidak pernah diacak — karena essay diperiksa manual,
+                                            paket yang berbeda antar siswa membuat penilaiannya tidak sebanding.</div>
+                                    </div>
+                                @endif
 
                                 <div class="mb-5">
                                     <label class="form-label required">Cara pemilihan soal</label>
@@ -237,40 +252,42 @@
                                         <label class="form-check">
                                             <input class="form-check-input sel-mode" type="radio" name="question_selection" value="all"
                                                 @checked(($exam->question_selection ?? 'all') === 'all')>
-                                            <span class="form-check-label ms-2"><b>Semua soal</b> — setiap siswa mengerjakan seluruh soal.</span>
+                                            <span class="form-check-label ms-2"><b>Semua soal</b> — setiap siswa mengerjakan seluruh soal PG.</span>
                                         </label>
                                         <label class="form-check">
                                             <input class="form-check-input sel-mode" type="radio" name="question_selection" value="manual"
                                                 @checked($exam->question_selection === 'manual')>
-                                            <span class="form-check-label ms-2"><b>Pilih manual</b> — hanya soal yang dicentang di bawah.</span>
+                                            <span class="form-check-label ms-2"><b>Pilih manual</b> — hanya soal PG yang dicentang di bawah.</span>
                                         </label>
                                         <label class="form-check">
                                             <input class="form-check-input sel-mode" type="radio" name="question_selection" value="auto"
                                                 @checked($exam->question_selection === 'auto')>
                                             <span class="form-check-label ms-2"><b>Otomatis (acak per siswa)</b> — tiap siswa menerima
-                                                sejumlah soal acak dari kolam yang aktif, jadi paketnya berbeda-beda.</span>
+                                                sejumlah soal PG acak dari kolam yang aktif, jadi paketnya berbeda-beda.</span>
                                         </label>
                                     </div>
                                 </div>
 
                                 <div class="mb-5" id="selCount">
-                                    <label class="form-label">Jumlah soal per siswa</label>
+                                    <label class="form-label">Jumlah soal PG per siswa</label>
                                     <input type="number" min="1" name="active_question_count" class="form-control form-control-solid"
-                                        value="{{ $exam->active_question_count }}" placeholder="mis. 30 dari {{ $exam->questions->count() }} soal">
+                                        value="{{ $exam->active_question_count }}" placeholder="mis. 30 dari {{ $soalPg->count() }} soal PG">
                                     <div class="form-text">Dipakai hanya pada mode otomatis. Nilai akhir tetap berskala 0–100
                                         karena bobot dihitung di dalam paket masing-masing siswa.</div>
                                 </div>
 
                                 <div id="selList">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <label class="form-label mb-0">Soal yang diujikan</label>
+                                        <label class="form-label mb-0">Soal pilihan ganda yang diujikan</label>
                                         <label class="form-check form-check-sm">
                                             <input class="form-check-input" type="checkbox" id="selAll">
                                             <span class="form-check-label fs-8 ms-2">Pilih semua</span>
                                         </label>
                                     </div>
                                     <div style="max-height:44vh;overflow:auto">
-                                        @foreach($exam->questions->sortBy('order') as $i => $qq)
+                                        {{-- Hanya PG yang bisa dicentang. Essay tidak ditampilkan di sini
+                                             karena tidak ada yang bisa dipilih: semuanya selalu diujikan. --}}
+                                        @foreach($soalPg->sortBy('order')->values() as $i => $qq)
                                             <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2">
                                                 <input class="form-check-input mt-1 sel-item" type="checkbox" name="active[]"
                                                     value="{{ $qq->id }}" @checked($qq->is_active)>

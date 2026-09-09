@@ -319,34 +319,53 @@ class ExamController extends Controller
         $mode = $data['question_selection'];
         $dicentang = collect($request->input('active', []))->map(fn ($v) => (string) $v)->all();
 
-        // Mode manual: yang dicentang jadi aktif, sisanya nonaktif. Mode lain:
-        // semua soal dikembalikan aktif agar kolamnya utuh.
+        // Pengaturan ini HANYA berlaku untuk soal pilihan ganda. Seluruh essay
+        // selalu ikut ke paket setiap siswa (lihat ExamPortalController::buildLayout),
+        // jadi is_active-nya dipaksa true supaya tidak ada essay yang tertinggal
+        // nonaktif dari pengaturan lama.
+        $pg = $exam->questions->where('type', 'mc');
+        $jumlahEssay = $exam->questions->where('type', 'essay')->count();
+
         if ($mode === 'manual') {
-            if (empty($dicentang)) {
-                return back()->with('error', 'Pilih minimal satu soal untuk diujikan.');
+            $dicentangPg = $pg->filter(fn ($q) => in_array((string) $q->id, $dicentang, true));
+            if ($dicentangPg->isEmpty() && $pg->isNotEmpty()) {
+                return back()->with('error', 'Pilih minimal satu soal pilihan ganda untuk diujikan.');
             }
-            foreach ($exam->questions as $q) {
+            foreach ($pg as $q) {
                 $q->update(['is_active' => in_array((string) $q->id, $dicentang, true)]);
             }
         } else {
-            $exam->questions()->update(['is_active' => true]);
+            $pg->each(fn ($q) => $q->update(['is_active' => true]));
         }
 
-        $aktif = $mode === 'manual' ? count($dicentang) : $exam->questions->count();
+        // Essay tidak pernah dinonaktifkan, mode apa pun.
+        $exam->questions()->where('type', 'essay')->update(['is_active' => true]);
+
+        $aktif = $mode === 'manual'
+            ? $pg->filter(fn ($q) => in_array((string) $q->id, $dicentang, true))->count()
+            : $pg->count();
         $jumlah = $mode === 'auto' ? (int) ($data['active_question_count'] ?? 0) : null;
 
         if ($mode === 'auto') {
+            if ($pg->isEmpty()) {
+                return back()->with('error', 'Mode otomatis mengacak soal PILIHAN GANDA, dan ujian ini belum punya soal pilihan ganda. Seluruh essay memang selalu diberikan ke semua siswa.');
+            }
             if (!$jumlah) {
-                return back()->with('error', 'Isi jumlah soal yang diberikan ke tiap siswa.');
+                return back()->with('error', 'Isi jumlah soal pilihan ganda yang diberikan ke tiap siswa.');
             }
             if ($jumlah > $aktif) {
-                return back()->with('error', "Jumlah soal ($jumlah) melebihi soal tersedia ($aktif).");
+                return back()->with('error', "Jumlah soal PG ($jumlah) melebihi soal PG tersedia ($aktif).");
             }
         }
 
         $exam->update(['question_selection' => $mode, 'active_question_count' => $jumlah]);
 
-        return back()->with('success', 'Pengaturan pemilihan soal disimpan.');
+        $pesan = 'Pengaturan pemilihan soal PG disimpan.';
+        if ($jumlahEssay) {
+            $pesan .= " Seluruh $jumlahEssay soal essay tetap diberikan ke semua siswa.";
+        }
+
+        return back()->with('success', $pesan);
     }
 
     public function update(Request $request, $id)

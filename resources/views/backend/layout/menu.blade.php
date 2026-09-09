@@ -218,6 +218,7 @@
                                 @endif
 
                                 @if(auth()->user()->hasRole('Siswa'))
+								@if(false) {{-- CBT-SYNC: menu LMS disembunyikan: Absensi Saya --}}
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('student.attendance') ? 'active' : '' }}" href="{{ route('student.attendance') }}">
@@ -228,7 +229,9 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+								@endif
 
+								@if(false) {{-- CBT-SYNC: menu LMS disembunyikan: Jadwal Pelajaran --}}
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}" href="{{ route('student.timetable') }}">
@@ -239,7 +242,9 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+								@endif
 
+								@if(false) {{-- CBT-SYNC: menu LMS disembunyikan: Pesan Internal --}}
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('student.chat.*') ? 'active' : '' }}" href="{{ route('student.chat.index') }}">
@@ -250,6 +255,7 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+								@endif
 
 								@if(false) {{-- CBT-SYNC: non-CBT --}}
 <!--begin:Menu item-->
@@ -264,6 +270,7 @@
 								<!--end:Menu item-->
 @endif
 
+								@if(false) {{-- CBT-SYNC: menu LMS disembunyikan: Perpustakaan Saya --}}
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('student.library.index') ? 'active' : '' }}" href="{{ route('student.library.index') }}">
@@ -274,6 +281,7 @@
 									</a>
 								</div>
 								<!--end:Menu item-->
+								@endif
 
 								@if(false) {{-- CBT-SYNC: menu Raport Hasil Ujian disembunyikan atas permintaan --}}
 								<!--begin:Menu item-->
