@@ -110,6 +110,11 @@ class ClassRoomController extends Controller
             'peserta' => $anggota,
             'sandi' => $sandi,
             'logo' => public_path('assets/media/logos/tut-wuri-handayani.png'),
+            // Dompdf berjalan dengan chroot public/ dan isRemoteEnabled=false,
+            // jadi yang dikirim harus PATH BERKAS LOKAL, bukan URL. Hanya raster
+            // yang diterima: dukungan SVG Dompdf tidak bisa diandalkan, dan logo
+            // yang gagal dirender akan mengosongkan kop kartu.
+            'logoSekolah' => $this->logoSekolahUntukKartu(),
         ])->render();
 
         $options = new \Dompdf\Options();
@@ -151,6 +156,27 @@ class ClassRoomController extends Controller
         $item = ClassRoom::findOrFail($id);
         $item->update($data);
         return redirect()->back()->with('success', 'Kelas berhasil diupdate');
+    }
+
+    /**
+     * Path lokal logo sekolah untuk kop kartu (Dompdf), atau null bila tidak
+     * layak dipakai. Dibatasi raster karena dukungan SVG Dompdf tidak andal.
+     */
+    private function logoSekolahUntukKartu(): ?string
+    {
+        $nama = \App\Models\Setting::get('site_logo');
+        if (blank($nama)) {
+            return null;
+        }
+
+        $ext = strtolower(pathinfo($nama, PATHINFO_EXTENSION));
+        if (! in_array($ext, ['png', 'jpg', 'jpeg', 'gif'], true)) {
+            return null;
+        }
+
+        $path = public_path('assets/media/logos/' . $nama);
+
+        return is_file($path) ? $path : null;
     }
 
     private function rules(): array

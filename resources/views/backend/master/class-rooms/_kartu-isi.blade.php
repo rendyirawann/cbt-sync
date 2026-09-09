@@ -12,6 +12,13 @@
                         <div class="j2">{{ $penyelenggara }}</div>
                         <div class="j3">TAHUN {{ $labelTahun }}</div>
                     </td>
+                    {{-- Logo sekolah di ujung kanan, memakai kelas .logo yang sama
+                         dengan Tut Wuri Handayani supaya ukurannya persis sama.
+                         Hanya dirender bila logonya memang ada — kalau tidak, kop
+                         tetap seimbang dengan dua kolom seperti sebelumnya. --}}
+                    @if($logoSekolah ?? null)
+                        <td class="logo"><img src="{{ $logoSekolah }}" alt=""></td>
+                    @endif
                 </tr>
             </table>
         </td>

@@ -28,7 +28,11 @@
                             <i class="ki-outline ki-trash fs-5"></i> Hapus Terpilih (<span id="jmlTerpilih">0</span>)
                         </button>
                     @endif
-                    @include('backend.master._import_tools', ['templateRoute' => 'students.template', 'importRoute' => 'students.import', 'label' => 'Siswa'])
+                    {{-- chunk: berkas diproses per potongan lewat AJAX. Wajib untuk Data
+                         Siswa karena biaya bcrypt per baris (~345 ms) membuat 350 baris
+                         menembus batas 30 detik worker RoadRunner dan request-nya dibunuh
+                         di tengah jalan. --}}
+                    @include('backend.master._import_tools', ['templateRoute' => 'students.template', 'importRoute' => 'students.import', 'label' => 'Siswa', 'chunk' => true])
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">Tambah Siswa</button>
                 </div>
             </div>

@@ -73,10 +73,21 @@
 <meta name="twitter:image:alt" content="{{ $ogAlt }}" />
 @if($tw)<meta name="twitter:site" content="{{ $tw }}" />@endif
 {{-- Ikon --}}
+{{-- Bila site_logo diisi, ia dipakai untuk SEMUA ukuran ikon.
+     Sebelumnya baris 32x32 & 16x16 memaksa berkas favicon bawaan, dan browser
+     lebih memilih ikon yang bersize — jadi logo sekolah tidak pernah muncul
+     meski $fav sudah menunjuk ke sana. --}}
+@php $favSekolah = !empty($s['site_logo']); @endphp
 <link rel="icon" href="{{ asset($fav) }}" sizes="any" />
-<link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/media/logos/favicon-32x32.png') }}" />
-<link rel="icon" type="image/png" sizes="16x16" href="{{ asset('assets/media/logos/favicon-16x16.png') }}" />
-<link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/media/logos/apple-touch-icon.png') }}" />
+@if($favSekolah)
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset($fav) }}" />
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset($fav) }}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset($fav) }}" />
+@else
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/media/logos/favicon-32x32.png') }}" />
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('assets/media/logos/favicon-16x16.png') }}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/media/logos/apple-touch-icon.png') }}" />
+@endif
 <link rel="manifest" href="{{ asset('site.webmanifest') }}" />
 {{-- Data terstruktur. Hanya diterbitkan pada halaman yang boleh diindeks —
      memasangnya di panel admin tidak ada gunanya dan hanya menambah berat.
