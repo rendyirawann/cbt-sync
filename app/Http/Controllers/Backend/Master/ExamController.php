@@ -308,64 +308,105 @@ class ExamController extends Controller
         }
 
         $data = $request->validate([
-            'question_selection' => 'required|in:all,manual,auto',
+            'question_selection'    => 'required|in:all,manual,auto',
             'active_question_count' => 'nullable|integer|min:1',
-            'active' => 'nullable|array',
+            'active'                => 'nullable|array',
+            'essay_selection'       => 'required|in:all,manual,auto',
+            'active_essay_count'    => 'nullable|integer|min:1',
+            'active_essay'          => 'nullable|array',
         ], [
-            'question_selection.required' => 'Cara pemilihan soal wajib dipilih',
-            'active_question_count.min' => 'Jumlah soal minimal 1',
+            'question_selection.required' => 'Cara pemilihan soal PG wajib dipilih',
+            'essay_selection.required'    => 'Cara pemilihan soal Essay wajib dipilih',
+            'active_question_count.min'   => 'Jumlah soal PG minimal 1',
+            'active_essay_count.min'      => 'Jumlah soal Essay minimal 1',
         ]);
 
-        $mode = $data['question_selection'];
-        $dicentang = collect($request->input('active', []))->map(fn ($v) => (string) $v)->all();
+        // PG dan Essay diproses dengan aturan yang sama, hanya beda kolam dan
+        // beda kolom penyimpanan. Ditulis sebagai satu closure supaya keduanya
+        // tidak bisa lagi berbeda perilaku secara tidak sengaja.
+        $olah = function ($kolam, string $mode, array $dicentang, ?int $jumlah, string $label) {
+            if ($kolam->isEmpty()) {
+                // Bagian ini tidak ada di ujian: modenya disimpan apa adanya,
+                // tidak ada yang perlu diaktifkan dan tidak ada yang salah.
+                return ['jumlah' => null, 'aktif' => 0, 'galat' => null];
+            }
 
-        // Pengaturan ini HANYA berlaku untuk soal pilihan ganda. Seluruh essay
-        // selalu ikut ke paket setiap siswa (lihat ExamPortalController::buildLayout),
-        // jadi is_active-nya dipaksa true supaya tidak ada essay yang tertinggal
-        // nonaktif dari pengaturan lama.
+            if ($mode === 'manual') {
+                $terpilih = $kolam->filter(fn ($q) => in_array((string) $q->id, $dicentang, true));
+                if ($terpilih->isEmpty()) {
+                    return ['galat' => "Pilih minimal satu soal $label untuk diujikan."];
+                }
+                foreach ($kolam as $q) {
+                    $q->update(['is_active' => in_array((string) $q->id, $dicentang, true)]);
+                }
+                $aktif = $terpilih->count();
+            } else {
+                // Mode lain memakai seluruh kolam, jadi semuanya dikembalikan aktif.
+                $kolam->each(fn ($q) => $q->update(['is_active' => true]));
+                $aktif = $kolam->count();
+            }
+
+            if ($mode === 'auto') {
+                if (! $jumlah) {
+                    return ['galat' => "Isi jumlah soal $label yang diberikan ke tiap siswa."];
+                }
+                if ($jumlah > $aktif) {
+                    return ['galat' => "Jumlah soal $label ($jumlah) melebihi soal $label tersedia ($aktif)."];
+                }
+            }
+
+            return ['jumlah' => $mode === 'auto' ? $jumlah : null, 'aktif' => $aktif, 'galat' => null];
+        };
+
         $pg = $exam->questions->where('type', 'mc');
-        $jumlahEssay = $exam->questions->where('type', 'essay')->count();
+        $essay = $exam->questions->where('type', 'essay');
 
-        if ($mode === 'manual') {
-            $dicentangPg = $pg->filter(fn ($q) => in_array((string) $q->id, $dicentang, true));
-            if ($dicentangPg->isEmpty() && $pg->isNotEmpty()) {
-                return back()->with('error', 'Pilih minimal satu soal pilihan ganda untuk diujikan.');
-            }
-            foreach ($pg as $q) {
-                $q->update(['is_active' => in_array((string) $q->id, $dicentang, true)]);
-            }
-        } else {
-            $pg->each(fn ($q) => $q->update(['is_active' => true]));
+        $hasilPg = $olah(
+            $pg,
+            $data['question_selection'],
+            collect($request->input('active', []))->map(fn ($v) => (string) $v)->all(),
+            (int) ($data['active_question_count'] ?? 0) ?: null,
+            'PG'
+        );
+        if ($hasilPg['galat'] ?? null) {
+            return back()->with('error', $hasilPg['galat']);
         }
 
-        // Essay tidak pernah dinonaktifkan, mode apa pun.
-        $exam->questions()->where('type', 'essay')->update(['is_active' => true]);
-
-        $aktif = $mode === 'manual'
-            ? $pg->filter(fn ($q) => in_array((string) $q->id, $dicentang, true))->count()
-            : $pg->count();
-        $jumlah = $mode === 'auto' ? (int) ($data['active_question_count'] ?? 0) : null;
-
-        if ($mode === 'auto') {
-            if ($pg->isEmpty()) {
-                return back()->with('error', 'Mode otomatis mengacak soal PILIHAN GANDA, dan ujian ini belum punya soal pilihan ganda. Seluruh essay memang selalu diberikan ke semua siswa.');
-            }
-            if (!$jumlah) {
-                return back()->with('error', 'Isi jumlah soal pilihan ganda yang diberikan ke tiap siswa.');
-            }
-            if ($jumlah > $aktif) {
-                return back()->with('error', "Jumlah soal PG ($jumlah) melebihi soal PG tersedia ($aktif).");
-            }
+        $hasilEssay = $olah(
+            $essay,
+            $data['essay_selection'],
+            collect($request->input('active_essay', []))->map(fn ($v) => (string) $v)->all(),
+            (int) ($data['active_essay_count'] ?? 0) ?: null,
+            'Essay'
+        );
+        if ($hasilEssay['galat'] ?? null) {
+            return back()->with('error', $hasilEssay['galat']);
         }
 
-        $exam->update(['question_selection' => $mode, 'active_question_count' => $jumlah]);
+        $exam->update([
+            'question_selection'    => $data['question_selection'],
+            'active_question_count' => $hasilPg['jumlah'],
+            'essay_selection'       => $data['essay_selection'],
+            'active_essay_count'    => $hasilEssay['jumlah'],
+        ]);
 
-        $pesan = 'Pengaturan pemilihan soal PG disimpan.';
-        if ($jumlahEssay) {
-            $pesan .= " Seluruh $jumlahEssay soal essay tetap diberikan ke semua siswa.";
+        $sebut = function ($label, $mode, $hasil) {
+            if ($mode === 'auto') {
+                return "$label: {$hasil['jumlah']} acak dari {$hasil['aktif']}";
+            }
+
+            return "$label: " . ($mode === 'manual' ? "{$hasil['aktif']} dipilih" : "semua ({$hasil['aktif']})");
+        };
+
+        $bagian = [];
+        if ($pg->isNotEmpty()) {
+            $bagian[] = $sebut('PG', $data['question_selection'], $hasilPg);
+        }
+        if ($essay->isNotEmpty()) {
+            $bagian[] = $sebut('Essay', $data['essay_selection'], $hasilEssay);
         }
 
-        return back()->with('success', $pesan);
+        return back()->with('success', 'Pengaturan soal disimpan. ' . implode(' · ', $bagian));
     }
 
     public function update(Request $request, $id)
