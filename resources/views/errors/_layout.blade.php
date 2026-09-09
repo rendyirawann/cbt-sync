@@ -43,7 +43,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}" />
+    {{-- Halaman galat memakai layoutnya sendiri dan TIDAK memuat
+         partials/head-meta, jadi ikonnya harus ditentukan di sini. Sebelumnya
+         menunjuk favicon.ico bawaan Metronic — itu salah satu sebab ikonnya
+         terlihat berubah-ubah antar halaman. --}}
+    @php $logoGalat = \App\Models\Setting::get('site_logo'); @endphp
+    <link rel="icon" href="{{ $logoGalat ? asset('assets/media/logos/'.$logoGalat) : asset('favicon.ico') }}" sizes="any" />
     <script>
         // data-bs-theme WAJIB terpasang (lihat catatan di atas). Kalau pilihan
         // pengguna tidak bisa dibaca, jatuh ke preferensi sistem, lalu ke light.

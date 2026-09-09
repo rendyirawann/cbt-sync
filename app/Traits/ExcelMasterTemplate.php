@@ -285,16 +285,73 @@ trait ExcelMasterTemplate
         // angka 0 di depan, nomor HP 081... jadi 8,1E+10, dan tanggal 17/08/2010
         // diubah ke format tanggal lokal komputer (mis. 08/17/2010) sehingga
         // terbaca sebagai bulan ke-17 lalu ditolak dan berakhir KOSONG.
+        // BATAS JAGA, dipisah dari $lastRow.
+        //
+        // $lastRow hanya sejauh baris contoh + 80, dan itu dipakai untuk hal
+        // kosmetik (garis, perataan). Tapi penjaga isi TIDAK boleh berhenti di
+        // situ: begitu petugas menempel 365 baris, baris ke-81 dan seterusnya
+        // kehilangan format Teks — dan NISN 0091910544 kembali kehilangan nol
+        // depannya tanpa peringatan apa pun. Itu tepat yang terjadi di lapangan.
+        $batasJaga = $isData ? max($lastRow, 1000) : $lastRow;
+
         foreach ($cols as $i => $col) {
             if (($col['format'] ?? null) !== 'text') {
                 continue;
             }
             $letter = Coordinate::stringFromColumnIndex($i + 1);
-            $s->getStyle("{$letter}3:{$letter}{$lastRow}")
+            $s->getStyle("{$letter}3:{$letter}{$batasJaga}")
                 ->getNumberFormat()->setFormatCode('@');
         }
 
+        // Penjaga nilai KEMBAR untuk kolom yang ditandai 'unik'. Dua lapis,
+        // karena satu lapis saja tidak cukup:
+        //   - Data Validation menolak saat DIKETIK, tapi TIDAK berjalan saat
+        //     isian di-TEMPEL — dan menempel dari daftar lain justru cara
+        //     paling umum mengisi template ini.
+        //   - Conditional formatting mewarnai merah, dan itu tetap bekerja
+        //     pada isian yang ditempel.
+        // Kolom yang ditandai unik mengikuti indeks UNIQUE yang benar-benar ada
+        // di database: users_email_unique, users_username_unique,
+        // students_nisn_unique.
         if ($isData) {
+            foreach ($cols as $i => $col) {
+                if (empty($col['unik'])) {
+                    continue;
+                }
+                $letter = Coordinate::stringFromColumnIndex($i + 1);
+                $rentang = "\${$letter}\$3:\${$letter}\${$batasJaga}";
+                $label = str_replace('*', '', $col['label']);
+
+                $dv = new DataValidation();
+                $dv->setType(DataValidation::TYPE_CUSTOM);
+                $dv->setErrorStyle(DataValidation::STYLE_STOP);
+                $dv->setAllowBlank(true);
+                $dv->setShowErrorMessage(true);
+                $dv->setErrorTitle("$label kembar");
+                $dv->setError("$label ini sudah dipakai di baris lain. Setiap siswa harus punya $label sendiri — kalau kembar, barisnya TIDAK akan masuk saat diimpor.");
+                // COUNTIF menghitung kemunculan nilai sel ini di seluruh kolom;
+                // lebih dari satu berarti kembar. Dipasang sekali untuk seluruh
+                // rentang, bukan per sel, supaya berkasnya tetap ringan.
+                $dv->setFormula1("COUNTIF({$rentang},{$letter}3)<2");
+                $s->setDataValidation("{$letter}3:{$letter}{$batasJaga}", $dv);
+
+                $kondisi = new \PhpOffice\PhpSpreadsheet\Style\Conditional();
+                $kondisi->setConditionType(\PhpOffice\PhpSpreadsheet\Style\Conditional::CONDITION_EXPRESSION);
+                $kondisi->setOperatorType(\PhpOffice\PhpSpreadsheet\Style\Conditional::OPERATOR_NONE);
+                // Dirangkai dengan kutip TUNGGAL: rumusnya memuat "" (sel kosong),
+                // dan menuliskannya di dalam string berkutip ganda butuh escaping
+                // berlapis yang mudah salah.
+                $kondisi->addCondition('AND(' . $letter . '3<>"",COUNTIF(' . $rentang . ',' . $letter . '3)>1)');
+                $kondisi->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFFECACA');
+                $kondisi->getStyle()->getFont()->setBold(true)->getColor()->setARGB('FF991B1B');
+
+                $gaya = $s->getStyle("{$letter}3:{$letter}{$batasJaga}");
+                $daftar = $gaya->getConditionalStyles();
+                $daftar[] = $kondisi;
+                $gaya->setConditionalStyles($daftar);
+            }
+
             foreach ($cols as $i => $col) {
                 if (!empty($col['options'])) {
                     $letter = Coordinate::stringFromColumnIndex($i + 1);
@@ -304,7 +361,7 @@ trait ExcelMasterTemplate
                     // agar berkasnya tidak rusak.
                     $isiDaftar = implode(',', $col['options']);
                     if (mb_strlen($isiDaftar) <= 240) {
-                        $this->applyDropdown($s, $letter, $lastRow, '"' . $isiDaftar . '"');
+                        $this->applyDropdown($s, $letter, $batasJaga, '"' . $isiDaftar . '"');
                     }
                 }
             }
@@ -315,15 +372,17 @@ trait ExcelMasterTemplate
 
     private function applyDropdown($s, string $col, int $lastRow, string $formula): void
     {
-        for ($row = 3; $row <= $lastRow; $row++) {
-            $dv = $s->getCell("{$col}{$row}")->getDataValidation();
-            $dv->setType(DataValidation::TYPE_LIST);
-            $dv->setErrorStyle(DataValidation::STYLE_INFORMATION);
-            $dv->setAllowBlank(true);
-            $dv->setShowDropDown(true);
-            $dv->setShowInputMessage(true);
-            $dv->setShowErrorMessage(true);
-            $dv->setFormula1($formula);
-        }
+        // Dipasang sekali untuk seluruh rentang, bukan per sel: dengan batas
+        // jaga 1000 baris, versi per-sel menghasilkan ribuan entri validasi dan
+        // membengkakkan berkasnya tanpa guna.
+        $dv = new DataValidation();
+        $dv->setType(DataValidation::TYPE_LIST);
+        $dv->setErrorStyle(DataValidation::STYLE_INFORMATION);
+        $dv->setAllowBlank(true);
+        $dv->setShowDropDown(true);
+        $dv->setShowInputMessage(true);
+        $dv->setShowErrorMessage(true);
+        $dv->setFormula1($formula);
+        $s->setDataValidation("{$col}3:{$col}{$lastRow}", $dv);
     }
 }
