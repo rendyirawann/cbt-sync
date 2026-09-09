@@ -648,10 +648,10 @@ class StudentController extends Controller
             ],
             'columns' => [
                 ['key' => 'name', 'label' => 'Nama', 'required' => true, 'width' => 28],
-                ['key' => 'email', 'label' => 'Email', 'required' => true, 'width' => 26, 'hint' => 'untuk login'],
+                ['key' => 'email', 'label' => 'Email', 'required' => true, 'width' => 26, 'unik' => true, 'hint' => 'untuk login; tidak boleh sama'],
                 ['key' => 'password', 'label' => 'Password', 'width' => 16, 'format' => 'text', 'hint' => 'kosongkan = acak bergaya ANBK'],
-                ['key' => 'username', 'label' => 'Username', 'width' => 18, 'format' => 'text', 'hint' => 'kosongkan = memakai NISN'],
-                ['key' => 'nisn', 'label' => 'NISN', 'required' => true, 'width' => 18, 'format' => 'text', 'hint' => 'wajib & unik; angka 0 di depan dipertahankan'],
+                ['key' => 'username', 'label' => 'Username', 'width' => 18, 'format' => 'text', 'unik' => true, 'hint' => 'kosongkan = memakai NISN; tidak boleh sama'],
+                ['key' => 'nisn', 'label' => 'NISN', 'required' => true, 'width' => 18, 'format' => 'text', 'unik' => true, 'hint' => 'wajib, 10 angka, tidak boleh sama; angka 0 di depan dipertahankan'],
                 ['key' => 'school', 'label' => 'Nama Sekolah', 'required' => true, 'width' => 30, 'options' => $pilihanSekolah, 'hint' => 'harus sudah terdaftar'],
                 ['key' => 'class', 'label' => 'Kelas', 'width' => 16, 'options' => $pilihanKelas, 'hint' => 'nama rombel yang sudah ada'],
                 ['key' => 'gender', 'label' => 'Gender', 'width' => 10, 'options' => ['L', 'P']],

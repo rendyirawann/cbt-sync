@@ -33,157 +33,18 @@
 									<!--end::Header Logo-->
 								</div>
 								<!--end::Wrapper-->
-								<!--begin:Search-->
-								<div class="ms-5 ms-md-17 d-flex align-items-center">
-									<!--begin::Search-->
-									<div id="kt_header_search" class="header-search d-flex align-items-center w-lg-400px" data-kt-search-keypress="true" data-kt-search-min-length="2" data-kt-search-enter="enter" data-kt-search-layout="menu" data-kt-search-responsive="lg" data-kt-menu-trigger="auto" data-kt-menu-permanent="true" data-kt-menu-placement="{default: 'bottom-end', lg: 'bottom-start'}">
-										<!--begin::Tablet and mobile search toggle-->
-										<div data-kt-search-element="toggle" class="search-toggle-mobile d-flex d-lg-none align-items-center">
-											<div class="d-flex btn btn-icon btn-color-gray-800 btn-active-light-primary w-30px h-30px w-md-40px h-md-40px">
-												<i class="ki-duotone ki-magnifier fs-1">
-													<span class="path1"></span>
-													<span class="path2"></span>
-												</i>
-											</div>
-										</div>
-										<!--end::Tablet and mobile search toggle-->
-										<!--begin::Form(use d-none d-lg-block classes for responsive search)-->
-										<form data-kt-search-element="form" class="d-none d-lg-block w-100 position-relative mb-5 mb-lg-0" autocomplete="off">
-											<!--begin::Hidden input(Added to disable form autocomplete)-->
-											<input type="hidden" />
-											<!--end::Hidden input-->
-											<!--begin::Icon-->
-											<i class="ki-duotone ki-magnifier search-icon fs-2 text-gray-500 position-absolute top-50 translate-middle-y ms-5">
-												<span class="path1"></span>
-												<span class="path2"></span>
-											</i>
-											<!--end::Icon-->
-											<!--begin::Input-->
-											<input type="text" class="search-input form-control form-control-solid ps-13" name="search" value="" placeholder="Search..." data-kt-search-element="input" />
-											<!--end::Input-->
-											<!--begin::Spinner-->
-											<span class="search-spinner position-absolute top-50 end-0 translate-middle-y lh-0 d-none me-5" data-kt-search-element="spinner">
-												<span class="spinner-border h-15px w-15px align-middle text-gray-500"></span>
-											</span>
-											<!--end::Spinner-->
-											<!--begin::Reset-->
-											<span class="search-reset btn btn-flush btn-active-color-primary position-absolute top-50 end-0 translate-middle-y lh-0 d-none me-4" data-kt-search-element="clear">
-												<i class="ki-duotone ki-cross fs-2 fs-lg-1 me-0">
-													<span class="path1"></span>
-													<span class="path2"></span>
-												</i>
-											</span>
-											<!--end::Reset-->
-										</form>
-										<!--end::Form-->
-										<!--begin::Menu-->
-										<div data-kt-search-element="content" class="menu menu-sub menu-sub-dropdown py-7 px-7 overflow-hidden w-300px w-md-350px">
-											<!--begin::Wrapper-->
-											<div data-kt-search-element="wrapper">
-												<!--begin::Recently viewed-->
-												<div id="custom-search-results" class="scroll-y mh-200px mh-lg-350px">
-													<div class="text-muted fs-7 text-center py-10" id="search-initial-msg">
-														Ketik untuk mencari menu...
-													</div>
-												</div>
-												<!--end::Recently viewed-->
-												<!--begin::Empty-->
-												<div data-kt-search-element="empty" class="text-center d-none" id="custom-search-empty">
-													<!--begin::Icon-->
-													<div class="pt-10 pb-10">
-														<i class="ki-duotone ki-search-list fs-4x opacity-50">
-															<span class="path1"></span><span class="path2"></span><span class="path3"></span>
-														</i>
-													</div>
-													<!--end::Icon-->
-													<!--begin::Message-->
-													<div class="pb-15 fw-semibold">
-														<h3 class="text-gray-600 fs-5 mb-2">Tidak ditemukan</h3>
-														<div class="text-muted fs-7">Coba kata kunci lain</div>
-													</div>
-													<!--end::Message-->
-												</div>
-												<!--end::Empty-->
-											</div>
-											<!--end::Wrapper-->
-										</div>
-										<!--end::Menu-->
-
-@push('scripts')
-<script>
-	const searchInput = document.querySelector('input[name="search"]');
-	const resultsContainer = document.getElementById('custom-search-results');
-	const emptyContainer = document.getElementById('custom-search-empty');
-	const initialMsg = document.getElementById('search-initial-msg');
-
-	// Definisi menu-menu aplikasi
-	const appMenus = [
-		// Admin
-		{ title: 'Dashboard Admin', url: '{{ route("dashboard") }}', icon: 'ki-element-11', type: 'admin' },
-		{ title: 'Data Sekolah', url: '{{ route("schools.index") }}', icon: 'ki-bank', type: 'admin' },
-		{ title: 'Tahun Ajaran', url: '{{ route("academic-years.index") }}', icon: 'ki-calendar', type: 'admin' },
-		{ title: 'Ruang Kelas', url: '{{ route("class-rooms.index") }}', icon: 'ki-shop', type: 'admin' },
-		{ title: 'Data Siswa', url: '{{ route("students.index") }}', icon: 'ki-profile-user', type: 'admin' },
-		{ title: 'Data Guru', url: '{{ route("teachers.index") }}', icon: 'ki-badge', type: 'admin' },
-		{ title: 'Mata Pelajaran', url: '{{ route("subjects.index") }}', icon: 'ki-book-square', type: 'admin' },
-		{ title: 'Jadwal Pelajaran', url: '{{ route("schedules.index") }}', icon: 'ki-calendar-8', type: 'admin' },
-		{ title: 'Modul Pembelajaran', url: '{{ route("learning-modules.index") }}', icon: 'ki-book', type: 'admin' },
-		{ title: 'Pengaturan Absensi', url: '{{ route("attendance-settings.index") }}', icon: 'ki-setting-2', type: 'admin' },
-		{ title: 'Penugasan Guru', url: '{{ route("teaching-assignments.index") }}', icon: 'ki-teacher', type: 'admin' },
-		{ title: 'Penugasan Siswa', url: '{{ route("assignments.index") }}', icon: 'ki-notepad-edit', type: 'admin' },
-		{ title: 'Rombongan Belajar', url: '{{ route("enrollments.index") }}', icon: 'ki-people', type: 'admin' },
-		{ title: 'Ujian / CBT', url: '{{ route("exams.index") }}', icon: 'ki-questionnaire-tablet', type: 'admin' },
-		
-		// Siswa (Portal)
-		{ title: 'Portal Siswa', url: '{{ route("student.dashboard") }}', icon: 'ki-home', type: 'student' },
-		{ title: 'Absensi Saya', url: '{{ route("student.attendance") }}', icon: 'ki-fingerprint-scan', type: 'student' },
-		{ title: 'Leaderboard & Lencana', url: '{{ route("portal.leaderboard") }}', icon: 'ki-cup', type: 'student' },
-	];
-
-	const isStudent = {{ auth()->user()->hasRole('Siswa') ? 'true' : 'false' }};
-	const availableMenus = appMenus.filter(m => isStudent ? m.type === 'student' : m.type === 'admin');
-
-	searchInput.addEventListener('input', function(e) {
-		const keyword = e.target.value.toLowerCase();
-		resultsContainer.innerHTML = '';
-		
-		if (keyword.length < 2) {
-			resultsContainer.innerHTML = '<div class="text-muted fs-7 text-center py-10">Ketik untuk mencari menu...</div>';
-			emptyContainer.classList.add('d-none');
-			return;
-		}
-
-		const filtered = availableMenus.filter(m => m.title.toLowerCase().includes(keyword));
-
-		if (filtered.length > 0) {
-			emptyContainer.classList.add('d-none');
-			filtered.forEach(menu => {
-				const item = `
-				<a href="${menu.url}" class="d-flex text-gray-900 text-hover-primary align-items-center mb-5">
-					<div class="symbol symbol-40px me-4">
-						<span class="symbol-label bg-light">
-							<i class="ki-duotone ${menu.icon} fs-2 text-primary">
-								<span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
-							</i>
-						</span>
-					</div>
-					<div class="d-flex flex-column justify-content-start fw-semibold">
-						<span class="fs-6 fw-semibold">${menu.title}</span>
-						<span class="fs-7 fw-semibold text-muted">Menu Aplikasi</span>
-					</div>
-				</a>`;
-				resultsContainer.innerHTML += item;
-			});
-		} else {
-			emptyContainer.classList.remove('d-none');
-		}
-	});
-</script>
-@endpush
-									</div>
-									<!--end::Search-->
+								{{-- Kotak pencarian menu global dibuang atas permintaan; tempatnya
+								     dipakai deretan logo. Markup DAN JS pencariannya ikut terhapus
+								     bersama blok ini, jadi tidak ada JS yang menggantung mencari
+								     elemen yang sudah tidak ada. --}}
+								<div class="deret-logo d-flex align-items-center gap-3">
+								    @if(!empty($appSettings['site_logo']))
+								        <img src="{{ asset('assets/media/logos/'.$appSettings['site_logo']) }}"
+								             alt="Logo sekolah" class="h-40px w-auto" />
+								    @endif
+								    <img src="{{ asset('assets/media/logos/tut-wuri-handayani.png') }}"
+								         alt="Tut Wuri Handayani" class="h-40px w-auto" />
 								</div>
-								<!--end:Search-->
 							</div>
 							<!--end::Brand-->
 							<!--begin::Toolbar wrapper-->

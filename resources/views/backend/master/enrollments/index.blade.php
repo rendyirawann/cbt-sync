@@ -16,6 +16,7 @@
             <div class="card-header mt-5">
                 <div class="card-title flex-column">
                     <h3 class="fw-bold mb-1">Plotting Siswa (Rombel)</h3>
+                    <div class="fs-6 text-gray-500">Manajemen penempatan siswa ke dalam kelas</div>
                     {{-- Kotak pencarian dibuat sendiri: dom DataTables milik Metronic
                          tidak memuat 'f'. Satu kotak menyaring SEMUA tabel rombel. --}}
                     <div class="d-flex align-items-center position-relative mt-3">
@@ -24,7 +25,6 @@
                                class="form-control form-control-sm form-control-solid w-100 w-md-300px ps-11"
                                placeholder="Cari nama siswa atau NISN di semua rombel">
                     </div>
-                    <div class="fs-6 text-gray-500">Manajemen penempatan siswa ke dalam kelas</div>
                 </div>
                 <div class="card-toolbar gap-2">
                     <form method="GET" class="d-flex align-items-center gap-2 me-2">
