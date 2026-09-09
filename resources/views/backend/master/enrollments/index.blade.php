@@ -16,6 +16,14 @@
             <div class="card-header mt-5">
                 <div class="card-title flex-column">
                     <h3 class="fw-bold mb-1">Plotting Siswa (Rombel)</h3>
+                    {{-- Kotak pencarian dibuat sendiri: dom DataTables milik Metronic
+                         tidak memuat 'f'. Satu kotak menyaring SEMUA tabel rombel. --}}
+                    <div class="d-flex align-items-center position-relative mt-3">
+                        <i class="ki-outline ki-magnifier fs-4 position-absolute ms-4 text-gray-500"></i>
+                        <input type="text" id="cariRombel" autocomplete="off"
+                               class="form-control form-control-sm form-control-solid w-100 w-md-300px ps-11"
+                               placeholder="Cari nama siswa atau NISN di semua rombel">
+                    </div>
                     <div class="fs-6 text-gray-500">Manajemen penempatan siswa ke dalam kelas</div>
                 </div>
                 <div class="card-toolbar gap-2">
@@ -189,7 +197,11 @@
                 pageLength: 10,
                 lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Semua']],
                 order: [[1, 'asc']],
-                columnDefs: [{ orderable: false, searchable: false, targets: [0, -1] }],
+                // Kolom: 0 #, 1 Siswa, 2 NISN, 3 Sekolah Asal, 4 Aksi.
+                // Sekolah Asal ikut dikeluarkan dari pencarian — isinya sama untuk
+                // semua siswa satu sekolah, jadi "SMA" akan mencocokkan semuanya.
+                columnDefs: [{ orderable: false, searchable: false, targets: [0, -1] },
+                             { searchable: false, targets: [3] }],
                 language: {
                     search: 'Cari:',
                     searchPlaceholder: 'nama / NISN',
@@ -208,6 +220,38 @@
                     this.api().column(0, { page: 'current' }).nodes().each(function (sel, i) {
                         sel.innerHTML = mulai + i + 1;
                     });
+
+        // Satu kotak, banyak tabel: setiap .tabel-rombel disaring dengan kata
+        // yang sama. Diberi jeda kecil supaya tiap ketikan tidak menyaring ulang
+        // seluruh rombel sekaligus.
+        var kotakRombel = document.getElementById('cariRombel');
+        if (kotakRombel) {
+            var jedaRombel = null;
+            kotakRombel.addEventListener('keyup', function () {
+                var nilai = this.value;
+                clearTimeout(jedaRombel);
+                jedaRombel = setTimeout(function () {
+                    $('.tabel-rombel').each(function () {
+                        if ($.fn.DataTable.isDataTable(this)) {
+                            $(this).DataTable().search(nilai).draw();
+                        }
+                    });
+                    // Rombel yang tertutup dibuka bila ada yang cocok, supaya
+                    // hasil pencarian tidak tersembunyi di dalam accordion.
+                    if (nilai) {
+                        $('.tabel-rombel').each(function () {
+                            if (!$.fn.DataTable.isDataTable(this)) return;
+                            var cocok = $(this).DataTable().rows({ search: 'applied' }).count();
+                            var lipat = $(this).closest('.collapse');
+                            if (cocok > 0 && lipat.length) { lipat.addClass('show'); }
+                        });
+                    }
+                }, 250);
+            });
+            kotakRombel.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); }
+            });
+        }
                 }
             });
         });

@@ -371,10 +371,16 @@ class StudentController extends Controller
         $per = (int) $request->input('per', 25);
         $bagian = $bertahap ? array_slice($rows, $dari, $per) : $rows;
 
+        // Dilaporkan pada potongan PERTAMA saja: isinya menyangkut seluruh berkas,
+        // jadi mengulanginya pada tiap potongan hanya menggandakan pesan.
+        $duplikat = ($bertahap && $dari > 0) ? [] : $this->duplikatDalamBerkas($rows);
+
         $h = $this->prosesImporSiswa($bagian);
 
         if (! $bertahap) {
-            return $this->importSummary($h['imported'], $h['skipped'], $h['errors'], $h['catatan']);
+            return $this->importSummary(
+                $h['imported'], $h['skipped'], array_merge($duplikat, $h['errors']), $h['catatan']
+            );
         }
 
         $diproses = $dari + count($bagian);
@@ -385,9 +391,49 @@ class StudentController extends Controller
             'selesai'  => $diproses >= $total || empty($bagian),
             'imported' => $h['imported'],
             'skipped'  => $h['skipped'],
-            'errors'   => $h['errors'],
+            // Baris kembar masuk ke daftar galat, bukan penghitung "dilewati":
+            // dilewati berarti datanya sudah ada, kembar berarti ada baris berkas
+            // yang tidak akan pernah masuk.
+            'errors'   => array_merge($duplikat, $h['errors']),
             'catatan'  => $h['catatan'],
         ]);
+    }
+
+    /**
+     * Cari email/NISN/username yang KEMBAR di dalam satu berkas.
+     *
+     * Murni di memori, tanpa query: yang dicari bukan tabrakan dengan data yang
+     * sudah ada (itu wajar dan memang dilewati), melainkan dua baris berkas yang
+     * saling bertabrakan — sebab pada kasus itu satu barisnya TIDAK akan masuk
+     * dan sebelumnya hilang tanpa jejak.
+     */
+    private function duplikatDalamBerkas(array $rows): array
+    {
+        $medan = [
+            'email'    => 'Email',
+            'nisn'     => 'NISN',
+            'username' => 'Username',
+        ];
+
+        $laporan = [];
+        foreach ($medan as $kunci => $label) {
+            $pertama = [];
+            foreach ($rows as $row) {
+                $nilai = strtolower(trim((string) ($row[$kunci] ?? '')));
+                if ($nilai === '') {
+                    continue;
+                }
+                $line = $row['_row'] ?? '?';
+                if (isset($pertama[$nilai])) {
+                    $laporan[] = "$label \"$nilai\" dipakai dua kali: baris {$pertama[$nilai]} dan baris $line"
+                        . ' — hanya baris ' . $pertama[$nilai] . ' yang masuk, baris ' . $line . ' TIDAK';
+                } else {
+                    $pertama[$nilai] = $line;
+                }
+            }
+        }
+
+        return $laporan;
     }
 
     /**

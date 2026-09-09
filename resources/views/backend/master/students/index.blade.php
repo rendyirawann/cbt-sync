@@ -20,6 +20,15 @@
             <div class="card-header mt-5">
                 <div class="card-title flex-column">
                     <h3 class="fw-bold mb-1">Manajemen Siswa</h3>
+                    {{-- Kotak pencarian dibuat sendiri karena dom DataTables milik
+                         Metronic tidak memuat 'f'. Lebarnya responsif: w-250px tetap
+                         akan keluar dari kartu di layar 390px. --}}
+                    <div class="d-flex align-items-center position-relative mt-3">
+                        <i class="ki-outline ki-magnifier fs-4 position-absolute ms-4 text-gray-500"></i>
+                        <input type="text" id="cariSiswa" autocomplete="off"
+                               class="form-control form-control-sm form-control-solid w-100 w-md-300px ps-11"
+                               placeholder="Cari nama, NISN, username, atau email">
+                    </div>
                 </div>
                 <div class="card-toolbar">
                     {{-- Muncul hanya saat ada baris tercentang; jumlahnya ikut di label. --}}
@@ -401,6 +410,12 @@
         // Kolom yang TIDAK boleh diurutkan: kolom centang (bila ada) dan kolom Aksi.
         var takUrut = bolehHapus ? [0, -1] : [-1];
 
+        // Geseran indeks: kolom centang menambah satu kolom di depan.
+        // Urutan kolom: [centang] NISN, Nama, Username, Tempat&Tgl, Proktor/Ruang,
+        // Gelombang, Asal Sekolah, Email, Gender, Aksi.
+        var geser = bolehHapus ? 1 : 0;
+        var takDicari = [geser + 3, geser + 4, geser + 5, geser + 6, geser + 8];
+
         // Baris "belum ada data siswa" adalah SATU sel ber-colspan, sementara
         // DataTables mengharap sel sebanyak kolom di kepala tabel. Memasangnya
         // pada keadaan itu melempar:
@@ -421,7 +436,14 @@
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
             order: bolehHapus ? [[2, 'asc']] : [[1, 'asc']],   // urut nama
-            columnDefs: [{ orderable: false, searchable: false, targets: takUrut }],
+            columnDefs: [
+                { orderable: false, searchable: false, targets: takUrut },
+                // Hanya NISN, Nama Lengkap, Username, dan Email yang boleh dicari.
+                // Tanpa ini, "UTS" mencocokkan SEMUA siswa lewat kolom ID Proktor
+                // dan "SMA" lewat kolom Asal Sekolah — hasil pencariannya jadi
+                // tidak berarti.
+                { searchable: false, targets: takDicari }
+            ],
             language: {
                 search: 'Cari siswa:',
                 searchPlaceholder: 'nama / NISN / username / email',
@@ -434,6 +456,22 @@
                 paginate: { first: 'Awal', last: 'Akhir', next: 'Berikutnya', previous: 'Sebelumnya' }
             }
         });
+
+        // Input dihubungkan ke DataTables dengan jeda kecil: tanpa jeda, tiap
+        // ketikan memicu penyaringan ulang 364 baris dan terasa tersendat.
+        var kotakCari = document.getElementById('cariSiswa');
+        if (kotakCari) {
+            var jeda = null;
+            kotakCari.addEventListener('keyup', function () {
+                var nilai = this.value;
+                clearTimeout(jeda);
+                jeda = setTimeout(function () { tabel.search(nilai).draw(); }, 250);
+            });
+            // Enter tidak boleh mengirim form apa pun dari sini.
+            kotakCari.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); }
+            });
+        }
 
         if (!bolehHapus) return;
 
