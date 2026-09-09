@@ -45,6 +45,11 @@
                     'penyelenggara' => strtoupper($siswaSaya->school->name ?? 'SEKOLAH'),
                     'labelTahun' => $tahunAktif->name ?? '-',
                     'logo' => asset('assets/media/logos/tut-wuri-handayani.png'),
+                    {{-- Di sini kartunya dirender BROWSER, jadi yang dipakai URL
+                         (asset), bukan path berkas seperti pada versi PDF. --}}
+                    'logoSekolah' => !empty($appSettings['site_logo'])
+                        ? asset('assets/media/logos/' . $appSettings['site_logo'])
+                        : null,
                 ])
             </div>
             <div class="text-muted fs-8 mt-4">

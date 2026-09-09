@@ -341,29 +341,108 @@ class StudentController extends Controller
 
     public function import(Request $request)
     {
-        $request->validate(['file' => 'required|file|mimes:xlsx,xls|max:8192'], $this->idMessages(), ['file' => 'Berkas Excel']);
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:8192',
+            // Diisi oleh JS impor bertahap. Tanpa keduanya, seluruh berkas
+            // diproses dalam satu permintaan seperti perilaku lama.
+            'dari' => 'nullable|integer|min:0',
+            'per'  => 'nullable|integer|min:1|max:50',
+        ], $this->idMessages(), ['file' => 'Berkas Excel']);
+
         try {
             $rows = $this->readExcelRows($request->file('file'), $this->spec()['columns']);
         } catch (\Throwable $e) {
-            return back()->with('error', 'Gagal membaca Excel: ' . $e->getMessage());
+            $pesan = 'Gagal membaca Excel: ' . $e->getMessage();
+
+            return $request->expectsJson()
+                ? response()->json(['message' => $pesan], 422)
+                : back()->with('error', $pesan);
         }
 
+        $total = count($rows);
+        $bertahap = $request->filled('dari');
+        $dari = (int) $request->input('dari', 0);
+        $per = (int) $request->input('per', 25);
+        $bagian = $bertahap ? array_slice($rows, $dari, $per) : $rows;
+
+        $h = $this->prosesImporSiswa($bagian);
+
+        if (! $bertahap) {
+            return $this->importSummary($h['imported'], $h['skipped'], $h['errors'], $h['catatan']);
+        }
+
+        $diproses = $dari + count($bagian);
+
+        return response()->json([
+            'total'    => $total,
+            'diproses' => $diproses,
+            'selesai'  => $diproses >= $total || empty($bagian),
+            'imported' => $h['imported'],
+            'skipped'  => $h['skipped'],
+            'errors'   => $h['errors'],
+            'catatan'  => $h['catatan'],
+        ]);
+    }
+
+    /**
+     * Proses satu potongan baris Excel menjadi akun + data siswa.
+     *
+     * Seluruh query pencarian dilakukan SEKALI untuk potongan ini, bukan per
+     * baris. Yang baru dibuat ikut dicatat ke dalam himpunan di memori, supaya
+     * dua baris yang sama di dalam satu berkas tetap terdeteksi seperti dulu.
+     */
+    private function prosesImporSiswa(array $rows): array
+    {
         // Admin sekolah: semua siswa dipaksa ke sekolahnya (kolom Sekolah di file diabaikan).
         $sid = \App\Support\SchoolScope::id();
         // NISN diwajibkan saat impor (permintaan sekolah): tanpa NISN, username
-        // jatuh ke email dan kartu ujian kehilangan nomor peserta — itu yang
-        // membuat sekelas siswa masuk tanpa NISN pada impor sebelumnya.
+        // jatuh ke email dan kartu ujian kehilangan nomor peserta.
         $rules = ['name' => 'required|string|max:255', 'email' => 'required|email', 'school' => ($sid ? 'nullable' : 'required') . '|string', 'gender' => 'nullable|in:L,P', 'nisn' => 'required|string|max:30'];
         $labels = ['name' => 'Nama', 'email' => 'Email', 'school' => 'Nama Sekolah', 'gender' => 'Gender', 'nisn' => 'NISN'];
         $activeYear = AcademicYear::where('is_active', 1)->first() ?? AcademicYear::first();
         // Kolom Gelombang di Excel diisi NAMA gelombang; dipetakan ke id di sini.
         $gelombang = \App\Models\Wave::pluck('id', 'name')
             ->mapWithKeys(fn ($id, $nama) => [strtolower(trim($nama)) => $id])->all();
+
+        // ---- Pencarian sekali untuk seluruh potongan (dulu per baris) ----
+        $ambil = fn ($k) => collect($rows)->pluck($k)->map(fn ($v) => trim((string) $v))->filter()->unique()->values()->all();
+
+        $emailBerkas = $ambil('email');
+        $nisnBerkas = $ambil('nisn');
+        $sekolahBerkas = $ambil('school');
+        $kelasBerkas = $ambil('class');
+
+        $emailDipakai = $emailBerkas
+            ? User::whereIn('email', $emailBerkas)->pluck('email')->map(fn ($e) => strtolower($e))->all()
+            : [];
+        $emailDipakai = array_fill_keys($emailDipakai, true);
+
+        $nisnDipakai = $nisnBerkas
+            ? array_fill_keys(Student::whereIn('nisn', $nisnBerkas)->pluck('nisn')->all(), true)
+            : [];
+
+        // Username dihitung dulu untuk semua baris, lalu diperiksa dalam satu query.
+        $calonUsername = [];
+        foreach ($rows as $r) {
+            $n = trim((string) ($r['nisn'] ?? ''));
+            $calonUsername[] = $this->rapikanUsername($r['username'] ?? '', $n !== '' ? $n : ($r['email'] ?? ''));
+        }
+        $calonUsername = array_values(array_unique(array_filter($calonUsername)));
+        $usernameDipakai = $calonUsername
+            ? array_fill_keys(User::whereIn('username', $calonUsername)->pluck('username')->all(), true)
+            : [];
+
+        $sekolahPaksa = $sid ? School::find($sid) : null;
+        $petaSekolah = (! $sid && $sekolahBerkas)
+            ? School::whereIn('name', $sekolahBerkas)->get()->keyBy('name')
+            : collect();
+        $petaKelas = $kelasBerkas
+            ? ClassRoom::whereIn('name', $kelasBerkas)->get()->keyBy('name')
+            : collect();
+
         $imported = 0; $skipped = 0; $errors = []; $catatan = [];
 
-        // Kolom yang tidak wajib tapi berdampak nyata bila kosong: tanpa ini,
-        // barisnya tetap masuk dan pengguna baru sadar ada yang kosong setelah
-        // melihat tabel atau mencetak kartu ujian.
+        // Kolom yang tidak wajib tapi berdampak nyata bila kosong.
         $penting = [
             'birth_place' => 'Tempat Lahir', 'birth_date' => 'Tanggal Lahir',
             'gender' => 'Gender', 'proctor_id' => 'ID Proktor', 'room' => 'Ruang', 'wave' => 'Gelombang',
@@ -381,13 +460,14 @@ class StudentController extends Controller
             if ($kosong) {
                 $catatan[] = "baris $line (" . implode(', ', $kosong) . ')';
             }
-            if (User::where('email', $row['email'])->exists()) { $skipped++; continue; }
-            $school = $sid ? School::find($sid) : School::where('name', $row['school'])->first();
+            $emailKunci = strtolower(trim((string) $row['email']));
+            if (isset($emailDipakai[$emailKunci])) { $skipped++; continue; }
+            $school = $sid ? $sekolahPaksa : $petaSekolah->get(trim((string) $row['school']));
             if (!$school) { $errors[] = "Baris $line: Sekolah \"{$row['school']}\" tidak ditemukan."; continue; }
             $nisn = $row['nisn'] ?? '';
-            if ($nisn !== '' && Student::where('nisn', $nisn)->exists()) { $errors[] = "Baris $line: NISN \"$nisn\" sudah dipakai."; continue; }
+            if ($nisn !== '' && isset($nisnDipakai[$nisn])) { $errors[] = "Baris $line: NISN \"$nisn\" sudah dipakai."; continue; }
             $unameCek = $this->rapikanUsername($row['username'] ?? '', $nisn !== '' ? $nisn : $row['email']);
-            if (User::where('username', $unameCek)->exists()) { $errors[] = "Baris $line: Username \"$unameCek\" sudah dipakai akun lain."; continue; }
+            if (isset($usernameDipakai[$unameCek])) { $errors[] = "Baris $line: Username \"$unameCek\" sudah dipakai akun lain."; continue; }
             try {
                 // Password kosong = acak bergaya ANBK (bukan lagi default seragam
                 // "siswa12345"), lalu disimpan sebagai password kartu.
@@ -396,7 +476,7 @@ class StudentController extends Controller
                 // di dalam closure, sehingga $gelombang[...] ?? null selalu bernilai
                 // null — dan kolom Gelombang di Excel tidak pernah tersimpan sama
                 // sekali, tanpa galat apa pun karena ditelan operator ??.
-                DB::transaction(function () use ($row, $school, $nisn, $activeYear, $sandiBaris, $gelombang) {
+                DB::transaction(function () use ($row, $school, $nisn, $activeYear, $sandiBaris, $gelombang, $petaKelas) {
                     $username = $this->rapikanUsername($row['username'] ?? '', $nisn !== '' ? $nisn : $row['email']);
                     $user = User::create([
                         'name' => $row['name'],
@@ -430,7 +510,7 @@ class StudentController extends Controller
 
                     // Enroll ke kelas bila kolom Kelas diisi & kelas ditemukan.
                     if (!empty($row['class']) && $activeYear) {
-                        $class = ClassRoom::where('name', $row['class'])->first();
+                        $class = $petaKelas->get(trim((string) $row['class']));
                         if ($class) {
                             ClassStudent::firstOrCreate([
                                 'student_id' => $student->id,
@@ -440,10 +520,17 @@ class StudentController extends Controller
                         }
                     }
                 });
+                // Dicatat di memori: dua baris dengan email/NISN/username sama
+                // di dalam satu berkas harus tetap terdeteksi, sama seperti saat
+                // pemeriksaannya masih berupa query per baris.
+                $emailDipakai[$emailKunci] = true;
+                if ($nisn !== '') { $nisnDipakai[$nisn] = true; }
+                $usernameDipakai[$unameCek] = true;
                 $imported++;
-            } catch (\Throwable $e) { $errors[] = "Baris $line: gagal disimpan."; }
+            } catch (\Throwable $e) { report($e); $errors[] = "Baris $line: gagal disimpan — " . $e->getMessage(); }
         }
-        return $this->importSummary($imported, $skipped, $errors, $catatan);
+
+        return compact('imported', 'skipped', 'errors', 'catatan');
     }
 
     /**

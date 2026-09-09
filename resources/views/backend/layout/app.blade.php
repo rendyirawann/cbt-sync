@@ -22,7 +22,10 @@ License: For each use you must have a valid license purchased only from above li
 		<meta name="description" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }} — Admin Dashboard" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 										<meta name="csrf-token" content="{{ csrf_token() }}" />
-						<link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
+						{{-- Baris <link rel="shortcut icon" href="…/favicon.ico"> dibuang dari
+						     sini: ia berada SESUDAH head-meta, jadi menimpa favicon logo
+						     sekolah di seluruh panel admin. Ikon sekarang sepenuhnya
+						     diurus partials/head-meta. --}}
 		<!--begin::Fonts(mandatory for all pages)-->
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
 		<!--end::Fonts-->
