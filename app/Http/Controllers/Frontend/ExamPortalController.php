@@ -163,22 +163,38 @@ class ExamPortalController extends Controller
     {
         $exam = $session->exam;
 
-        // Kolam soal: mode 'manual' hanya memakai soal yang dicentang guru.
-        // Jaring aman — bila guru lupa mengaktifkan apa pun, pakai semua soal
-        // daripada menyajikan ujian kosong.
-        $questions = $exam->question_selection === 'all'
-            ? $exam->questions
-            : $exam->questions->where('is_active', true)->values();
-        if ($questions->isEmpty()) {
-            $questions = $exam->questions;
+        // ESSAY SELALU IKUT SELURUHNYA. Pemilihan soal aktif — manual maupun
+        // jumlah acak — hanya berlaku untuk PILIHAN GANDA.
+        //
+        // Alasannya: essay dinilai manual satu per satu. Kalau paket essay
+        // berbeda antar siswa (siswa A dapat 3 essay, siswa B tidak dapat sama
+        // sekali), pemeriksaannya tidak sebanding dan bobot per bagian jadi
+        // tidak berarti. PG aman diacak karena dinilai otomatis.
+        $semuaSoal = $exam->questions;
+        $essay = $semuaSoal->where('type', 'essay')->values();
+        $pg = $semuaSoal->where('type', 'mc');
+
+        // Kolam PG: mode 'manual' hanya memakai yang dicentang guru. Jaring aman —
+        // bila guru lupa mengaktifkan apa pun, pakai semua PG daripada menyajikan
+        // ujian tanpa soal pilihan ganda.
+        $kolamPg = $exam->question_selection === 'all'
+            ? $pg
+            : $pg->where('is_active', true);
+        if ($kolamPg->isEmpty()) {
+            $kolamPg = $pg;
         }
 
-        // Mode 'auto': tiap siswa menerima sejumlah soal ACAK dari kolam, jadi
+        // Mode 'auto': tiap siswa menerima sejumlah PG ACAK dari kolam, jadi
         // paket antar siswa berbeda. Penilaian mengikuti paket ini lewat
         // CbtScoringService::paketSoal().
         $jumlahAktif = (int) $exam->active_question_count;
-        if ($exam->question_selection === 'auto' && $jumlahAktif > 0 && $questions->count() > $jumlahAktif) {
-            $questions = $questions->shuffle()->take($jumlahAktif)->values();
+        if ($exam->question_selection === 'auto' && $jumlahAktif > 0 && $kolamPg->count() > $jumlahAktif) {
+            $kolamPg = $kolamPg->shuffle()->take($jumlahAktif);
+        }
+
+        $questions = $kolamPg->values()->concat($essay);
+        if ($questions->isEmpty()) {
+            $questions = $semuaSoal;
         }
 
         $qOrder = $session->shuffle_questions
