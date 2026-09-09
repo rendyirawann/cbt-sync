@@ -448,11 +448,10 @@ class StudentController extends Controller
 
         $imported = 0; $skipped = 0; $errors = []; $catatan = [];
 
-        // Kolom yang tidak wajib tapi berdampak nyata bila kosong.
-        $penting = [
-            'birth_place' => 'Tempat Lahir', 'birth_date' => 'Tanggal Lahir',
-            'gender' => 'Gender', 'proctor_id' => 'ID Proktor', 'room' => 'Ruang', 'wave' => 'Gelombang',
-        ];
+        // Daftarnya diambil dari App\Support\KelengkapanSiswa supaya SAMA dengan
+        // badge "perlu dilengkapi" di tabel Data Siswa. Dulu ditulis inline di
+        // sini, jadi keduanya bisa diam-diam berbeda isi.
+        $penting = \App\Support\KelengkapanSiswa::kolomExcel();
 
         foreach ($rows as $row) {
             $line = $row['_row']; unset($row['_row']);

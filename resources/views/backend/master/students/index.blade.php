@@ -64,7 +64,19 @@
                                                value="{{ $item->id }}" data-nama="{{ $item->user->name ?? $item->nisn }}"></td>
                                 @endif
                                 <td>{{ $item->nisn }}</td>
-                                <td>{{ $item->user->name ?? '-' }}</td>
+                                <td>
+                                    {{ $item->user->name ?? '-' }}
+                                    @php $kurang = \App\Support\KelengkapanSiswa::kurang($item); @endphp
+                                    @if($kurang)
+                                        {{-- Hanya muncul bila memang ada yang kosong; baris yang sudah
+                                             lengkap tidak diberi badge sama sekali. Isi yang kurang
+                                             disebutkan di tooltip supaya tidak perlu membuka Detail. --}}
+                                        <span class="badge badge-light-warning fs-9 fw-bold d-inline-block mt-1"
+                                              title="Belum diisi: {{ implode(', ', $kurang) }}">
+                                            <i class="ki-outline ki-information-5 fs-8 me-1"></i>perlu dilengkapi ({{ count($kurang) }})
+                                        </span>
+                                    @endif
+                                </td>
                                 <td>{{ $item->user->username ?? '-' }}</td>
                                 <td>
                                     {{ $item->birth_place ?: '-' }}
@@ -83,7 +95,18 @@
                                 </td>
                                 <td>{{ $item->school->name ?? '-' }}</td>
                                 <td>{{ $item->user->email ?? '-' }}</td>
-                                <td>{{ $item->gender == 'L' ? 'Laki-laki' : 'Perempuan' }}</td>
+                                {{-- Dulu `== 'L' ? 'Laki-laki' : 'Perempuan'`, sehingga gender
+                                     NULL tampil sebagai "Perempuan" — tabelnya salah untuk setiap
+                                     siswa yang kolom Gender-nya dikosongkan di Excel. --}}
+                                <td>
+                                    @if($item->gender === 'L')
+                                        Laki-laki
+                                    @elseif($item->gender === 'P')
+                                        Perempuan
+                                    @else
+                                        <span class="text-muted fw-semibold">belum diisi</span>
+                                    @endif
+                                </td>
                                 <td class="text-end">
                                     <a href="#" class="btn btn-sm btn-light btn-active-light-primary btn-detail-siswa"
                                        data-id="{{ $item->id }}">Detail</a>
