@@ -224,84 +224,114 @@
                                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal"><i class="ki-outline ki-cross fs-1"></i></div>
                             </div>
                             <div class="modal-body px-8 py-6">
+                                {{-- PG dan Essay punya pengaturan MASING-MASING. Kedua panel
+                                     dirender dari satu blok berulang, jadi keduanya tidak bisa
+                                     diam-diam berbeda perilaku. --}}
                                 @php
-                                    // Pengaturan ini hanya menyangkut PG; essay tidak dihitung
-                                    // di sini karena semuanya selalu diberikan.
                                     $soalPg = $exam->questions->where('type', 'mc');
                                     $soalEssay = $exam->questions->where('type', 'essay');
-                                    $aktifCount = $soalPg->where('is_active', true)->count();
+                                    $bagianSoal = [
+                                        [
+                                            'kunci' => 'pg', 'judul' => 'Soal Pilihan Ganda', 'warna' => 'primary',
+                                            'soal' => $soalPg->sortBy('order')->values(),
+                                            'namaMode' => 'question_selection', 'namaJumlah' => 'active_question_count',
+                                            'namaCentang' => 'active',
+                                            'mode' => $exam->question_selection ?: 'all',
+                                            'jumlah' => $exam->active_question_count,
+                                            'catatan' => null,
+                                        ],
+                                        [
+                                            'kunci' => 'essay', 'judul' => 'Soal Essay', 'warna' => 'info',
+                                            'soal' => $soalEssay->sortBy('order')->values(),
+                                            'namaMode' => 'essay_selection', 'namaJumlah' => 'active_essay_count',
+                                            'namaCentang' => 'active_essay',
+                                            'mode' => $exam->essay_selection ?: 'all',
+                                            'jumlah' => $exam->active_essay_count,
+                                            'catatan' => 'Essay diperiksa manual satu per satu. Mode acak membuat paket essay berbeda antar siswa, sehingga pemeriksaannya tidak sebanding — pakai hanya bila memang diinginkan.',
+                                        ],
+                                    ];
                                 @endphp
-                                <div class="alert alert-light-primary fs-8 py-2 mb-5">
-                                    Ujian ini punya <b>{{ $soalPg->count() }}</b> soal pilihan ganda
-                                    (<b>{{ $aktifCount }}</b> ditandai aktif).
-                                    Pengaturan hanya bisa diubah selama belum ada siswa yang memulai ujian.
-                                </div>
-                                @if($soalEssay->isNotEmpty())
-                                    <div class="alert alert-light-info d-flex align-items-center fs-8 py-3 mb-5">
-                                        <i class="ki-outline ki-information-5 fs-3 text-info me-3"></i>
-                                        <div>Pengaturan di bawah <b>hanya untuk soal pilihan ganda</b>.
-                                            Seluruh <b>{{ $soalEssay->count() }} soal essay</b> selalu diberikan ke
-                                            <b>semua</b> siswa dan tidak pernah diacak — karena essay diperiksa manual,
-                                            paket yang berbeda antar siswa membuat penilaiannya tidak sebanding.</div>
-                                    </div>
-                                @endif
 
-                                <div class="mb-5">
-                                    <label class="form-label required">Cara pemilihan soal</label>
-                                    <div class="d-flex flex-column gap-3">
-                                        <label class="form-check">
-                                            <input class="form-check-input sel-mode" type="radio" name="question_selection" value="all"
-                                                @checked(($exam->question_selection ?? 'all') === 'all')>
-                                            <span class="form-check-label ms-2"><b>Semua soal</b> — setiap siswa mengerjakan seluruh soal PG.</span>
-                                        </label>
-                                        <label class="form-check">
-                                            <input class="form-check-input sel-mode" type="radio" name="question_selection" value="manual"
-                                                @checked($exam->question_selection === 'manual')>
-                                            <span class="form-check-label ms-2"><b>Pilih manual</b> — hanya soal PG yang dicentang di bawah.</span>
-                                        </label>
-                                        <label class="form-check">
-                                            <input class="form-check-input sel-mode" type="radio" name="question_selection" value="auto"
-                                                @checked($exam->question_selection === 'auto')>
-                                            <span class="form-check-label ms-2"><b>Otomatis (acak per siswa)</b> — tiap siswa menerima
-                                                sejumlah soal PG acak dari kolam yang aktif, jadi paketnya berbeda-beda.</span>
-                                        </label>
-                                    </div>
+                                <div class="alert alert-light-primary fs-8 py-3 mb-6">
+                                    Pengaturan <b>Pilihan Ganda</b> dan <b>Essay</b> terpisah, jadi bisa diatur
+                                    berbeda. Hanya bisa diubah selama belum ada siswa yang memulai ujian.
                                 </div>
 
-                                <div class="mb-5" id="selCount">
-                                    <label class="form-label">Jumlah soal PG per siswa</label>
-                                    <input type="number" min="1" name="active_question_count" class="form-control form-control-solid"
-                                        value="{{ $exam->active_question_count }}" placeholder="mis. 30 dari {{ $soalPg->count() }} soal PG">
-                                    <div class="form-text">Dipakai hanya pada mode otomatis. Nilai akhir tetap berskala 0–100
-                                        karena bobot dihitung di dalam paket masing-masing siswa.</div>
-                                </div>
+                                @foreach($bagianSoal as $b)
+                                    @if($b['soal']->isEmpty())
+                                        {{-- Bagian ini tidak ada di ujian. Modenya tetap dikirim
+                                             sebagai 'all' supaya validasi required di server tidak
+                                             gagal hanya karena panelnya tidak dirender. --}}
+                                        <input type="hidden" name="{{ $b['namaMode'] }}" value="all">
+                                    @else
+                                        <div class="border border-gray-300 rounded p-5 mb-6" data-bagian="{{ $b['kunci'] }}">
+                                            <div class="d-flex align-items-center justify-content-between mb-4">
+                                                <h4 class="fw-bold mb-0">
+                                                    <span class="badge badge-light-{{ $b['warna'] }} me-2">{{ $b['soal']->count() }} soal</span>
+                                                    {{ $b['judul'] }}
+                                                </h4>
+                                                <span class="text-muted fs-8">{{ $b['soal']->where('is_active', true)->count() }} ditandai aktif</span>
+                                            </div>
 
-                                <div id="selList">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <label class="form-label mb-0">Soal pilihan ganda yang diujikan</label>
-                                        <label class="form-check form-check-sm">
-                                            <input class="form-check-input" type="checkbox" id="selAll">
-                                            <span class="form-check-label fs-8 ms-2">Pilih semua</span>
-                                        </label>
-                                    </div>
-                                    <div style="max-height:44vh;overflow:auto">
-                                        {{-- Hanya PG yang bisa dicentang. Essay tidak ditampilkan di sini
-                                             karena tidak ada yang bisa dipilih: semuanya selalu diujikan. --}}
-                                        @foreach($soalPg->sortBy('order')->values() as $i => $qq)
-                                            <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2">
-                                                <input class="form-check-input mt-1 sel-item" type="checkbox" name="active[]"
-                                                    value="{{ $qq->id }}" @checked($qq->is_active)>
-                                                <div class="flex-grow-1">
-                                                    <div class="d-flex flex-wrap gap-2 mb-1">
-                                                        <span class="badge badge-light-{{ $qq->type==='mc'?'primary':'info' }}">{{ $qq->type==='mc'?'PG':'Essay' }}</span>
-                                                        <span class="badge badge-light">soal {{ $i + 1 }}</span>
-                                                    </div>
-                                                    <div class="fs-7 text-gray-800">{{ \Illuminate\Support\Str::limit($qq->question_text, 120) }}</div>
+                                            @if($b['catatan'])
+                                                <div class="alert alert-light-warning fs-8 py-2 mb-4">{{ $b['catatan'] }}</div>
+                                            @endif
+
+                                            <div class="d-flex flex-column gap-2 mb-4">
+                                                <label class="form-check">
+                                                    <input class="form-check-input sel-mode" type="radio"
+                                                        name="{{ $b['namaMode'] }}" value="all" @checked($b['mode'] === 'all')>
+                                                    <span class="form-check-label ms-2 fs-7"><b>Semua</b> — setiap siswa mengerjakan seluruh {{ $b['soal']->count() }} soal ini.</span>
+                                                </label>
+                                                <label class="form-check">
+                                                    <input class="form-check-input sel-mode" type="radio"
+                                                        name="{{ $b['namaMode'] }}" value="manual" @checked($b['mode'] === 'manual')>
+                                                    <span class="form-check-label ms-2 fs-7"><b>Pilih manual</b> — hanya yang dicentang di bawah.</span>
+                                                </label>
+                                                <label class="form-check">
+                                                    <input class="form-check-input sel-mode" type="radio"
+                                                        name="{{ $b['namaMode'] }}" value="auto" @checked($b['mode'] === 'auto')>
+                                                    <span class="form-check-label ms-2 fs-7"><b>Otomatis (acak per siswa)</b> — tiap siswa menerima sejumlah soal acak dari yang aktif.</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="mb-4 sel-count">
+                                                <label class="form-label fs-7">Jumlah soal per siswa</label>
+                                                <input type="number" min="1" name="{{ $b['namaJumlah'] }}"
+                                                    class="form-control form-control-solid form-control-sm"
+                                                    value="{{ $b['jumlah'] }}"
+                                                    placeholder="mis. {{ max(1, (int) floor($b['soal']->count() / 2)) }} dari {{ $b['soal']->count() }}">
+                                                <div class="form-text fs-8">Dipakai hanya pada mode otomatis. Nilai akhir tetap
+                                                    berskala 0–100 karena bobot dihitung di dalam paket masing-masing siswa.</div>
+                                            </div>
+
+                                            <div class="sel-list">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <label class="form-label mb-0 fs-7">Soal yang diujikan</label>
+                                                    <label class="form-check form-check-sm">
+                                                        <input class="form-check-input sel-all" type="checkbox">
+                                                        <span class="form-check-label fs-8 ms-2">Pilih semua</span>
+                                                    </label>
                                                 </div>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                </div>
+                                                <div style="max-height:32vh;overflow:auto">
+                                                    @foreach($b['soal'] as $i => $qq)
+                                                        <label class="d-flex align-items-start gap-3 border rounded p-3 mb-2">
+                                                            <input class="form-check-input mt-1 sel-item" type="checkbox"
+                                                                name="{{ $b['namaCentang'] }}[]" value="{{ $qq->id }}" @checked($qq->is_active)>
+                                                            <div class="flex-grow-1">
+                                                                <div class="d-flex flex-wrap gap-2 mb-1">
+                                                                    <span class="badge badge-light-{{ $b['warna'] }}">{{ $b['judul'] === 'Soal Essay' ? 'Essay' : 'PG' }}</span>
+                                                                    <span class="badge badge-light">soal {{ $i + 1 }}</span>
+                                                                </div>
+                                                                <div class="fs-7 text-gray-800">{{ \Illuminate\Support\Str::limit($qq->question_text, 110) }}</div>
+                                                            </div>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                @endforeach
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-primary" @disabled($exam->hasStartedAttempts())>Simpan Pengaturan</button>
@@ -852,17 +882,29 @@
     (function(){
         var modal = document.getElementById('selectionModal');
         if (!modal) return;
-        function segarkan(){
-            var mode = (modal.querySelector('.sel-mode:checked') || {}).value || 'all';
-            modal.querySelector('#selCount').style.display = mode === 'auto' ? '' : 'none';
-            modal.querySelector('#selList').style.display  = mode === 'manual' ? '' : 'none';
+
+        // Dulu id tunggal (#selCount/#selList/#selAll). Sekarang ada DUA panel —
+        // PG dan Essay — jadi semuanya dicari relatif terhadap panelnya sendiri
+        // lewat [data-bagian]. Memakai id tunggal akan membuat panel Essay
+        // mengatur panel PG.
+        function segarkanPanel(panel){
+            var mode = (panel.querySelector('.sel-mode:checked') || {}).value || 'all';
+            var count = panel.querySelector('.sel-count');
+            var list  = panel.querySelector('.sel-list');
+            if (count) count.style.display = mode === 'auto' ? '' : 'none';
+            if (list)  list.style.display  = mode === 'manual' ? '' : 'none';
         }
-        modal.querySelectorAll('.sel-mode').forEach(function(r){ r.addEventListener('change', segarkan); });
-        var semua = modal.querySelector('#selAll');
-        if (semua) semua.addEventListener('change', function(){
-            modal.querySelectorAll('.sel-item').forEach(function(c){ c.checked = semua.checked; });
+
+        modal.querySelectorAll('[data-bagian]').forEach(function(panel){
+            panel.querySelectorAll('.sel-mode').forEach(function(r){
+                r.addEventListener('change', function(){ segarkanPanel(panel); });
+            });
+            var semua = panel.querySelector('.sel-all');
+            if (semua) semua.addEventListener('change', function(){
+                panel.querySelectorAll('.sel-item').forEach(function(c){ c.checked = semua.checked; });
+            });
+            segarkanPanel(panel);
         });
-        segarkan();
     })();
 
     // ---- Bank Soal: cari & pilih semua ----

@@ -170,29 +170,40 @@ class ExamPortalController extends Controller
         // berbeda antar siswa (siswa A dapat 3 essay, siswa B tidak dapat sama
         // sekali), pemeriksaannya tidak sebanding dan bobot per bagian jadi
         // tidak berarti. PG aman diacak karena dinilai otomatis.
+        // PG dan ESSAY punya pengaturan soal aktif MASING-MASING, jadi kolamnya
+        // dihitung terpisah dengan aturan yang sama.
+        //
+        // Catatan penting untuk essay: mode 'auto' membuat paket essay berbeda
+        // antar siswa, dan essay dinilai MANUAL satu per satu — jadi pemeriksaan
+        // jadi tidak sebanding. Itu sebabnya bawaannya 'all', dan mode acak untuk
+        // essay hanya dipakai bila guru sengaja memilihnya.
         $semuaSoal = $exam->questions;
-        $essay = $semuaSoal->where('type', 'essay')->values();
         $pg = $semuaSoal->where('type', 'mc');
+        $essay = $semuaSoal->where('type', 'essay');
 
-        // Kolam PG: mode 'manual' hanya memakai yang dicentang guru. Jaring aman —
-        // bila guru lupa mengaktifkan apa pun, pakai semua PG daripada menyajikan
-        // ujian tanpa soal pilihan ganda.
-        $kolamPg = $exam->question_selection === 'all'
-            ? $pg
-            : $pg->where('is_active', true);
-        if ($kolamPg->isEmpty()) {
-            $kolamPg = $pg;
-        }
+        $pilih = function ($kolam, ?string $mode, int $jumlah) {
+            $mode = $mode ?: 'all';
 
-        // Mode 'auto': tiap siswa menerima sejumlah PG ACAK dari kolam, jadi
-        // paket antar siswa berbeda. Penilaian mengikuti paket ini lewat
-        // CbtScoringService::paketSoal().
-        $jumlahAktif = (int) $exam->active_question_count;
-        if ($exam->question_selection === 'auto' && $jumlahAktif > 0 && $kolamPg->count() > $jumlahAktif) {
-            $kolamPg = $kolamPg->shuffle()->take($jumlahAktif);
-        }
+            $aktif = $mode === 'all' ? $kolam : $kolam->where('is_active', true);
 
-        $questions = $kolamPg->values()->concat($essay);
+            // Jaring aman: bila guru lupa mengaktifkan apa pun, pakai seluruh
+            // kolamnya daripada menghilangkan bagian itu dari ujian.
+            if ($aktif->isEmpty()) {
+                $aktif = $kolam;
+            }
+
+            // Mode 'auto': tiap siswa menerima sejumlah soal ACAK dari kolam.
+            // Penilaian mengikuti paket ini lewat CbtScoringService::paketSoal().
+            if ($mode === 'auto' && $jumlah > 0 && $aktif->count() > $jumlah) {
+                $aktif = $aktif->shuffle()->take($jumlah);
+            }
+
+            return $aktif->values();
+        };
+
+        $questions = $pilih($pg, $exam->question_selection, (int) $exam->active_question_count)
+            ->concat($pilih($essay, $exam->essay_selection, (int) $exam->active_essay_count));
+
         if ($questions->isEmpty()) {
             $questions = $semuaSoal;
         }
