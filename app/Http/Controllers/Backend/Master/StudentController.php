@@ -396,6 +396,7 @@ class StudentController extends Controller
             // yang tidak akan pernah masuk.
             'errors'   => array_merge($duplikat, $h['errors']),
             'catatan'  => $h['catatan'],
+            'dilewati' => $h['dilewati'],
         ]);
     }
 
@@ -492,7 +493,7 @@ class StudentController extends Controller
             ? ClassRoom::whereIn('name', $kelasBerkas)->get()->keyBy('name')
             : collect();
 
-        $imported = 0; $skipped = 0; $errors = []; $catatan = [];
+        $imported = 0; $skipped = 0; $errors = []; $catatan = []; $dilewati = [];
 
         // Daftarnya diambil dari App\Support\KelengkapanSiswa supaya SAMA dengan
         // badge "perlu dilengkapi" di tabel Data Siswa. Dulu ditulis inline di
@@ -512,7 +513,14 @@ class StudentController extends Controller
                 $catatan[] = "baris $line (" . implode(', ', $kosong) . ')';
             }
             $emailKunci = strtolower(trim((string) $row['email']));
-            if (isset($emailDipakai[$emailKunci])) { $skipped++; continue; }
+            if (isset($emailDipakai[$emailKunci])) {
+                // Dicatat, bukan cuma dihitung: pada berkas ratusan baris,
+                // angka "N dilewati" tidak menjawab pertanyaan "siapa?".
+                $skipped++;
+                $dilewati[] = "baris $line — " . trim((string) ($row['name'] ?? '(tanpa nama)'))
+                    . " (email $emailKunci sudah terdaftar)";
+                continue;
+            }
             $school = $sid ? $sekolahPaksa : $petaSekolah->get(trim((string) $row['school']));
             if (!$school) { $errors[] = "Baris $line: Sekolah \"{$row['school']}\" tidak ditemukan."; continue; }
             $nisn = trim((string) ($row['nisn'] ?? ''));
@@ -590,7 +598,7 @@ class StudentController extends Controller
             } catch (\Throwable $e) { report($e); $errors[] = "Baris $line: gagal disimpan — " . $e->getMessage(); }
         }
 
-        return compact('imported', 'skipped', 'errors', 'catatan');
+        return compact('imported', 'skipped', 'errors', 'catatan', 'dilewati');
     }
 
     /**
