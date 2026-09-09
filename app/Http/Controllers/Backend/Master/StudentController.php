@@ -21,6 +21,12 @@ class StudentController extends Controller
 {
     use ValidatesMasterData, ExcelMasterTemplate;
 
+    /**
+     * Panjang NISN Kemendikbud. Dipakai untuk memulihkan nol depan yang dibuang
+     * Excel ketika kolomnya berformat Angka, bukan Teks.
+     */
+    private const PANJANG_NISN = 10;
+
     /** Nama role siswa yang diterima (huruf besar/kecil pernah dipakai keduanya). */
     private const ROLE_SISWA = ['Siswa', 'siswa'];
 
@@ -464,7 +470,16 @@ class StudentController extends Controller
             if (isset($emailDipakai[$emailKunci])) { $skipped++; continue; }
             $school = $sid ? $sekolahPaksa : $petaSekolah->get(trim((string) $row['school']));
             if (!$school) { $errors[] = "Baris $line: Sekolah \"{$row['school']}\" tidak ditemukan."; continue; }
-            $nisn = $row['nisn'] ?? '';
+            $nisn = trim((string) ($row['nisn'] ?? ''));
+            // Nol depan yang hilang karena sel berformat Angka dipulihkan, lalu
+            // DICATAT — supaya berkas sumbernya ikut dibetulkan, bukan cuma
+            // ditambal di sini.
+            if ($nisn !== '' && ctype_digit($nisn) && strlen($nisn) < self::PANJANG_NISN) {
+                $asli = $nisn;
+                $nisn = str_pad($nisn, self::PANJANG_NISN, '0', STR_PAD_LEFT);
+                $catatan[] = "baris $line (NISN $asli dilengkapi jadi $nisn — kolom NISN di Excel"
+                    . ' berformat Angka sehingga nol depannya terbuang; ubah formatnya ke Teks)';
+            }
             if ($nisn !== '' && isset($nisnDipakai[$nisn])) { $errors[] = "Baris $line: NISN \"$nisn\" sudah dipakai."; continue; }
             $unameCek = $this->rapikanUsername($row['username'] ?? '', $nisn !== '' ? $nisn : $row['email']);
             if (isset($usernameDipakai[$unameCek])) { $errors[] = "Baris $line: Username \"$unameCek\" sudah dipakai akun lain."; continue; }
