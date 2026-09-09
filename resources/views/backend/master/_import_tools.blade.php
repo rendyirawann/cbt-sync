@@ -58,7 +58,7 @@
             var token = form.querySelector('input[name=_token]').value;
 
             var dari = 0, total = null;
-            var akum = { imported: 0, skipped: 0, errors: [], catatan: [] };
+            var akum = { imported: 0, skipped: 0, errors: [], catatan: [], dilewati: [] };
 
             tombol.disabled = true;
             tombol.setAttribute('data-kt-indicator', 'on');
@@ -84,23 +84,49 @@
                 });
             }
 
+            // Satu bagian ringkasan: judul + daftar yang bisa digulir sendiri.
+            // Batasnya 300 baris supaya pop-up tidak menggantung di berkas yang
+            // sangat besar; kalau terpotong, jumlah yang tidak ditampilkan tetap
+            // disebutkan — jangan pernah memotong tanpa memberi tahu.
+            function bagianRingkasan(judul, warna, daftar, ikon) {
+                if (!daftar.length) return '';
+                var tampil = daftar.slice(0, 300);
+                var sisa = daftar.length - tampil.length;
+                return '<div class="mt-4 text-start">'
+                    + '<div class="fw-bold text-' + warna + ' mb-2">'
+                    + '<i class="ki-outline ' + ikon + ' fs-5 me-1"></i>'
+                    + judul + ' (' + daftar.length + ')</div>'
+                    + '<div class="border border-gray-300 rounded p-3 fs-8 text-gray-700"'
+                    + ' style="max-height:26vh;overflow:auto">'
+                    + tampil.map(function (x) { return '• ' + x; }).join('<br>')
+                    + (sisa > 0 ? '<br><span class="text-muted">… dan ' + sisa + ' baris lagi</span>' : '')
+                    + '</div></div>';
+            }
+
             function selesai() {
                 tombol.removeAttribute('data-kt-indicator');
-                var html = '<b>' + akum.imported + '</b> data berhasil diimpor.';
-                if (akum.skipped) html += '<br>' + akum.skipped + ' dilewati (sudah ada).';
-                if (akum.errors.length) {
-                    html += '<br><span class="text-danger">Gagal ' + akum.errors.length + ' baris:</span>'
-                        + '<div class="text-start fs-8 mt-2" style="max-height:30vh;overflow:auto">'
-                        + akum.errors.slice(0, 40).map(function (x) { return '• ' + x; }).join('<br>')
-                        + (akum.errors.length > 40 ? '<br>…' : '') + '</div>';
-                }
-                if (akum.catatan.length) {
-                    html += '<br><span class="text-warning">Perlu dilengkapi ' + akum.catatan.length + ' baris.</span>';
-                }
+
+                var html = '<div class="fs-5 text-start">'
+                    + '<span class="badge badge-success fs-6 me-2">' + akum.imported + ' masuk</span>'
+                    + (akum.skipped ? '<span class="badge badge-light-primary fs-6 me-2">' + akum.skipped + ' dilewati</span>' : '')
+                    + (akum.errors.length ? '<span class="badge badge-danger fs-6 me-2">' + akum.errors.length + ' gagal</span>' : '')
+                    + (akum.catatan.length ? '<span class="badge badge-warning fs-6">' + akum.catatan.length + ' perlu dilengkapi</span>' : '')
+                    + '</div>';
+
+                html += bagianRingkasan('GAGAL — tidak masuk, perlu diperbaiki', 'danger',
+                    akum.errors, 'ki-cross-circle');
+                html += bagianRingkasan('DILEWATI — sudah terdaftar sebelumnya', 'primary',
+                    akum.dilewati, 'ki-information-5');
+                html += bagianRingkasan('PERLU DILENGKAPI — sudah masuk, datanya belum penuh', 'warning',
+                    akum.catatan, 'ki-notepad-edit');
+
                 Swal.fire({
                     icon: akum.errors.length ? 'warning' : 'success',
-                    title: 'Impor selesai', html: html,
-                    buttonsStyling: false, confirmButtonText: 'Muat Ulang Halaman',
+                    title: akum.errors.length ? 'Impor selesai, ada yang gagal' : 'Impor selesai',
+                    html: html,
+                    width: '860px',
+                    buttonsStyling: false,
+                    confirmButtonText: 'Muat Ulang Halaman',
                     customClass: { confirmButton: 'btn btn-primary' }
                 }).then(function () { window.location.reload(); });
             }
@@ -137,6 +163,7 @@
                     akum.skipped += j.skipped;
                     akum.errors = akum.errors.concat(j.errors || []);
                     akum.catatan = akum.catatan.concat(j.catatan || []);
+                    akum.dilewati = akum.dilewati.concat(j.dilewati || []);
                     dari = j.diproses;
                     tulisKabar();
                     if (j.selesai) { selesai(); } else { lanjut(); }
