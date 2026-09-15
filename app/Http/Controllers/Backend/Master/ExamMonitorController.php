@@ -24,7 +24,10 @@ class ExamMonitorController extends Controller
         $sessions = $this->sesiTerjangkau()
             ->with(['exam.teachingAssignment.subject', 'exam.teachingAssignment.teacher.user', 'classRoom'])
             ->orderByDesc('starts_at')
-            ->limit(100)
+            // Dinaikkan dari 100 sejak daftar ini menjadi tabel bercari: batas
+            // yang memotong diam-diam membuat pencarian tampak lengkap padahal
+            // sesi lama sudah tidak ikut termuat.
+            ->limit(500)
             ->get();
 
         $now = Carbon::now();
