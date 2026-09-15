@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ExamController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
         $query = Exam::with(['teachingAssignment.subject', 'teachingAssignment.classRoom', 'teachingAssignment.teacher.user'])
@@ -52,10 +52,26 @@ class ExamController extends Controller
                 ->with(['sessions.students', 'sessions.attempts'])->get()
         );
 
-        $exams = $query->whereIn('status', \App\Support\SiklusUjian::statusTerlihat($user))
-            ->latest()->get();
+        // Penyaring status. Tanpa parameter, isinya persis seperti sebelumnya
+        // (tampilan harian peran ini). Superadmin & Admin boleh meminta status
+        // lain — termasuk SELESAI — supaya hasil ujian yang sudah tutup bisa
+        // dibuka lagi. Nilai dari peramban tidak dipercaya: selalu diadu dengan
+        // daftar status yang memang terjangkau peran tersebut.
+        $terjangkau = \App\Support\SiklusUjian::statusTerjangkau($user);
+        $saring = trim((string) $request->query('status', ''));
 
-        return view('backend.master.exams.index', compact('exams', 'assignments'));
+        if ($saring === 'semua') {
+            $status = $terjangkau;
+        } elseif ($saring !== '' && in_array($saring, $terjangkau, true)) {
+            $status = [$saring];
+        } else {
+            $saring = '';
+            $status = \App\Support\SiklusUjian::statusTerlihat($user);
+        }
+
+        $exams = $query->whereIn('status', $status)->latest()->get();
+
+        return view('backend.master.exams.index', compact('exams', 'assignments', 'saring'));
     }
 
     public function store(Request $request)

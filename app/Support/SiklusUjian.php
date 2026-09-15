@@ -125,9 +125,37 @@ class SiklusUjian
         return [self::DRAFT, self::TERSEDIA, self::RIWAYAT];
     }
 
+    /**
+     * Status yang BOLEH dijangkau peran ini lewat penyaring di daftar ujian —
+     * sengaja dibedakan dari statusTerlihat() yang mengatur tampilan harian.
+     *
+     * Admin sekolah perlu membuka kembali ujian yang sudah SELESAI untuk
+     * melihat hasilnya, tetapi ujian itu tetap tidak ikut di daftar
+     * sehari-hari supaya layarnya tetap bersih seperti permintaan sekolah.
+     * Jadi: tidak tampil secara bawaan, tapi terjangkau sekali penyaring
+     * dipakai. Guru tidak berubah — baginya SELESAI tetap tertutup.
+     */
+    public static function statusTerjangkau($user = null): array
+    {
+        return self::bolehMenyaring($user)
+            ? [self::DRAFT, self::TERSEDIA, self::SELESAI, self::RIWAYAT]
+            : self::statusTerlihat($user);
+    }
+
+    /** Siapa yang mendapat dropdown penyaring status: Superadmin/Developer & Admin. */
+    public static function bolehMenyaring($user = null): bool
+    {
+        $user = $user ?: auth()->user();
+
+        return self::pengawas($user) || (bool) $user?->hasRole(['Admin', 'admin']);
+    }
+
     public static function bolehLihat(Exam $exam, $user = null): bool
     {
-        return in_array($exam->status, self::statusTerlihat($user), true);
+        // Memakai statusTerjangkau(), bukan statusTerlihat(): ujian SELESAI
+        // tidak muncul di daftar harian Admin, tetapi halamannya harus tetap
+        // boleh dibuka — kalau tidak, tautan dari hasil penyaring berakhir 404.
+        return in_array($exam->status, self::statusTerjangkau($user), true);
     }
 
     /**

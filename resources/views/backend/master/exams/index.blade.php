@@ -22,10 +22,49 @@
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
     <div class="app-container container-fluid px-4 px-lg-6">
-        <div class="card">
+        @php
+            $bolehMenyaring = \App\Support\SiklusUjian::bolehMenyaring();
+            $pengawasUjian = \App\Support\SiklusUjian::pengawas();
+            // Bawaan berbeda per peran: Superadmin memang sudah melihat semua
+            // status, sedangkan Admin/Guru tidak melihat yang SELESAI.
+            $labelBawaan = $pengawasUjian ? 'Semua status' : 'Aktif — tanpa yang Selesai';
+            $saring = $saring ?? '';
+        @endphp
+        <div class="card card-flush">
+            <div class="card-header mt-5">
+                <div class="card-title flex-column">
+                    <h3 class="fw-bold mb-1">Daftar Ujian</h3>
+                    {{-- Kotak cari dibuat sendiri: dom DataTables bawaan Metronic
+                         tidak memuat 'f', jadi kotak bawaannya tidak pernah muncul. --}}
+                    <div class="d-flex align-items-center position-relative mt-3">
+                        <i class="ki-outline ki-magnifier fs-4 position-absolute ms-4 text-gray-500"></i>
+                        <input type="text" id="cariUjian" autocomplete="off"
+                               class="form-control form-control-sm form-control-solid w-100 w-md-300px ps-11"
+                               placeholder="Cari judul ujian, mapel, atau kelas">
+                    </div>
+                </div>
+                @if($bolehMenyaring)
+                <div class="card-toolbar align-items-center gap-2">
+                    <span class="text-muted fs-7 d-none d-md-inline">Status:</span>
+                    {{-- Penyaring ini dikerjakan di SERVER (memuat ulang halaman),
+                         bukan di DataTables, karena status SELESAI memang tidak
+                         ikut terkirim pada tampilan bawaan Admin. --}}
+                    <select id="saringStatus" class="form-select form-select-sm form-select-solid w-100 w-md-225px">
+                        <option value="" @selected($saring === '')>{{ $labelBawaan }}</option>
+                        @unless($pengawasUjian)
+                            <option value="semua" @selected($saring === 'semua')>Semua status (termasuk Selesai)</option>
+                        @endunless
+                        <option value="draft" @selected($saring === 'draft')>Draft saja</option>
+                        <option value="published" @selected($saring === 'published')>Available saja</option>
+                        <option value="finished" @selected($saring === 'finished')>Selesai saja</option>
+                        <option value="history" @selected($saring === 'history')>History saja</option>
+                    </select>
+                </div>
+                @endif
+            </div>
             <div class="card-body py-4">
                 <div class="table-responsive">
-                    <table class="table align-middle table-row-dashed fs-6 gy-5">
+                    <table id="tabelUjian" class="table align-middle table-row-dashed fs-6 gy-5">
                         <thead>
                             <tr class="text-start text-gray-400 fw-bold fs-7 text-uppercase gs-0">
                                 <th>Judul Ujian</th>
@@ -87,7 +126,13 @@
                                 </td>
                             </tr>
                             @empty
-                            <tr><td colspan="7" class="text-center py-10 text-muted">Belum ada ujian. Klik "Buat Ujian" untuk memulai.</td></tr>
+                            <tr><td colspan="7" class="text-center py-10 text-muted baris-kosong">
+                                @if(($saring ?? '') !== '')
+                                    Tidak ada ujian dengan status itu. Kembalikan penyaring ke "{{ $labelBawaan }}" untuk melihat daftar biasa.
+                                @else
+                                    Belum ada ujian. Klik "Buat Ujian" untuk memulai.
+                                @endif
+                            </td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -217,4 +262,64 @@
     });
 </script>
 @endpush
-@endsection
+
+@push('scripts')
+{{-- DataTables tidak ikut di plugins.bundle.js, jadi halaman yang memakainya
+     memuat bundelnya sendiri — pola yang sama dipakai Data Siswa & User. --}}
+<script src="{{ URL::to('assets/plugins/custom/datatables/datatables.bundle.js') }}"></script>
+<script>
+    $(function () {
+        // Penyaring status: satu perjalanan ke server, karena baris berstatus
+        // SELESAI memang tidak ada di halaman saat tampilan bawaan.
+        var pilihStatus = document.getElementById('saringStatus');
+        if (pilihStatus) {
+            pilihStatus.addEventListener('change', function () {
+                var dasar = '{{ route('exams.index') }}';
+                window.location.href = this.value ? dasar + '?status=' + encodeURIComponent(this.value) : dasar;
+            });
+        }
+
+        // Saat tabel kosong, isinya satu sel ber-colspan sementara DataTables
+        // menuntut sel sebanyak kolom di kepala tabel — memasangnya melempar
+        // "Requested unknown parameter" sebagai kotak galat di layar pengguna.
+        if (document.querySelector('#tabelUjian td.baris-kosong')) {
+            return;
+        }
+
+        var tabel = $('#tabelUjian').DataTable({
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+            // Urutan dibiarkan apa adanya dari server (terbaru di atas).
+            order: [],
+            columnDefs: [
+                { orderable: false, searchable: false, targets: [6] },
+                // Kolom Tipe/Soal/Sesi tidak ikut dicari: angka "5" akan
+                // mencocokkan ujian mana pun yang kebetulan punya 5 soal.
+                { searchable: false, targets: [2, 3, 4] }
+            ],
+            language: {
+                lengthMenu: 'Tampilkan _MENU_ baris',
+                info: 'Menampilkan _START_–_END_ dari _TOTAL_ ujian',
+                infoEmpty: 'Tidak ada ujian',
+                infoFiltered: '(disaring dari _MAX_ total)',
+                zeroRecords: 'Tidak ada ujian yang cocok dengan pencarian',
+                emptyTable: 'Belum ada ujian',
+                paginate: { first: 'Awal', last: 'Akhir', next: 'Berikutnya', previous: 'Sebelumnya' }
+            }
+        });
+
+        var kotakCari = document.getElementById('cariUjian');
+        if (kotakCari) {
+            var jeda = null;
+            kotakCari.addEventListener('keyup', function () {
+                var nilai = this.value;
+                clearTimeout(jeda);
+                jeda = setTimeout(function () { tabel.search(nilai).draw(); }, 250);
+            });
+            kotakCari.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); }
+            });
+        }
+    });
+</script>
+@endpush
