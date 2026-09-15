@@ -190,7 +190,7 @@
 								<!--end:Menu item-->
 @endif
 
-								@if(false) {{-- CBT-SYNC: menu Raport Hasil Ujian disembunyikan atas permintaan --}}
+								@if(\App\Support\SiklusUjian::pengawas()) {{-- CBT-SYNC: menu Raport Hasil Ujian: hanya Superadmin (dan Developer, akun vendor). Aksesnya dikunci lagi di RaporController, jadi menyembunyikan menu saja tidak cukup. --}}
 								<!--begin:Menu item-->
 								<div class="menu-item">
 									<a class="menu-link {{ request()->routeIs('admin.rapor.*') ? 'active' : '' }}" href="{{ route('admin.rapor.index') }}">

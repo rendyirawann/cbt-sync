@@ -27,22 +27,15 @@ class RaporController extends Controller
             return $this->showStudentRapor($student->id);
         }
 
-        // 2. Determine available classrooms based on role
-        if ($user->hasRole('Superadmin')) {
-            $classRooms = ClassRoom::all();
-        } elseif ($user->hasRole('Guru')) {
-            $teacher = $user->teacher;
-            if (!$teacher) {
-                return redirect()->route('dashboard')->with('error', 'Profil guru tidak ditemukan.');
-            }
-            // Fetch classrooms where the teacher teaches
-            $classRoomIds = TeachingAssignment::where('teacher_id', $teacher->id)
-                ->pluck('class_room_id')
-                ->unique();
-            $classRooms = ClassRoom::whereIn('id', $classRoomIds)->get();
-        } else {
-            abort(403, 'Akses ditolak.');
+        // 2. Menu e-Rapor dimunculkan kembali KHUSUS Superadmin (dan Developer,
+        //    akun vendor) atas permintaan sekolah. Guru — yang dulu boleh —
+        //    ikut ditolak, supaya yang terlihat di menu dan yang bisa dibuka
+        //    lewat URL sama persis.
+        if (! \App\Support\SiklusUjian::pengawas($user)) {
+            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin.');
         }
+
+        $classRooms = ClassRoom::all();
 
         $selectedClassId = $request->get('class_room_id', $classRooms->first()?->id);
         $students = [];
@@ -81,22 +74,12 @@ class RaporController extends Controller
             if (!$student || $student->id !== $id) {
                 abort(403, 'Anda hanya dapat mengakses e-Rapor Anda sendiri.');
             }
-        } elseif ($user->hasRole('Guru')) {
-            $teacher = $user->teacher;
-            if (!$teacher) abort(403, 'Profil guru tidak ditemukan.');
-            // Verify if student is in teacher's classrooms
-            $teacherClassIds = TeachingAssignment::where('teacher_id', $teacher->id)
-                ->pluck('class_room_id')
-                ->toArray();
-            
-            $isAuthorized = Student::where('id', $id)
-                ->whereHas('classStudents', function($q) use ($teacherClassIds) {
-                    $q->whereIn('class_room_id', $teacherClassIds);
-                })->exists();
-
-            if (!$isAuthorized) {
-                abort(403, 'Anda hanya dapat mengakses siswa di kelas Anda.');
-            }
+        } elseif (! \App\Support\SiklusUjian::pengawas($user)) {
+            // Dulu di sini hanya Guru yang diperiksa, sehingga peran lain
+            // (Admin, Kepala Sekolah) lolos TANPA pemeriksaan apa pun dan bisa
+            // membuka rapor siswa mana saja lewat URL. Sekarang: selain siswa
+            // yang membuka miliknya sendiri, hanya Superadmin yang boleh.
+            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin.');
         }
 
         return $this->showStudentRapor($id);
@@ -112,13 +95,10 @@ class RaporController extends Controller
             if (!$student || $student->id !== $id) {
                 abort(403, 'Akses ditolak.');
             }
-        } elseif ($user->hasRole('Guru')) {
-            $teacher = $user->teacher;
-            $teacherClassIds = TeachingAssignment::where('teacher_id', $teacher->id)->pluck('class_room_id')->toArray();
-            $isAuthorized = Student::where('id', $id)->whereHas('classStudents', function($q) use ($teacherClassIds) {
-                $q->whereIn('class_room_id', $teacherClassIds);
-            })->exists();
-            if (!$isAuthorized) abort(403, 'Akses ditolak.');
+        } elseif (! \App\Support\SiklusUjian::pengawas($user)) {
+            // Lubang yang sama seperti di show(): mencetak rapor pun dulu
+            // terbuka bagi peran yang tidak diperiksa.
+            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin.');
         }
 
         $student = Student::with(['user', 'school', 'classStudents.classRoom', 'classStudents.academicYear'])->findOrFail($id);
@@ -138,7 +118,7 @@ class RaporController extends Controller
 
     public function saveSettings(Request $request)
     {
-        if (!auth()->user()->hasRole('Superadmin')) {
+        if (! \App\Support\SiklusUjian::pengawas()) {
             abort(403, 'Hanya Superadmin yang dapat mengubah pengaturan rapor.');
         }
 
