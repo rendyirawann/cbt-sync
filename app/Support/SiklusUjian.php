@@ -150,6 +150,22 @@ class SiklusUjian
         return self::pengawas($user) || (bool) $user?->hasRole(['Admin', 'admin']);
     }
 
+    /**
+     * Siapa yang boleh membuka Raport Hasil Ujian: Superadmin, Developer, dan
+     * Admin sekolah. Guru sengaja di luar — rapor memuat nilai seluruh mapel
+     * satu kelas, bukan hanya mapel yang ia ampu.
+     *
+     * Dipisah dari bolehMenyaring() walau isinya kebetulan sama: keduanya
+     * menjawab pertanyaan berbeda, jadi kalau salah satunya berubah kelak, yang
+     * lain tidak ikut berubah diam-diam.
+     */
+    public static function bolehRapor($user = null): bool
+    {
+        $user = $user ?: auth()->user();
+
+        return self::pengawas($user) || (bool) $user?->hasRole(['Admin', 'admin']);
+    }
+
     public static function bolehLihat(Exam $exam, $user = null): bool
     {
         // Memakai statusTerjangkau(), bukan statusTerlihat(): ujian SELESAI

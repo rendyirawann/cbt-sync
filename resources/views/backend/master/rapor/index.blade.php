@@ -32,7 +32,7 @@
         @endif
 
         {{-- ======== ROLES CONFIUGURATIONS TAB ======== --}}
-        @if(auth()->user()->hasRole('Superadmin'))
+        @if(\App\Support\SiklusUjian::pengawas())
             <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bold mb-8">
                 <li class="nav-item">
                     <a class="nav-link text-active-primary pb-4 active" data-bs-toggle="tab" href="#kt_rapor_students">
@@ -174,7 +174,7 @@
             </div>
 
             {{-- TAB 2: GRADE THRESHOLDS SETTINGS --}}
-            @if(auth()->user()->hasRole('Superadmin'))
+            @if(\App\Support\SiklusUjian::pengawas())
                 <div class="tab-pane fade" id="kt_rapor_grade_settings" role="tabpanel">
                     <div class="card shadow-sm border-0 max-w-800px">
                         <div class="card-header border-0 pt-6">

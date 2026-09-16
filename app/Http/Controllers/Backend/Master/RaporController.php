@@ -28,12 +28,12 @@ class RaporController extends Controller
             return $this->showStudentRapor($student->id);
         }
 
-        // 2. Menu e-Rapor dimunculkan kembali KHUSUS Superadmin (dan Developer,
-        //    akun vendor) atas permintaan sekolah. Guru — yang dulu boleh —
-        //    ikut ditolak, supaya yang terlihat di menu dan yang bisa dibuka
-        //    lewat URL sama persis.
-        if (! \App\Support\SiklusUjian::pengawas($user)) {
-            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin.');
+        // 2. Rapor dibuka untuk Superadmin, Developer, dan Admin sekolah.
+        //    Guru tetap ditolak: rapor memuat nilai seluruh mapel satu kelas,
+        //    bukan hanya mapel yang ia ampu. Yang terlihat di menu dan yang
+        //    bisa dibuka lewat URL selalu sama — lihat SiklusUjian::bolehRapor().
+        if (! \App\Support\SiklusUjian::bolehRapor($user)) {
+            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin dan Admin.');
         }
 
         $classRooms = ClassRoom::all();
@@ -99,12 +99,12 @@ class RaporController extends Controller
             if (!$student || $student->id !== $id) {
                 abort(403, 'Anda hanya dapat mengakses e-Rapor Anda sendiri.');
             }
-        } elseif (! \App\Support\SiklusUjian::pengawas($user)) {
+        } elseif (! \App\Support\SiklusUjian::bolehRapor($user)) {
             // Dulu di sini hanya Guru yang diperiksa, sehingga peran lain
             // (Admin, Kepala Sekolah) lolos TANPA pemeriksaan apa pun dan bisa
             // membuka rapor siswa mana saja lewat URL. Sekarang: selain siswa
             // yang membuka miliknya sendiri, hanya Superadmin yang boleh.
-            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin.');
+            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin dan Admin.');
         }
 
         return $this->showStudentRapor($id);
@@ -120,10 +120,10 @@ class RaporController extends Controller
             if (!$student || $student->id !== $id) {
                 abort(403, 'Akses ditolak.');
             }
-        } elseif (! \App\Support\SiklusUjian::pengawas($user)) {
+        } elseif (! \App\Support\SiklusUjian::bolehRapor($user)) {
             // Lubang yang sama seperti di show(): mencetak rapor pun dulu
             // terbuka bagi peran yang tidak diperiksa.
-            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin.');
+            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin dan Admin.');
         }
 
         $student = Student::with(['user', 'school', 'classStudents.classRoom', 'classStudents.academicYear'])->findOrFail($id);
