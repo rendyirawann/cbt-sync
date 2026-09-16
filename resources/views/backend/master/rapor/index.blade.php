@@ -53,19 +53,46 @@
                 <div class="card shadow-sm border-0 mb-10">
                     <div class="card-header border-0 pt-6">
                         <div class="card-title">
-                            <span class="fs-4 fw-bold text-gray-900">Pilih Rombongan Belajar / Kelas</span>
+                            <span class="fs-4 fw-bold text-gray-900">Pilih Tahun Ajaran &amp; Rombongan Belajar</span>
                         </div>
                     </div>
                     <div class="card-body">
-                        <form action="{{ route('admin.rapor.index') }}" method="GET" class="d-flex gap-3 align-items-center max-w-500px">
-                            <select name="class_room_id" class="form-select form-select-solid" data-control="select2" onchange="this.form.submit()">
-                                <option value="">Pilih Ruang Kelas...</option>
-                                @foreach($classRooms as $class)
-                                    <option value="{{ $class->id }}" {{ $selectedClassId == $class->id ? 'selected' : '' }}>
-                                        {{ $class->name }}
-                                    </option>
-                                @endforeach
-                            </select>
+                        {{-- Satu form, dua dropdown. Mengganti tahun ajaran MENGOSONGKAN
+                             pilihan kelas lebih dulu: kelas yang dipilih sebelumnya belum
+                             tentu punya anggota di tahun yang baru, dan controller akan
+                             memilihkan kelas pertama tahun itu. --}}
+                        <form action="{{ route('admin.rapor.index') }}" method="GET" class="row g-3 align-items-end">
+                            <div class="col-12 col-md-5">
+                                <label class="form-label fw-semibold text-gray-700">Tahun Ajaran</label>
+                                <select name="academic_year_id" id="pilihTahunRapor" class="form-select form-select-solid"
+                                        onchange="document.getElementById('pilihKelasRapor').value = ''; this.form.submit();">
+                                    @forelse($academicYears as $tahun)
+                                        <option value="{{ $tahun->id }}" {{ $selectedYearId == $tahun->id ? 'selected' : '' }}>
+                                            {{ $tahun->name }} — {{ $tahun->semester }}{{ $tahun->is_active ? ' (aktif)' : '' }}
+                                        </option>
+                                    @empty
+                                        <option value="">Belum ada tahun ajaran</option>
+                                    @endforelse
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-5">
+                                <label class="form-label fw-semibold text-gray-700">Rombongan Belajar / Kelas</label>
+                                <select name="class_room_id" id="pilihKelasRapor" class="form-select form-select-solid"
+                                        onchange="this.form.submit()">
+                                    @forelse($classRooms as $class)
+                                        <option value="{{ $class->id }}" {{ $selectedClassId == $class->id ? 'selected' : '' }}>
+                                            {{ $class->name }}
+                                        </option>
+                                    @empty
+                                        <option value="">Tidak ada kelas berisi siswa pada tahun ajaran ini</option>
+                                    @endforelse
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <span class="text-muted fs-7 d-block pb-2">
+                                    {{ count($students) }} siswa
+                                </span>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -73,15 +100,21 @@
                 @if($selectedClassId)
                     <div class="card shadow-sm border-0">
                         <div class="card-header border-0 pt-6">
-                            <div class="card-title">
-                                <h3 class="fw-bold text-gray-900">
-                                    Daftar Siswa Kelas
-                                </h3>
+                            <div class="card-title flex-column">
+                                <h3 class="fw-bold text-gray-900 mb-1">Daftar Siswa Kelas</h3>
+                                {{-- Kotak cari dibuat sendiri: dom DataTables bawaan
+                                     Metronic tidak memuat 'f'. --}}
+                                <div class="d-flex align-items-center position-relative mt-3">
+                                    <i class="ki-outline ki-magnifier fs-4 position-absolute ms-4 text-gray-500"></i>
+                                    <input type="text" id="cariSiswaRapor" autocomplete="off"
+                                           class="form-control form-control-sm form-control-solid w-100 w-md-300px ps-11"
+                                           placeholder="Cari nama, NISN, NIS, atau email">
+                                </div>
                             </div>
                         </div>
                         <div class="card-body py-4">
                             <div class="table-responsive">
-                                <table class="table align-middle table-row-dashed fs-6 gy-5">
+                                <table id="tabelRaporSiswa" class="table align-middle table-row-dashed fs-6 gy-5">
                                     <thead>
                                         <tr class="text-start text-gray-400 fw-bold fs-7 text-uppercase gs-0">
                                             <th>Nama Lengkap</th>
@@ -121,7 +154,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="5" class="text-center py-10 text-muted">Belum ada siswa yang terdaftar di kelas ini.</td>
+                                                <td colspan="5" class="text-center py-10 text-muted baris-kosong">Belum ada siswa yang terdaftar di kelas ini pada tahun ajaran yang dipilih.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -201,4 +234,51 @@
 
     </div>
 </div>
+
+@push('scripts')
+{{-- DataTables tidak ikut di plugins.bundle.js, jadi dimuat sendiri di sini. --}}
+<script src="{{ URL::to('assets/plugins/custom/datatables/datatables.bundle.js') }}"></script>
+<script>
+    $(function () {
+        var tabel = document.getElementById('tabelRaporSiswa');
+        // Tabel kosong = satu sel ber-colspan; DataTables menuntut sel sebanyak
+        // kolom di kepala tabel dan akan melempar "Requested unknown parameter".
+        if (!tabel || tabel.querySelector('td.baris-kosong')) {
+            return;
+        }
+
+        var dt = $(tabel).DataTable({
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+            order: [[0, 'asc']],      // urut nama
+            columnDefs: [
+                { orderable: false, searchable: false, targets: [4] }
+            ],
+            language: {
+                lengthMenu: 'Tampilkan _MENU_ baris',
+                info: 'Menampilkan _START_–_END_ dari _TOTAL_ siswa',
+                infoEmpty: 'Tidak ada siswa',
+                infoFiltered: '(disaring dari _MAX_ total)',
+                zeroRecords: 'Tidak ada siswa yang cocok dengan pencarian',
+                emptyTable: 'Belum ada siswa',
+                paginate: { first: 'Awal', last: 'Akhir', next: 'Berikutnya', previous: 'Sebelumnya' }
+            }
+        });
+
+        var kotakCari = document.getElementById('cariSiswaRapor');
+        if (kotakCari) {
+            var jeda = null;
+            kotakCari.addEventListener('keyup', function () {
+                var nilai = this.value;
+                clearTimeout(jeda);
+                jeda = setTimeout(function () { dt.search(nilai).draw(); }, 250);
+            });
+            kotakCari.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); }
+            });
+        }
+    });
+</script>
+@endpush
+
 @endsection
