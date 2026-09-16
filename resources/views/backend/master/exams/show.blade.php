@@ -544,7 +544,7 @@
                                         </div></div>
                                     </div>
                                     @if($q->image_path)<div class="mb-2"><img src="{{ asset('storage/'.$q->image_path) }}" class="zoomable rounded mh-100px" alt="Gambar soal"></div>@endif
-                                    <div class="mb-4"><label class="form-label">Ganti Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB.</div></div>
+                                    <div class="mb-4"><label class="form-label">Ganti Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG, PNG, atau WEBP — maksimal 12 MB.</div></div>
                                     @if($q->type === 'mc')
                                     <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci • tiap opsi boleh teks, rumus $…$, dan/atau gambar)</span></label>
                                     <div class="mc-options">

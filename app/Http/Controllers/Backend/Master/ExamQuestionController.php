@@ -20,8 +20,8 @@ class ExamQuestionController extends Controller
             'question_text' => 'required|string',
             'points' => 'nullable|numeric|min:0',
             'penalty' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
-            'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:12288',
+            'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:12288',
         ], $this->imageMessages());
 
         $exam = Exam::findOrFail($request->exam_id);
@@ -87,8 +87,8 @@ class ExamQuestionController extends Controller
             'question_text' => 'required|string',
             'points' => 'nullable|numeric|min:0',
             'penalty' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
-            'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg|max:3072',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:12288',
+            'option_images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:12288',
         ], $this->imageMessages());
 
         if ($question->type === 'mc') {
@@ -343,11 +343,11 @@ class ExamQuestionController extends Controller
     {
         return [
             'image.image' => 'Berkas yang diunggah harus berupa gambar.',
-            'image.mimes' => 'Format gambar harus JPG, JPEG, atau PNG.',
-            'image.max' => 'Ukuran gambar maksimal 3 MB.',
+            'image.mimes' => 'Format gambar harus JPG, JPEG, PNG, atau WEBP. Foto iPhone (HEIC) belum didukung — ubah dulu ke JPG.',
+            'image.max' => 'Ukuran gambar maksimal 12 MB.',
             'option_images.*.image' => 'Gambar opsi harus berupa berkas gambar.',
-            'option_images.*.mimes' => 'Format gambar opsi harus JPG, JPEG, atau PNG.',
-            'option_images.*.max' => 'Ukuran gambar opsi maksimal 3 MB.',
+            'option_images.*.mimes' => 'Format gambar opsi harus JPG, JPEG, PNG, atau WEBP.',
+            'option_images.*.max' => 'Ukuran gambar opsi maksimal 12 MB.',
         ];
     }
 
