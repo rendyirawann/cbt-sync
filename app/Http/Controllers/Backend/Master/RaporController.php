@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\Student;
 use App\Models\Subject;
@@ -37,13 +38,35 @@ class RaporController extends Controller
 
         $classRooms = ClassRoom::all();
 
-        $selectedClassId = $request->get('class_room_id', $classRooms->first()?->id);
+        // Tahun ajaran dipilih lebih dulu; daftar kelas lalu mengikuti tahun itu,
+        // supaya kelas yang tidak punya anggota pada tahun tersebut tidak ikut
+        // muncul di dropdown.
+        $academicYears = AcademicYear::orderByDesc('name')->orderBy('semester')->get();
+
+        $selectedYearId = $request->get('academic_year_id');
+        if (!$selectedYearId || !$academicYears->contains('id', $selectedYearId)) {
+            $selectedYearId = $academicYears->firstWhere('is_active', true)?->id
+                ?? $academicYears->first()?->id;
+        }
+
+        $classRooms = $classRooms->filter(function ($kelas) use ($selectedYearId) {
+            return $kelas->classStudents()->where('academic_year_id', $selectedYearId)->exists();
+        })->values();
+
+        // Kelas dari tahun lain (mis. tertinggal di URL) tidak dipakai begitu saja.
+        $selectedClassId = $request->get('class_room_id');
+        if (!$selectedClassId || !$classRooms->contains('id', $selectedClassId)) {
+            $selectedClassId = $classRooms->first()?->id;
+        }
+
         $students = [];
 
         if ($selectedClassId) {
-            // Get all students enrolled in this classroom
-            $students = Student::whereHas('classStudents', function($q) use ($selectedClassId) {
-                $q->where('class_room_id', $selectedClassId);
+            // Keanggotaan kelas DIBATASI tahun ajaran. Tanpa ini, siswa yang pernah
+            // terdaftar di kelas yang sama pada tahun lain ikut terbawa ke daftar.
+            $students = Student::whereHas('classStudents', function ($q) use ($selectedClassId, $selectedYearId) {
+                $q->where('class_room_id', $selectedClassId)
+                  ->when($selectedYearId, fn ($x) => $x->where('academic_year_id', $selectedYearId));
             })->with('user')->get();
         }
 
@@ -54,6 +77,8 @@ class RaporController extends Controller
         $gradeD = Setting::get('rapor_grade_d', 56);
 
         return view('backend.master.rapor.index', compact(
+            'academicYears',
+            'selectedYearId',
             'classRooms',
             'selectedClassId',
             'students',
