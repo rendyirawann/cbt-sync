@@ -89,6 +89,9 @@ class GambarSoal
             $src = match ($mime) {
                 'image/jpeg' => @imagecreatefromjpeg($full),
                 'image/png'  => @imagecreatefrompng($full),
+                // WEBP diterima sejak guru banyak memakai gambar dari WhatsApp
+                // dan tangkapan layar peramban modern.
+                'image/webp' => @imagecreatefromwebp($full),
                 default      => null,
             };
             if (! $src) {
@@ -116,9 +119,11 @@ class GambarSoal
             // Tulis ke berkas sementara dulu: kalau hasilnya tidak lebih kecil,
             // berkas asli dibiarkan utuh.
             $tmp = $full . '.tmp';
-            $ok = $mime === 'image/png'
-                ? imagepng($src, $tmp, 9)                       // PNG: lossless
-                : imagejpeg($src, $tmp, self::MUTU_JPEG);       // JPEG: mutu 82
+            $ok = match ($mime) {
+                'image/png'  => imagepng($src, $tmp, 9),                  // PNG: lossless
+                'image/webp' => imagewebp($src, $tmp, self::MUTU_JPEG),   // WEBP: mutu setara JPEG
+                default      => imagejpeg($src, $tmp, self::MUTU_JPEG),   // JPEG: mutu 82
+            };
             imagedestroy($src);
 
             if (! $ok || ! is_file($tmp)) {

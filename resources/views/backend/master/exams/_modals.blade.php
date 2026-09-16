@@ -76,7 +76,7 @@
                     <i class="ki-outline ki-information-5 fs-4 text-primary me-1"></i>
                     Poin TIDAK diisi di sini. Mode <b>Otomatis</b>: dibagi rata sistem (100 / jumlah soal per bagian). Mode <b>Manual</b>: bobot tiap soal ditentukan guru saat <b>memeriksa</b> di menu Hasil &amp; Nilai.
                 </div>
-                <div class="mb-4"><label class="form-label">Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
+                <div class="mb-4"><label class="form-label">Gambar Soal (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG, PNG, atau WEBP — maksimal 12 MB. Gambar otomatis dikecilkan setelah diunggah. (Foto iPhone/HEIC: ubah dulu ke JPG.)</div></div>
                 <label class="form-label required">Opsi Jawaban <span class="text-muted fs-8">(klik bulatan = kunci jawaban • tiap opsi boleh teks, rumus $…$, dan/atau gambar)</span></label>
                 <div class="mc-options">
                     @for($k=0;$k<4;$k++)
@@ -122,7 +122,7 @@
                     Poin TIDAK diisi di sini. Mode <b>Otomatis</b>: dibagi rata sistem (100 / jumlah soal per bagian). Mode <b>Manual</b>: bobot tiap soal ditentukan guru saat <b>memeriksa</b> di menu Hasil &amp; Nilai.
                     Saat memeriksa, guru menandai Benar/Salah — benar mendapat bobot penuh.
                 </div>
-                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG/JPEG/PNG, maksimal 3 MB. Cocok untuk diagram/grafik/gambar soal.</div></div>
+                <div class="mb-4"><label class="form-label">Gambar (opsional)</label><input type="file" name="image" class="form-control" accept="image/*"><div class="form-text">Format JPG, PNG, atau WEBP — maksimal 12 MB. Gambar otomatis dikecilkan setelah diunggah. (Foto iPhone/HEIC: ubah dulu ke JPG.)</div></div>
                 <div class="alert alert-light-info fs-7">Jawaban essay dinilai manual oleh guru di menu "Peserta & Nilai".</div>
             </div>
             <div class="modal-footer"><button type="submit" class="btn btn-info text-white">Simpan Soal</button></div>

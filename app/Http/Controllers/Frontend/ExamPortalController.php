@@ -350,7 +350,7 @@ class ExamPortalController extends Controller
             // fotonya diterima lalu dikecilkan server (kompresFoto: 1600px, mutu 78),
             // sehingga yang tersimpan tetap ratusan KB. nginx mengizinkan 32M dan
             // PHP-FPM 64M pada jalur ini, jadi 6 MB aman.
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:6144',
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:12288',
         ]);
 
         $ans = ExamAnswer::firstOrNew(['exam_attempt_id' => $attempt->id, 'question_id' => $request->question_id]);
