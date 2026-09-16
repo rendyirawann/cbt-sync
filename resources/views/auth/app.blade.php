@@ -11,7 +11,7 @@
     @php
         $siteLogo = $appSettings['site_logo'] ?? 'cbt-logo.svg';
         $siteFont = $appSettings['site_font'] ?? 'Plus Jakarta Sans';
-        $siteName = $appSettings['site_name'] ?? 'CBT-SYNC';
+        $siteName = $appSettings['site_name'] ?? 'CBT-PRYME';
     @endphp
     <!--begin::Fonts-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={{ str_replace(' ', '+', $siteFont) }}:wght@300;400;500;600;700;800&display=swap" />

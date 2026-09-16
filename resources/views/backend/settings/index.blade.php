@@ -60,7 +60,7 @@
                                         <div class="fv-row mb-7">
                                             <label class="fs-6 fw-semibold mb-2">Application Name</label>
                                             <input type="text" class="form-control form-control-solid" name="site_name"
-                                                value="{{ $settings['site_name'] ?? 'CBT-SYNC' }}" placeholder="Your App Name" />
+                                                value="{{ $settings['site_name'] ?? 'CBT-PRYME' }}" placeholder="Your App Name" />
                                         </div>
 
                                         <div class="fv-row mb-3">

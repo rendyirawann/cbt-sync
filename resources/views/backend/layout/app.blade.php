@@ -19,7 +19,7 @@ License: For each use you must have a valid license purchased only from above li
 		     login & landing. --}}
 		@include('partials.head-meta', ['metaRobots' => 'noindex, nofollow'])
 		<meta charset="utf-8" />
-		<meta name="description" content="{{ $appSettings['site_name'] ?? 'CBT-SYNC' }} — Admin Dashboard" />
+		<meta name="description" content="{{ $appSettings['site_name'] ?? 'CBT-PRYME' }} — Admin Dashboard" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 										<meta name="csrf-token" content="{{ csrf_token() }}" />
 						{{-- Baris <link rel="shortcut icon" href="…/favicon.ico"> dibuang dari

@@ -8,7 +8,7 @@
          WhatsApp tampil polos tanpa keterangan dan tanpa gambar. --}}
     @include('partials.head-meta', [
         'metaTitle' => 'Login Siswa',
-        'metaDescription' => 'Masuk ke portal ujian ' . ($appSettings['site_name'] ?? 'CBT SYNC')
+        'metaDescription' => 'Masuk ke portal ujian ' . ($appSettings['site_name'] ?? 'CBT-PRYME')
             . ' memakai username, email, atau NISN untuk mengikuti ujian berbasis komputer,'
             . ' melihat kartu ujian dan jadwal, serta hasil dan nilai.',
         'metaRobots' => 'index, follow',
@@ -117,7 +117,7 @@
                 <img src="{{ URL::to('assets/media/logos/' . ($appSettings['site_logo'] ?? 'cbt-logo.svg')) }}" class="h-100px mb-12" alt="">
                 <img src="{{ URL::to('assets/media/illustrations/doofenshmirtz/13.png') }}" class="floating-img mb-10" alt="">
                 <div class="text-center px-5">
-                    <h2 class="text-gray-900 fw-bolder mb-3 fs-1">Selamat Datang di {{ $appSettings['site_name'] ?? 'CBT-SYNC' }}</h2>
+                    <h2 class="text-gray-900 fw-bolder mb-3 fs-1">Selamat Datang di {{ $appSettings['site_name'] ?? 'CBT-PRYME' }}</h2>
                     <p class="text-gray-600 fs-6">Masuk untuk mengikuti ujian online (CBT) sekolahmu.</p>
                 </div>
             </div>
