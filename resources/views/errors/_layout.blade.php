@@ -1,5 +1,5 @@
 {{--
-    Kerangka halaman galat CBT-SYNC.
+    Kerangka halaman galat CBT-PRYME.
 
     Dipakai semua berkas errors/*.blade.php supaya tampilannya satu rupa.
 
