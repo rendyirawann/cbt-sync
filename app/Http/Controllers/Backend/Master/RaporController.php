@@ -144,7 +144,7 @@ class RaporController extends Controller
         $classRoom = $activeClassStudent->classRoom;
         $academicYear = $activeClassStudent->academicYear;
         // Wali kelas & sekolah dipakai kop tanda tangan; dimuat sekali di sini.
-        $classRoom->loadMissing(['school', 'homeroomTeacher.user']);
+        $classRoom->loadMissing('school');
 
         // Fetch rapor details & ranking
         $raporData = $this->calculateRaporDetails($student, $classRoom->id);
@@ -192,8 +192,8 @@ class RaporController extends Controller
             'teks' => trim((string) Setting::get('rapor_kop', '')) ?: mb_strtoupper($sekolah),
             'logo' => $berkas ? asset('assets/media/logos/' . $berkas) : null,
             'kepsek' => trim((string) Setting::get('rapor_kepsek', '')),
-            // Wali kelas melekat pada kelas (data master), bukan pada mapet.
-            'wali' => $classRoom?->homeroomTeacher?->user?->name ?? '',
+            // Wali kelas ditulis manual per kelas di Data Master > Kelas.
+            'wali' => trim((string) ($classRoom?->homeroom_teacher ?? '')),
         ];
     }
 

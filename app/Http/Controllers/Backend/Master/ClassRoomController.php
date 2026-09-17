@@ -17,19 +17,11 @@ class ClassRoomController extends Controller
     public function index()
     {
         $sid = \App\Support\SchoolScope::id();
-        $classRooms = ClassRoom::with(['school', 'homeroomTeacher.user'])
+        $classRooms = ClassRoom::with('school')
             ->when($sid, fn ($q) => $q->where('school_id', $sid))
             ->get();
         $schools = $sid ? School::where('id', $sid)->get() : School::all();
-        // Pilihan wali kelas diambil dari data master guru; disaring ke sekolah
-        // yang sedang discope supaya tidak bocor antar-sekolah.
-        $teachers = \App\Models\Teacher::with('user')
-            ->when($sid, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('school_id', $sid)))
-            ->get()
-            ->sortBy(fn ($t) => $t->user->name ?? '')
-            ->values();
-
-        return view('backend.master.class-rooms.index', compact('classRooms', 'schools', 'teachers'));
+        return view('backend.master.class-rooms.index', compact('classRooms', 'schools'));
     }
 
     /**
@@ -193,13 +185,13 @@ class ClassRoomController extends Controller
             'school_id' => 'required|uuid|exists:schools,id',
             'name' => 'required|string|max:255',
             'level' => 'required|string|max:50',
-            'homeroom_teacher_id' => 'nullable|uuid|exists:teachers,id',
+            'homeroom_teacher' => 'nullable|string|max:150',
         ];
     }
 
     private function labels(): array
     {
-        return ['school_id' => 'Sekolah', 'name' => 'Nama Kelas', 'level' => 'Tingkat/Level', 'homeroom_teacher_id' => 'Wali Kelas'];
+        return ['school_id' => 'Sekolah', 'name' => 'Nama Kelas', 'level' => 'Tingkat/Level', 'homeroom_teacher' => 'Wali Kelas'];
     }
 
     public function template()

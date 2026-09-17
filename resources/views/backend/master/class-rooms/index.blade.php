@@ -36,10 +36,10 @@
                             <tr>
                                 <td>{{ $item->name }}</td>
                                 <td>
-                                    @if($item->homeroomTeacher?->user)
-                                        {{ $item->homeroomTeacher->user->name }}
+                                    @if(filled($item->homeroom_teacher))
+                                        {{ $item->homeroom_teacher }}
                                     @else
-                                        <span class="badge badge-light-warning">belum ditentukan</span>
+                                        <span class="badge badge-light-warning">belum diisi</span>
                                     @endif
                                 </td>
                                 <td>{{ $item->school->name ?? '-' }}</td>
@@ -98,13 +98,9 @@
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Tingkat / Level</label><input type="text" name="level" class="form-control form-control-solid" placeholder="cth: 10" required><div class="form-text">Angka tingkat kelas, mis. 10 / 11 / 12 (atau 7 / 8 / 9).</div></div>
                     <div class="fv-row mb-7">
                         <label class="fs-6 fw-semibold mb-2">Wali Kelas</label>
-                        <select name="homeroom_teacher_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#addModal">
-                            <option value="">Belum ditentukan</option>
-                            @foreach($teachers as $g)
-                                <option value="{{ $g->id }}">{{ $g->user->name ?? '-' }}</option>
-                            @endforeach
-                        </select>
-                        <div class="form-text">Namanya dipakai pada kolom tanda tangan Wali Kelas di Raport Hasil Ujian.</div>
+                        <input type="text" name="homeroom_teacher" class="form-control form-control-solid"
+                               placeholder="cth: Angga Adha Pratama, S.Pd.">
+                        <div class="form-text">Ditulis manual — persis seperti yang ingin dicetak pada kolom tanda tangan Raport Hasil Ujian, lengkap dengan gelar.</div>
                     </div>
                 </div>
                 <div class="modal-footer flex-center">
@@ -140,13 +136,9 @@
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Tingkat / Level</label><input type="text" name="level" class="form-control form-control-solid" value="{{ $item->level }}" placeholder="cth: 10" required></div>
                     <div class="fv-row mb-7">
                         <label class="fs-6 fw-semibold mb-2">Wali Kelas</label>
-                        <select name="homeroom_teacher_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal{{ $item->id }}">
-                            <option value="">Belum ditentukan</option>
-                            @foreach($teachers as $g)
-                                <option value="{{ $g->id }}" {{ $item->homeroom_teacher_id === $g->id ? 'selected' : '' }}>{{ $g->user->name ?? '-' }}</option>
-                            @endforeach
-                        </select>
-                        <div class="form-text">Namanya dipakai pada kolom tanda tangan Wali Kelas di Raport Hasil Ujian.</div>
+                        <input type="text" name="homeroom_teacher" class="form-control form-control-solid"
+                               value="{{ $item->homeroom_teacher }}" placeholder="cth: Angga Adha Pratama, S.Pd.">
+                        <div class="form-text">Ditulis manual — persis seperti yang ingin dicetak pada kolom tanda tangan Raport Hasil Ujian, lengkap dengan gelar.</div>
                     </div>
                 </div>
                 <div class="modal-footer flex-center">
