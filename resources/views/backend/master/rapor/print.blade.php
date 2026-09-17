@@ -437,6 +437,16 @@
             width: 30%;
             text-align: center;
             font-size: 13px;
+            /* Label "Mengetahui, / Kepala Sekolah" dua baris, yang lain satu
+               baris. Tanpa ini barisan nama di bawahnya ikut turun sendiri-
+               sendiri. Kolom dijadikan flex-column lalu barisan namanya
+               didorong ke dasar, jadi ketiganya sejajar. */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sig-slot > :last-child {
+            margin-top: auto;
         }
 
         .sig-space {
@@ -451,14 +461,29 @@
 
         /* INTERFACES FOR SCREEN INTERACTION */
         @media print {
+            /* Jarak atas-bawah diberikan oleh @page, BUKAN oleh padding elemen.
+               Padding hanya berlaku di ujung elemen, sehingga saat tabel nilai
+               melimpah, halaman SAMBUNGAN tercetak menempel ke tepi kertas.
+               Diuji: margin 0mm -> 3 halaman, 14mm -> 3 halaman, 40mm -> 5
+               halaman; jadi margin ini memang berlaku pada setiap halaman. */
+            @page {
+                size: A4;
+                margin: 14mm 0;
+            }
+
             .no-print {
                 display: none !important;
             }
+
             .page {
                 border: none;
                 box-shadow: none;
                 margin: 0;
-                padding: 20mm;
+                /* Tinggi tidak lagi dipatok 297mm: isinya boleh mengalir, dan
+                   tiap halaman tetap mendapat jarak atas dari @page. */
+                height: auto;
+                min-height: 269mm;   /* 297mm - margin @page 2 x 14mm */
+                padding: 6mm 20mm;
             }
         }
 
