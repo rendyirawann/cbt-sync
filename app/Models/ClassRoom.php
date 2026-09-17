@@ -10,6 +10,12 @@ class ClassRoom extends Model
 {
     protected $guarded = [];
     use HasUuids, LogsAllActivity;
+    /** Wali kelas — satu guru per kelas, dipakai pada kop tanda tangan rapor. */
+    public function homeroomTeacher()
+    {
+        return $this->belongsTo(Teacher::class, 'homeroom_teacher_id');
+    }
+
     public function school()
     {
         return $this->belongsTo(School::class);

@@ -32,7 +32,7 @@
         @endif
 
         {{-- ======== ROLES CONFIUGURATIONS TAB ======== --}}
-        @if(\App\Support\SiklusUjian::pengawas())
+        @if(\App\Support\SiklusUjian::bolehRapor())
             <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bold mb-8">
                 <li class="nav-item">
                     <a class="nav-link text-active-primary pb-4 active" data-bs-toggle="tab" href="#kt_rapor_students">
@@ -41,7 +41,7 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link text-active-primary pb-4" data-bs-toggle="tab" href="#kt_rapor_grade_settings">
-                        Ketentuan Predikat Rapor
+                        Pengaturan Rapor
                     </a>
                 </li>
             </ul>
@@ -173,9 +173,79 @@
                 @endif
             </div>
 
-            {{-- TAB 2: GRADE THRESHOLDS SETTINGS --}}
-            @if(\App\Support\SiklusUjian::pengawas())
+            {{-- TAB 2: KOP RAPOR (Admin & Superadmin) + PREDIKAT NILAI (Superadmin) --}}
+            @if(\App\Support\SiklusUjian::bolehRapor())
                 <div class="tab-pane fade" id="kt_rapor_grade_settings" role="tabpanel">
+
+                    {{-- Kop, logo, dan tanda tangan --}}
+                    <div class="card shadow-sm border-0 max-w-800px mb-8">
+                        <div class="card-header border-0 pt-6">
+                            <h3 class="card-title fw-bold text-gray-900">Kop, Logo &amp; Tanda Tangan Rapor</h3>
+                        </div>
+                        <form id="formKopRapor" action="{{ route('admin.rapor.kop') }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="card-body">
+                                <div class="mb-8">
+                                    <label class="fs-6 fw-bold mb-2">Teks Kop pada Sampul</label>
+                                    <textarea name="rapor_kop" rows="2" class="form-control form-control-solid"
+                                              placeholder="SMA SWASTA MUHAMMADIYAH 4 BABALAN">{{ $kopTeks }}</textarea>
+                                    <div class="form-text">
+                                        Tulisan paling atas di halaman sampul rapor. Kosongkan untuk memakai nama sekolah.
+                                        Tekan Enter bila ingin dua baris.
+                                    </div>
+                                </div>
+
+                                <div class="mb-8">
+                                    <label class="fs-6 fw-bold mb-2">Nama Kepala Sekolah</label>
+                                    <input type="text" name="rapor_kepsek" class="form-control form-control-solid"
+                                           value="{{ $kopKepsek }}" placeholder="cth: Dr. H. Ahmad Fauzi, M.Pd.">
+                                    <div class="form-text">Dicetak pada kolom tanda tangan "Mengetahui, Kepala Sekolah".</div>
+                                </div>
+
+                                <div class="mb-8">
+                                    <label class="fs-6 fw-bold mb-2">Logo pada Rapor</label>
+                                    <div class="d-flex align-items-center gap-4 mb-3">
+                                        @php
+                                            $logoTampil = $kopLogo ?: (\App\Models\Setting::get('site_logo', '') ?: null);
+                                        @endphp
+                                        @if($logoTampil)
+                                            <img src="{{ asset('assets/media/logos/' . $logoTampil) }}" alt="Logo rapor"
+                                                 style="height:70px;width:70px;object-fit:contain;" class="border rounded p-1">
+                                        @endif
+                                        <div class="text-muted fs-7">
+                                            @if($kopLogo)
+                                                Memakai logo khusus rapor: <code>{{ $kopLogo }}</code>
+                                            @else
+                                                Belum ada logo khusus rapor — dipakai logo sekolah dari Pengaturan.
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <input type="file" name="rapor_logo" class="form-control form-control-solid" accept="image/*">
+                                    <div class="form-text">Format PNG, JPG, atau WEBP — maksimal 4 MB. Kosongkan bila tidak ingin mengganti.</div>
+                                    @if($kopLogo)
+                                        <label class="form-check form-check-sm form-check-custom mt-3">
+                                            <input class="form-check-input" type="checkbox" name="hapus_logo" value="1">
+                                            <span class="form-check-label text-gray-700">Hapus logo khusus rapor, kembali memakai logo sekolah</span>
+                                        </label>
+                                    @endif
+                                </div>
+
+                                <div class="notice d-flex bg-light-primary rounded border-primary border border-dashed p-5">
+                                    <i class="ki-outline ki-information fs-2tx text-primary me-4"></i>
+                                    <div class="fw-semibold fs-7 text-gray-700">
+                                        <b>Wali Kelas tidak diatur di sini.</b> Namanya berbeda tiap kelas, jadi diambil dari
+                                        <a href="{{ route('class-rooms.index') }}" class="fw-bold">Data Master &rsaquo; Kelas</a>
+                                        — setiap kelas punya kolom Wali Kelas sendiri.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer d-flex justify-content-end py-6">
+                                <button type="submit" class="btn btn-primary">Simpan Kop Rapor</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    @if(\App\Support\SiklusUjian::pengawas())
                     <div class="card shadow-sm border-0 max-w-800px">
                         <div class="card-header border-0 pt-6">
                             <h3 class="card-title fw-bold text-gray-900">Konfigurasi Nilai Huruf & Predikat Raport Hasil Ujian</h3>
@@ -228,6 +298,7 @@
                             </div>
                         </form>
                     </div>
+                    @endif
                 </div>
             @endif
         </div>

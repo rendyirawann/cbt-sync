@@ -76,7 +76,16 @@ class RaporController extends Controller
         $gradeC = Setting::get('rapor_grade_c', 66);
         $gradeD = Setting::get('rapor_grade_d', 56);
 
+        // Nilai kop rapor untuk formulir pengaturan (mentah, apa adanya dari
+        // tabel settings — bukan hasil kopRapor() yang sudah diberi cadangan).
+        $kopTeks = (string) Setting::get('rapor_kop', '');
+        $kopLogo = (string) Setting::get('rapor_logo', '');
+        $kopKepsek = (string) Setting::get('rapor_kepsek', '');
+
         return view('backend.master.rapor.index', compact(
+            'kopTeks',
+            'kopLogo',
+            'kopKepsek',
             'academicYears',
             'selectedYearId',
             'classRooms',
@@ -134,11 +143,14 @@ class RaporController extends Controller
 
         $classRoom = $activeClassStudent->classRoom;
         $academicYear = $activeClassStudent->academicYear;
+        // Wali kelas & sekolah dipakai kop tanda tangan; dimuat sekali di sini.
+        $classRoom->loadMissing(['school', 'homeroomTeacher.user']);
 
         // Fetch rapor details & ranking
         $raporData = $this->calculateRaporDetails($student, $classRoom->id);
+        $kop = $this->kopRapor($classRoom, $student);
 
-        return view('backend.master.rapor.print', compact('student', 'classRoom', 'academicYear', 'raporData'));
+        return view('backend.master.rapor.print', compact('student', 'classRoom', 'academicYear', 'raporData', 'kop'));
     }
 
     public function saveSettings(Request $request)
@@ -160,6 +172,70 @@ class RaporController extends Controller
         Setting::set('rapor_grade_d', $request->grade_d);
 
         return redirect()->back()->with('success', 'Ketentuan predikat nilai e-Rapor berhasil diperbarui!');
+    }
+
+    /**
+     * Kop rapor: teks judul atas, logo, nama kepala sekolah, dan nama wali
+     * kelas. Semuanya bisa diatur sekolah; yang tidak diisi jatuh ke cadangan
+     * yang masuk akal, bukan ke teks yang dipatok mati.
+     */
+    private function kopRapor($classRoom = null, $student = null): array
+    {
+        // Logo rapor boleh berbeda dari logo aplikasi; kalau tidak diisi,
+        // dipakai logo sekolah yang sudah ada di Pengaturan.
+        $berkas = trim((string) Setting::get('rapor_logo', ''))
+            ?: trim((string) Setting::get('site_logo', ''));
+
+        $sekolah = $classRoom?->school?->name ?? $student?->school?->name ?? '';
+
+        return [
+            'teks' => trim((string) Setting::get('rapor_kop', '')) ?: mb_strtoupper($sekolah),
+            'logo' => $berkas ? asset('assets/media/logos/' . $berkas) : null,
+            'kepsek' => trim((string) Setting::get('rapor_kepsek', '')),
+            // Wali kelas melekat pada kelas (data master), bukan pada mapet.
+            'wali' => $classRoom?->homeroomTeacher?->user?->name ?? '',
+        ];
+    }
+
+    /**
+     * Simpan kop rapor. Boleh oleh Admin dan Superadmin — berbeda dari ambang
+     * predikat nilai yang tetap milik Superadmin.
+     */
+    public function saveKop(Request $request)
+    {
+        if (! \App\Support\SiklusUjian::bolehRapor()) {
+            abort(403, 'Akses ditolak. Raport Hasil Ujian hanya untuk Superadmin dan Admin.');
+        }
+
+        $request->validate([
+            'rapor_kop' => 'nullable|string|max:300',
+            'rapor_kepsek' => 'nullable|string|max:150',
+            'rapor_logo' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:4096',
+        ], [
+            'rapor_logo.image' => 'Berkas logo harus berupa gambar.',
+            'rapor_logo.mimes' => 'Format logo harus PNG, JPG, JPEG, atau WEBP.',
+            'rapor_logo.max' => 'Ukuran logo maksimal 4 MB.',
+        ], [
+            'rapor_kop' => 'Teks kop rapor',
+            'rapor_kepsek' => 'Nama kepala sekolah',
+            'rapor_logo' => 'Logo rapor',
+        ]);
+
+        Setting::set('rapor_kop', trim((string) $request->input('rapor_kop')));
+        Setting::set('rapor_kepsek', trim((string) $request->input('rapor_kepsek')));
+
+        if ($request->boolean('hapus_logo')) {
+            Setting::set('rapor_logo', '');
+        }
+
+        if ($request->hasFile('rapor_logo')) {
+            $file = $request->file('rapor_logo');
+            $nama = 'rapor-logo-' . time() . '.' . strtolower($file->getClientOriginalExtension());
+            $file->move(public_path('assets/media/logos'), $nama);
+            Setting::set('rapor_logo', $nama);
+        }
+
+        return redirect()->back()->with('success', 'Kop Raport Hasil Ujian berhasil disimpan.');
     }
 
     /**

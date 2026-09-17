@@ -232,6 +232,7 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     Route::get('/admin/rapor/{id}', [\App\Http\Controllers\Backend\Master\RaporController::class, 'show'])->name('admin.rapor.show');
     Route::get('/admin/rapor/{id}/generate', [\App\Http\Controllers\Backend\Master\RaporController::class, 'generate'])->name('admin.rapor.generate');
     Route::post('/admin/rapor/settings', [\App\Http\Controllers\Backend\Master\RaporController::class, 'saveSettings'])->name('admin.rapor.settings');
+    Route::post('/admin/rapor/kop', [\App\Http\Controllers\Backend\Master\RaporController::class, 'saveKop'])->name('admin.rapor.kop');
 
 
     // --- DEBUG/CHECK AUTH ---
