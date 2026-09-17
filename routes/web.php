@@ -156,7 +156,13 @@ Route::middleware(['auth', 'forbid-banned-user', 'no-student', 'kepsek.readonly'
     // Master Data Routes LMS
     Route::resource('/admin/teachers', \App\Http\Controllers\Backend\Master\TeacherController::class);
     Route::resource('/admin/students', \App\Http\Controllers\Backend\Master\StudentController::class);
-    Route::resource('/admin/schools', \App\Http\Controllers\Backend\Master\SchoolController::class)->middleware('role:Developer');
+    // Data Sekolah: Superadmin boleh MELIHAT dan MENGUBAH sekolahnya (alamat,
+    // telepon, dll. yang ikut tercetak di kop rapor). Menambah, menghapus, dan
+    // impor sekolah tetap milik Developer.
+    Route::resource('/admin/schools', \App\Http\Controllers\Backend\Master\SchoolController::class)
+        ->only(['index', 'update'])->middleware('role:Developer|Superadmin');
+    Route::resource('/admin/schools', \App\Http\Controllers\Backend\Master\SchoolController::class)
+        ->except(['index', 'update'])->middleware('role:Developer');
     Route::resource('/admin/academic-years', \App\Http\Controllers\Backend\Master\AcademicYearController::class);
     Route::resource('/admin/subjects', \App\Http\Controllers\Backend\Master\SubjectController::class);
     Route::resource('/admin/waves', \App\Http\Controllers\Backend\Master\WaveController::class)->except(['show', 'create', 'edit']);
