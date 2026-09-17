@@ -26,6 +26,7 @@
                         <thead class="fs-7 text-gray-400 text-uppercase">
                             <tr>
                                 <th>Nama Kelas</th>
+                                <th>Wali Kelas</th>
                                 <th>Sekolah</th>
                                 <th class="text-end">Aksi</th>
                             </tr>
@@ -34,6 +35,13 @@
                             @forelse($classRooms as $item)
                             <tr>
                                 <td>{{ $item->name }}</td>
+                                <td>
+                                    @if($item->homeroomTeacher?->user)
+                                        {{ $item->homeroomTeacher->user->name }}
+                                    @else
+                                        <span class="badge badge-light-warning">belum ditentukan</span>
+                                    @endif
+                                </td>
                                 <td>{{ $item->school->name ?? '-' }}</td>
                                 <td class="text-end">
                                     <a href="{{ route('class-rooms.students', $item->id) }}"
@@ -48,7 +56,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="3">
+                                <td colspan="4">
                                     <div class="text-center px-4 py-15">
                                         <img src="{{ asset('assets/media/illustrations/sigma-1/5.png') }}" alt="" class="mw-100 mh-200px mb-7">
                                         <h3 class="fw-bold text-gray-900 mb-2">Belum ada data ruang kelas</h3>
@@ -88,6 +96,16 @@
                     </div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Nama Kelas</label><input type="text" name="name" class="form-control form-control-solid" placeholder="cth: X-IPA 1" required></div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Tingkat / Level</label><input type="text" name="level" class="form-control form-control-solid" placeholder="cth: 10" required><div class="form-text">Angka tingkat kelas, mis. 10 / 11 / 12 (atau 7 / 8 / 9).</div></div>
+                    <div class="fv-row mb-7">
+                        <label class="fs-6 fw-semibold mb-2">Wali Kelas</label>
+                        <select name="homeroom_teacher_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#addModal">
+                            <option value="">Belum ditentukan</option>
+                            @foreach($teachers as $g)
+                                <option value="{{ $g->id }}">{{ $g->user->name ?? '-' }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Namanya dipakai pada kolom tanda tangan Wali Kelas di Raport Hasil Ujian.</div>
+                    </div>
                 </div>
                 <div class="modal-footer flex-center">
                     <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>
@@ -120,6 +138,16 @@
                     </div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Nama Kelas</label><input type="text" name="name" class="form-control form-control-solid" value="{{ $item->name }}" required></div>
                     <div class="fv-row mb-7"><label class="required fs-6 fw-semibold mb-2">Tingkat / Level</label><input type="text" name="level" class="form-control form-control-solid" value="{{ $item->level }}" placeholder="cth: 10" required></div>
+                    <div class="fv-row mb-7">
+                        <label class="fs-6 fw-semibold mb-2">Wali Kelas</label>
+                        <select name="homeroom_teacher_id" class="form-select form-select-solid" data-control="select2" data-dropdown-parent="#editModal{{ $item->id }}">
+                            <option value="">Belum ditentukan</option>
+                            @foreach($teachers as $g)
+                                <option value="{{ $g->id }}" {{ $item->homeroom_teacher_id === $g->id ? 'selected' : '' }}>{{ $g->user->name ?? '-' }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Namanya dipakai pada kolom tanda tangan Wali Kelas di Raport Hasil Ujian.</div>
+                    </div>
                 </div>
                 <div class="modal-footer flex-center">
                     <button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">Batal</button>

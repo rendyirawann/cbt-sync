@@ -1,3 +1,14 @@
+@php
+    // Cadangan bila view dipanggil tanpa $kop (mis. dari kode lama): rapor tetap
+    // tercetak, memakai nama sekolah dan tanpa nama penanda tangan.
+    $kop = ($kop ?? []) + [
+        'teks' => mb_strtoupper((string) ($classRoom->school->name ?? $student->school->name ?? '')),
+        'logo' => null,
+        'kepsek' => '',
+        'wali' => '',
+    ];
+    $garisTtd = '............................';
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -110,6 +121,25 @@
             display: flex;
             justify-content: center;
             align-items: center;
+        }
+
+        /* Logo sekolah dicetak apa adanya, tanpa lingkaran gradien: lambang
+           sekolah punya bentuk & warnanya sendiri. */
+        .cover-emblem-img {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+        }
+
+        .kop-logo.kop-logo-img {
+            background: transparent;
+            border-radius: 0;
+        }
+
+        .kop-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .cover-emblem {
@@ -505,12 +535,15 @@
         
         <div class="cover-page">
             <div class="cover-header">
-                <p class="cover-kementerian">Kementerian Pendidikan, Kebudayaan,<br>Riset, dan Teknologi Republik Indonesia</p>
+                <p class="cover-kementerian">{!! nl2br(e($kop['teks'])) !!}</p>
                 <h1 class="cover-main-title">Raport Hasil Ujian</h1>
                 <p class="cover-sub-title">Laporan Capaian Hasil Belajar Peserta Didik</p>
             </div>
 
             <div class="cover-emblem-container">
+                @if($kop['logo'])
+                    <img src="{{ $kop['logo'] }}" alt="Logo sekolah" class="cover-emblem-img">
+                @else
                 <div class="cover-emblem">
                     <!-- Standard vector graphics insignia representing academic achievement -->
                     <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -519,6 +552,7 @@
                         <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
+                @endif
             </div>
 
             <div class="cover-identity-box">
@@ -558,8 +592,12 @@
             <div>
                 {{-- KOP SURAT --}}
                 <div class="kop-surat">
-                    <div class="kop-logo">
-                        <span>L</span>
+                    <div class="kop-logo{{ $kop['logo'] ? ' kop-logo-img' : '' }}">
+                        @if($kop['logo'])
+                            <img src="{{ $kop['logo'] }}" alt="Logo sekolah">
+                        @else
+                            <span>{{ mb_substr((string) ($student->school->name ?? 'S'), 0, 1) }}</span>
+                        @endif
                     </div>
                     <div class="kop-text-container">
                         <h1 class="school-title">{{ $student->school->name ?? 'CBT-PRYME SCHOOL' }}</h1>
@@ -673,15 +711,16 @@
                     <div class="sig-slot">
                         <p>Wali Kelas</p>
                         <div class="sig-space"></div>
-                        <p class="sig-name">
-                            {{ count($raporData['subjects']) > 0 ? $raporData['subjects'][0]['teacher_name'] : 'Wali Kelas' }}
-                        </p>
+                        {{-- Wali kelas diambil dari Data Master > Kelas. Sebelumnya di sini
+                             tercetak nama guru mapel PERTAMA pada daftar nilai — kebetulan
+                             saja, dan berubah mengikuti urutan mapel. --}}
+                        <p class="sig-name">{{ $kop['wali'] ?: $garisTtd }}</p>
                     </div>
 
                     <div class="sig-slot">
                         <p>Mengetahui,<br>Kepala Sekolah</p>
                         <div class="sig-space"></div>
-                        <p class="sig-name">Dr. H. Ahmad Fauzi, M.Pd.</p>
+                        <p class="sig-name">{{ $kop['kepsek'] ?: $garisTtd }}</p>
                     </div>
                 </div>
             </div>
