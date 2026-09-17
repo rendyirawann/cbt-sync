@@ -81,8 +81,12 @@ class RaporController extends Controller
         $kopTeks = (string) Setting::get('rapor_kop', '');
         $kopLogo = (string) Setting::get('rapor_logo', '');
         $kopKepsek = (string) Setting::get('rapor_kepsek', '');
+        // Alamat & telepon pada kop rapor adalah DATA SEKOLAH, jadi formulirnya
+        // menyunting baris sekolah itu sendiri — bukan menyalinnya ke setting.
+        $sekolahKop = $this->sekolahKop();
 
         return view('backend.master.rapor.index', compact(
+            'sekolahKop',
             'kopTeks',
             'kopLogo',
             'kopKepsek',
@@ -198,6 +202,22 @@ class RaporController extends Controller
     }
 
     /**
+     * Sekolah yang disunting lewat formulir kop: yang sedang discope, atau —
+     * bila pemasangan ini hanya melayani satu sekolah — sekolah itu. Kalau
+     * jumlahnya lebih dari satu dan tidak ada scope, dikembalikan null supaya
+     * formulir tidak menebak-nebak milik siapa yang diubah.
+     */
+    private function sekolahKop(): ?\App\Models\School
+    {
+        $sid = \App\Support\SchoolScope::id();
+        if ($sid) {
+            return \App\Models\School::find($sid);
+        }
+
+        return \App\Models\School::count() === 1 ? \App\Models\School::first() : null;
+    }
+
+    /**
      * Simpan kop rapor. Boleh oleh Admin dan Superadmin — berbeda dari ambang
      * predikat nilai yang tetap milik Superadmin.
      */
@@ -211,6 +231,8 @@ class RaporController extends Controller
             'rapor_kop' => 'nullable|string|max:300',
             'rapor_kepsek' => 'nullable|string|max:150',
             'rapor_logo' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:4096',
+            'sekolah_alamat' => 'nullable|string|max:300',
+            'sekolah_telepon' => 'nullable|string|max:50',
         ], [
             'rapor_logo.image' => 'Berkas logo harus berupa gambar.',
             'rapor_logo.mimes' => 'Format logo harus PNG, JPG, JPEG, atau WEBP.',
@@ -219,6 +241,8 @@ class RaporController extends Controller
             'rapor_kop' => 'Teks kop rapor',
             'rapor_kepsek' => 'Nama kepala sekolah',
             'rapor_logo' => 'Logo rapor',
+            'sekolah_alamat' => 'Alamat sekolah',
+            'sekolah_telepon' => 'Telepon sekolah',
         ]);
 
         Setting::set('rapor_kop', trim((string) $request->input('rapor_kop')));
@@ -226,6 +250,16 @@ class RaporController extends Controller
 
         if ($request->boolean('hapus_logo')) {
             Setting::set('rapor_logo', '');
+        }
+
+        // Alamat & telepon disimpan ke baris sekolah, sumber yang sama dengan
+        // yang dibaca kop rapor.
+        $sekolah = $this->sekolahKop();
+        if ($sekolah && $request->has('sekolah_alamat')) {
+            $sekolah->update([
+                'address' => trim((string) $request->input('sekolah_alamat')) ?: null,
+                'phone' => trim((string) $request->input('sekolah_telepon')) ?: null,
+            ]);
         }
 
         if ($request->hasFile('rapor_logo')) {
