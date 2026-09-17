@@ -202,25 +202,6 @@
                                     <div class="form-text">Dicetak pada kolom tanda tangan "Mengetahui, Kepala Sekolah".</div>
                                 </div>
 
-                                @if($sekolahKop)
-                                <div class="mb-8">
-                                    <label class="fs-6 fw-bold mb-2">Alamat Sekolah</label>
-                                    <input type="text" name="sekolah_alamat" class="form-control form-control-solid"
-                                           value="{{ $sekolahKop->address }}" placeholder="cth: Jl. Kalimantan, Brandan Timur Baru, Kec. Sei Lepan, Kab. Langkat">
-                                    <div class="form-text">
-                                        Tercetak pada kop halaman isi rapor, di bawah nama sekolah. Ini data sekolah
-                                        ({{ $sekolahKop->name }}) — mengubahnya di sini sama dengan mengubahnya di Data Master &rsaquo; Sekolah.
-                                    </div>
-                                </div>
-
-                                <div class="mb-8">
-                                    <label class="fs-6 fw-bold mb-2">Telepon Sekolah</label>
-                                    <input type="text" name="sekolah_telepon" class="form-control form-control-solid"
-                                           value="{{ $sekolahKop->phone }}" placeholder="cth: 0852-7062-9062">
-                                    <div class="form-text">Tercetak setelah alamat, dipisah tanda "|". Kosongkan bila tidak ingin dicetak.</div>
-                                </div>
-                                @endif
-
                                 <div class="mb-8">
                                     <label class="fs-6 fw-bold mb-2">Logo pada Rapor</label>
                                     <div class="d-flex align-items-center gap-4 mb-3">

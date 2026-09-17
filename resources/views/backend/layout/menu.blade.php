@@ -346,7 +346,7 @@
 									<!--end:Menu link-->
 									<!--begin:Menu sub-->
 									<div class="menu-sub menu-sub-accordion">
-										@if(auth()->user()->hasRole('Developer'))
+										@if(auth()->user()->hasRole(['Developer', 'Superadmin']))
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('schools.*') ? 'active' : '' }}" href="{{ route('schools.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Data Sekolah</span></a></div>
 										@endif
 										<div class="menu-item"><a class="menu-link {{ request()->routeIs('academic-years.*') ? 'active' : '' }}" href="{{ route('academic-years.index') }}"><span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Tahun Ajaran</span></a></div>

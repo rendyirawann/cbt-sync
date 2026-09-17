@@ -30,6 +30,14 @@ class SchoolController extends Controller
     public function update(Request $request, $id)
     {
         $item = School::findOrFail($id);
+
+        // Superadmin boleh mengubah hanya sekolahnya sendiri. index() memang
+        // sudah discope, tetapi update() menerima id apa pun — tanpa penjaga
+        // ini, sekolah lain bisa diubah dengan menebak id.
+        $sid = \App\Support\SchoolScope::id();
+        if ($sid && $item->id !== $sid && ! auth()->user()->hasRole('Developer')) {
+            abort(403, 'Anda hanya dapat mengubah data sekolah Anda sendiri.');
+        }
         $data = $request->validate($this->rules(), $this->idMessages(), $this->labels());
         $item->update($data);
         return redirect()->back()->with('success', 'Sekolah berhasil diupdate');
